@@ -2202,6 +2202,25 @@ el.dispatchEvent(new CustomEvent(type, { bubbles: true, detail }));
 }
 
 // ---- lib/controls/slider.js
+function sliderTrack(fractions) {
+const track = h('div', { class: 'x-track' });
+for (const f of fractions) {
+const tick = h('i', { class: 'x-tick' });
+tick.style.setProperty('--at', `${f * 100}%`);
+track.append(tick);
+}
+return track;
+}
+function stepFractions(min, max, step) {
+const span = max - min;
+if (!(step > 0) || !(span > 0) || span / step > 40) return [];
+const out = [];
+for (let k = 0; k * step <= span + 1e-9; k++) out.push(Math.min(1, (k * step) / span));
+return out;
+}
+function evenFractions(n) {
+return n > 1 ? Array.from({ length: n }, (_, k) => k / (n - 1)) : [];
+}
 function mountSlider(fig, control, i) {
 const discrete = 'values' in control;
 const wrap = h('div', { class: `x-ctl x-ctl-slider${control.width === 'long' ? ' x-long' : ''}`, id: `${fig.id}_sl${i}` });
@@ -2214,7 +2233,8 @@ const parts = control.format ? compileTemplate(control.format) : null;
 const fallbackFmt = Number.isInteger(control.step) ? ',d' : '.2f';
 const valueOf = () => (discrete ? control.values[Number(input.value)] : Number(input.value));
 input.addEventListener('input', () => fig.set(control.name, valueOf(), 'user'));
-wrap.append(h('label', {}, h('span', { class: 'x-ctl-label' }, control.label), input, out));
+const ticks = discrete ? evenFractions(control.values.length) : stepFractions(control.min, control.max, control.step);
+wrap.append(h('label', {}, h('span', { class: 'x-ctl-label' }, control.label), sliderTrack(ticks), input, out));
 return {
 el: wrap, name: control.name,
 sync(scope) {
@@ -2245,7 +2265,7 @@ input.addEventListener('input', () => {
 if (scrub) fig.set(control.name, Number(input.value), 'user');
 else fig.set(`${control.name}.rate`, control.rates[Number(input.value)], 'user');
 });
-wrap.append(h('label', {}, h('span', { class: 'x-ctl-label' }, labelText), input, out));
+wrap.append(h('label', {}, h('span', { class: 'x-ctl-label' }, labelText), sliderTrack(scrub ? [] : evenFractions(control.rates.length)), input, out));
 const clockText = (ms) => (control.format === 'dhm' ? format(ms / 86400e3, 'dhm') : format(epochMs + ms, control.format, fig.fmt));
 return {
 el: wrap, name: control.name, epochMs,

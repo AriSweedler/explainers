@@ -821,6 +821,8 @@ Phase 2 shipped the 2D runtime, the stylesheet, and PoC 1. The rest of this sect
 
 **Added after delivery** (2026-09-22): prose refs inherit the visibility of what they point at. `figure.visibleIds` is recomputed after every scope change and state (`lib/core/state.js` `visibleIds`, the pure rule `isShown` follows), `x-fig:visibility` fires when the set changes, and `lib/site/hooks.js` toggles `x-ref-hidden` on the spans, which the stylesheet renders as plain prose with no hover highlight. Tested in `test/runtime.test.mjs` against fig-months.
 
+**Added after delivery** (2026-09-22): slider geometry and ticks. A native range moves the knob so its edge touches the input's ends, so the knob center stops half a knob (20 px) short; the runtime now draws the visible track itself (`div.x-track`, a sibling of the input inset by half the knob on both sides, `--x-pct` measured along it), so the knob center lands exactly on the track ends and the fill is flush with the knob center; the wrapper is one knob wider than the 380/600 px track. A discrete control (a `values` list, or `(max - min) / step <= 40`; a speed-mode time control's `rates`) gets one `i.x-tick` per stop (2 x 8 px, `--c-muted`, behind the track) where the knob center lands; a continuous control gets none (`lib/controls/slider.js` `stepFractions` / `evenFractions`).
+
 **Deferred to phase 3**: `dist/explainers-3d.v1.js` and `lib/scene3d/*` (three.js; the placeholder above stands in), the drag `surface:<id>` constraint and `geolocate`; `lib/poster-svg.js` and the `<svg class="x-poster">` emission in `build`, and the caveat sentence appended to `<figcaption>`; `dist/integrity.json` and the `integrity=` checks; the `validate` warnings for a `point_at` layer never referenced, a referenced layer hidden in every state, and a `dfn` in a section without a figure; the test files this section names (`states`, `glossary`, `poster`, `budget`, Playwright): `test/runtime.test.mjs` covers the goto transition under a fake clock, deep links and the runtime/CSS budgets in Node, and the DOM behavior was verified by headless Chrome screenshots (`preview/`, not committed).
 
 **Deviations from the contract, and why**:
@@ -900,7 +902,7 @@ Animation: there is no implicit clock variable. The only animated quantities are
     <div class="x-readouts" aria-live="polite">…</div>        <!-- text mirror of canvas readouts -->
   </div>
   <div class="x-ctl x-ctl-slider x-long" id="fig-x_sl0" style="--token: var(--c-moon)">
-    <label>days since new Moon <input type="range" min max step value aria-valuetext> <output>0.00 days</output></label>
+    <label>days since new Moon <div class="x-track"><i class="x-tick" style="--at: 0%"></i>…</div> <input type="range" min max step value aria-valuetext> <output>0.00 days</output></label>   <!-- ticks only on discrete controls -->
   </div>
   <div class="x-ctl x-ctl-segmented" id="fig-x_seg0"><fieldset role="radiogroup">…</fieldset></div>
   <button class="x-drag-proxy" id="fig-x_drag_p" role="slider" aria-label="p">…</button>   <!-- keyboard nudging -->

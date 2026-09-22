@@ -76,16 +76,25 @@ cite { font-style: italic; }
 /* controls under the canvas, in spec order */
 .x-ctl { margin: 0.9rem auto 0; font: 0.9rem/1.3 var(--x-sans); }
 .x-ctl.x-hl { outline: 2px solid var(--token, var(--x-accent)); outline-offset: 6px; border-radius: 4px; }
-.x-ctl-slider { width: min(380px, 100%); }
-.x-ctl-slider.x-long { width: min(600px, 100%); }
-.x-ctl-slider label { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "input input" "label output"; align-items: center; column-gap: 0.75rem; }
+/* A native range moves the knob so its EDGE touches the input's ends, so the knob CENTER stops half a
+   knob (20 px) short of each end. The runtime therefore draws the visible track itself (.x-track), inset
+   by half the knob on both sides, and measures the fill (--x-pct) and the tick marks along that track:
+   the knob center lands exactly on the track ends and on every tick. The native track is transparent.
+   The wrapper is one knob wider than the track so a standard/long track still measures 380/600 px. */
+.x-ctl-slider { --x-thumb: 40px; width: min(calc(380px + var(--x-thumb)), 100%); }
+.x-ctl-slider.x-long { width: min(calc(600px + var(--x-thumb)), 100%); }
+.x-ctl-slider label { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "input input" "label output"; align-items: center; column-gap: 0.75rem; padding: 0 calc(var(--x-thumb) / 2); }
 .x-ctl-slider .x-ctl-label { grid-area: label; color: var(--x-muted); }
 .x-ctl-slider output { grid-area: output; color: var(--token); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-.x-ctl-slider input[type="range"] { grid-area: input; -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: pointer; }
+.x-ctl-slider .x-track { grid-area: input; position: relative; height: 4px; pointer-events: none; }
+.x-ctl-slider .x-track::before { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: 2px; background: linear-gradient(to right, var(--token) var(--x-pct, 0%), var(--x-rule) var(--x-pct, 0%)); }
+/* one tick per stop on a discrete slider (a values list, or 40 or fewer steps), behind the track so it never hides the fill */
+.x-ctl-slider .x-tick { position: absolute; top: -2px; left: var(--at); width: 2px; height: 8px; margin-left: -1px; border-radius: 1px; background: var(--c-muted, var(--x-muted)); }
+.x-ctl-slider input[type="range"] { grid-area: input; -webkit-appearance: none; appearance: none; width: calc(100% + var(--x-thumb)); height: 40px; margin: 0 calc(var(--x-thumb) / -2); background: transparent; cursor: pointer; }
 .x-ctl-slider input[type="range"]:focus { outline: none; }
-.x-ctl-slider input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--token) var(--x-pct, 0%), var(--x-rule) var(--x-pct, 0%)); }
-.x-ctl-slider input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--x-rule); }
-.x-ctl-slider input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--token); }
+.x-ctl-slider input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.x-ctl-slider input[type="range"]::-moz-range-track { height: 4px; background: transparent; }
+.x-ctl-slider input[type="range"]::-moz-range-progress { height: 4px; background: transparent; }
 /* the thumb is a 40 px target drawn as an 18 px knob with a 2 px page-colored ring */
 .x-ctl-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; margin-top: -18px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--token) 0 9px, var(--bg) 9.5px 11px, transparent 11.5px); }
 .x-ctl-slider input[type="range"]::-moz-range-thumb { width: 40px; height: 40px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--token) 0 9px, var(--bg) 9.5px 11px, transparent 11.5px); }
