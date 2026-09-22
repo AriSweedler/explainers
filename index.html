@@ -3,19 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf8f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'">
 <title>Explainers</title>
-<link rel="stylesheet" href="dist/explainers.v1.css">
+<meta name="description" content="Interactive explainers by Ari Sweedler. One linear story each; every figure is a small model you can drag, scrub and step through.">
+<meta property="og:title" content="Explainers">
+<meta property="og:type" content="website">
+<meta property="og:description" content="Interactive explainers, one linear story each. Every figure is a small model you can drag, scrub and step through.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="dist/explainers.v1.css">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#faf8f5, #151412);
+    --fg: light-dark(#1d1c1a, #e8e4dc);
+    --c-sun: light-dark(#b8651a, #f2a144);
+    --c-moon: light-dark(#5d5d63, #b8b8c0);
+    --c-earth: light-dark(#2f6fb0, #6fa8e6);
+  }
+  .x-site { margin-top: 3.5rem; }
+  .x-site h1 { margin: 0 0 0.5rem; }
+  .x-site .x-lede { font-size: 1.3rem; line-height: 1.45; color: var(--x-muted); margin: 0 0 0.5rem; }
+  .x-byline { font: 400 0.95rem/1.4 var(--x-sans); color: var(--x-muted); margin: 0 0 2.5rem; }
+  .x-index { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .x-index li { margin: 0; padding: 0; border: 0; }
+  .x-card { display: block; padding: 1.35rem 1.5rem 1.2rem; border: 1px solid var(--x-rule); border-radius: 14px; color: inherit; text-decoration: none; background: color-mix(in srgb, var(--fg) 3%, var(--bg)); transition: border-color 120ms ease, transform 120ms ease; }
+  .x-card:hover, .x-card:focus-visible { border-color: var(--x-accent); transform: translateY(-1px); outline: none; }
+  .x-card h2 { margin: 0 0 0.4rem; font-size: 1.45rem; }
+  .x-card p { margin: 0 0 0.6rem; }
+  .x-card .x-meta { font: 500 0.85rem/1.4 var(--x-sans); color: var(--x-muted); letter-spacing: 0.01em; margin: 0; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .x-meta .x-dot::before { content: "·"; }
+  .x-swatches { display: inline-flex; gap: 0.3rem; vertical-align: middle; margin-right: 0.4rem; }
+  .x-swatches i { width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; }
+  .x-about { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--x-rule); color: var(--x-muted); font-size: 0.98rem; }
+  .x-about a { color: inherit; }
+  .x-footer { margin-top: 1.5rem; font: 400 0.9rem/1.4 var(--x-sans); color: var(--x-muted); }
+  @media (max-width: 40rem) { .x-site { margin-top: 2rem; } .x-card { padding: 1.1rem 1.15rem 1rem; border-radius: 12px; } }
+</style>
 </head>
 <body>
 <main>
-<h1>Explainers</h1>
-<p>Interactive explainers, one linear story each. Every figure is a small model you can drag, scrub and step through.</p>
+<header class="x-site">
+  <h1>Explainers</h1>
+  <p class="x-lede">One linear story each. Every figure is a small model you can drag, scrub and step through, and every term you meet is defined the moment you need it.</p>
+  <p class="x-byline">by Ari Sweedler</p>
+</header>
+
 <ul class="x-index">
-  <!-- one <li><a href="articles/<slug>/">Title</a> — one line</li> per article -->
-  <li><a href="articles/poc-months/">Moon</a> — the sidereal and synodic month: two clocks, one Moon (phase-2 proof of concept).</li>
+  <li><a class="x-card" href="articles/hebrew-calendar/">
+    <h2>The Hebrew Calendar</h2>
+    <p>Twelve moons fall eleven days short of a year, and no whole number of days fills either. From the day, the month and the year, through the Julian and Gregorian patches, to the nineteen-year cycle, the leap month, and the rules that fix the length of every Hebrew year.</p>
+    <p class="x-meta"><span class="x-swatches" aria-hidden="true"><i style="background: var(--c-sun)"></i><i style="background: var(--c-moon)"></i><i style="background: var(--c-earth)"></i></span><span>14 interactive figures</span><span class="x-dot"></span><span>16 min</span></p>
+  </a></li>
+  <li><a class="x-card" href="articles/poc-months/">
+    <h2>Moon</h2>
+    <p>Two months hide inside every lunar month: the sidereal month the stars measure and the synodic month the Sun measures. One figure tells them apart.</p>
+    <p class="x-meta"><span class="x-swatches" aria-hidden="true"><i style="background: var(--c-moon)"></i><i style="background: var(--c-sun)"></i></span><span>1 interactive figure</span><span class="x-dot"></span><span>2 min</span></p>
+  </a></li>
 </ul>
+
+<section class="x-about">
+  <p>Each article is one HTML file plus JSON figure specs, rendered by a small runtime with no framework and no tracking. The specs are checked by a validator before anything is published. Source on <a rel="external" href="https://github.com/AriSweedler/explainers">GitHub</a>.</p>
+</section>
+<footer class="x-footer"><p>🤖🌸 Generated with Claude Code with the ari-hemingway skill</p></footer>
 </main>
 </body>
 </html>
