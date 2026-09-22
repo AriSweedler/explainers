@@ -1,0 +1,10 @@
+name = "explainers"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Reverse proxy for the GitHub Pages site at https://explainers.sweedler.com (custom domain on
+# the sweedler.com zone; the route creates the DNS record). Path mapping: top of worker.js.
+routes = [{ pattern = "explainers.sweedler.com", custom_domain = true }]
+
+[vars]
+UPSTREAM = "https://arisweedler.github.io"

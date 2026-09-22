@@ -7,10 +7,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test 'test/**/*.test.mjs'",
+    "test": "node --test 'test/**/*.test.mjs' 'infra/**/*.test.mjs'",
     "build-cli": "node tools/build-cli.mjs",
     "docs": "node tools/gen-docs.mjs",
     "serve": "node tools/serve.mjs",
-    "start": "node tools/serve.mjs"
+    "start": "node tools/serve.mjs",
+    "proxy": "node tools/proxy-dev.mjs"
   }
 }

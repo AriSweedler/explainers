@@ -7,6 +7,26 @@ A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec
 
 **Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/poc-months/` (the sidereal and synodic month). Phase 3 adds WebGL figures (three.js), SVG posters and `integrity.json`; see "Phase 2 contract" in `DESIGN.md` for what is done and what is deferred.
 
+## explainers.sweedler.com
+
+`infra/explainers-proxy/worker.js` is a Cloudflare Worker that fronts the GitHub Pages site so
+articles get short URLs: `https://explainers.sweedler.com/hebrew-calendar/` serves
+`https://arisweedler.github.io/explainers/articles/hebrew-calendar/`. The path table is at the top
+of `worker.js`; `worker.test.mjs` pins every row (`npm test` runs it); `npm run proxy` runs the same
+handler locally on port 8787 against the live upstream.
+
+Deploy by hand; wrangler is not a dependency of this repo:
+
+```
+cd infra/explainers-proxy
+npx wrangler login      # once per machine, opens the browser
+npx wrangler deploy     # the custom-domain route creates the DNS record on sweedler.com
+```
+
+GitHub Pages keeps serving the `github.io` URL; the Worker is a second origin over the same files.
+Do not set a custom domain on the Pages side: it would redirect the `github.io` URL to the Worker's
+host and the Worker fetches from `github.io`.
+
 ## Preview locally
 
 ```
