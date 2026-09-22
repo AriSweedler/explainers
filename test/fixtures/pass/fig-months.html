@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf8f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+<title>Moon</title>
+<meta name="description" content="Phase-2 PoC 1: the sidereal and synodic month, from the design's authoring example.">
+<meta property="og:title" content="Moon">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://explainers.sweedler.com/articles/moon/">
+<meta property="og:image" content="https://explainers.sweedler.com/articles/moon/assets/og.png">
+<meta property="og:description" content="The sidereal and synodic month.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="../../dist/explainers.v1.css">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#faf8f5, #151412);
+    --fg: light-dark(#1d1c1a, #e8e4dc);
+    --c-sun:   light-dark(#b8651a, #f2a144);
+    --c-moon:  light-dark(#5d5d63, #b8b8c0);
+    --c-earth: light-dark(#2f6fb0, #6fa8e6);
+    --c-star:  light-dark(#6f6320, #d8c860);
+    --c-muted: light-dark(#7a756e, #8a857e);
+  }
+</style>
+</head>
+<body>
+<main>
+<header class="x-hero">
+  <h1>Moon</h1>
+  <p class="x-lede">Two months hide inside every lunar month. This is the figure that tells them apart.</p>
+</header>
+<nav class="x-page-tools"><a class="x-pause-all" href="#">Pause all animations</a></nav>
+
+<section id="two-months">
+<h2><a class="x-anchor" href="#two-months">Two Months</a></h2>
+
+<p>Let's start a clock at new Moon. The <span data-fig="fig-months" data-ref="star-line">dotted grey line</span> points at a distant star that never moves; the <span data-fig="fig-months" data-ref="sun-line">orange arrow</span> points at the Sun and creeps along as Earth travels its own orbit.</p>
+
+<figure class="x-fig" id="fig-months" data-aspect="3:2">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene2d",
+    "view": { "x": [-6, 6], "y": [-4, 4] },
+    "constants": { "R": 3, "T_sid": 27.321661, "Y": 365.256363,
+                   "T_syn": { "value": 29.530589, "expect": "1/(1/T_sid - 1/Y)", "tol": 0.001 } },
+    "caveats": { "not_to_scale": true },
+    "layers": [
+      { "id": "orbit",      "kind": "circle", "cx": 0, "cy": 0, "r": "R", "stroke": "muted", "dash": [4, 4] },
+      { "id": "earth",      "kind": "circle", "cx": 0, "cy": 0, "r": 0.6, "fill": "earth", "label": "Earth" },
+      { "id": "star-line",  "kind": "ray", "from": [0, 0], "angle": 0, "length": 5.6, "stroke": "star", "dash": [2, 6], "label": "to a distant star" },
+      { "id": "sun-line",   "kind": "ray", "from": [0, 0], "angle": "tau*t/Y", "length": 5.6, "stroke": "sun", "arrow": "end", "label": "to the Sun", "visible": "showSun" },
+      { "id": "trail",      "kind": "arc", "cx": 0, "cy": 0, "r": "R", "from": 0, "to": "tau*t/T_sid", "stroke": "moon", "width": 3 },
+      { "id": "elongation", "kind": "arc", "cx": 0, "cy": 0, "r": 1.2, "from": "tau*t/Y", "to": "tau*t/T_sid", "stroke": "sun", "width": 2, "visible": "showSun" },
+      { "id": "moon",       "kind": "circle", "cx": "R*cos(tau*t/T_sid)", "cy": "R*sin(tau*t/T_sid)", "r": 0.18, "fill": "moon" }
+    ],
+    "readouts": [
+      { "anchor": "moon", "offset": [14, -14], "text": "day {t:.1f}", "token": "moon" },
+      { "at": [-5.7, 3.5], "text": "{t:dhm}", "token": "moon" },
+      { "at": [-5.7, -3.5], "text": "Moon–Sun angle: {deg(wrap(tau*t/T_sid - tau*t/Y)):.0f}°", "token": "sun", "visible": "showSun" }
+    ]
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "t", "label": "days since new Moon", "min": 0, "max": 60, "step": 0.01, "default": 0, "width": "long", "token": "moon", "format": "{t:.2f} days" },
+      { "kind": "toggle", "name": "showSun", "label": ["hide Sun direction", "show Sun direction"], "default": true, "token": "sun", "position": "corner" },
+      { "kind": "play", "target": "t", "rate": 4, "loop": false, "autoplay": false }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["star-line", "sun-line", "moon"],
+    "states": [
+      { "name": "new-moon", "t": 0, "showSun": true, "caption": "New Moon: the Moon sits on both the star line and the Sun line." },
+      { "name": "sidereal", "t": 27.321661, "showSun": true, "caption": "One sidereal month: back on the star line, but the Sun line has moved on." },
+      { "name": "synodic",  "t": 29.530589, "showSun": true, "caption": "One synodic month: back on the Sun line. New Moon again." }
+    ]
+  }
+}
+</script>
+<figcaption>Drag the slider or press play. Not to scale.</figcaption>
+</figure>
+
+<p>Move the slider until the <span data-fig="fig-months" data-ref="moon">grey Moon</span> returns to the <span data-fig="fig-months" data-ref="star-line">dotted star line</span>. That takes <a href="#fig-months" data-state="sidereal">27.32 days</a>, one <dfn id="t-sidereal-month"><a href="#g-sidereal-month">sidereal month</a></dfn>, the time for one lap measured against the distant stars: 27 days, 7 hours, and 43 minutes. But the <span data-fig="fig-months" data-ref="sun-line">orange Sun direction</span> has crept ahead, so the Moon needs two more days to line up with it again: <a href="#fig-months" data-state="synodic">29.53 days</a>, one <dfn id="t-synodic-month"><a href="#g-synodic-month">synodic month</a></dfn>, the time between two new Moons, 29 days, 12 hours, and 44 minutes. The two rates subtract:</p>
+<div class="x-tex">\frac{1}{\tok{sun}{T_{\mathrm{syn}}}} = \frac{1}{\tok{moon}{T_{\mathrm{sid}}}} - \frac{1}{\tok{star}{Y}}</div>
+<p>Every lunar calendar counts the <a class="term" href="#g-synodic-month">synodic month</a>, and twelve of them fall eleven days short of a year, which is where the trouble starts.</p>
+</section>
+
+<section id="further-watching-and-reading">
+<h2><a class="x-anchor" href="#further-watching-and-reading">Further watching and reading</a></h2>
+<ul>
+  <li><a rel="external" href="https://ciechanow.ski/moon/">Bartosz Ciechanowski, <cite>Moon</cite></a>: the reference article this figure re-expresses.</li>
+</ul>
+</section>
+
+<section id="final-words">
+<h2><a class="x-anchor" href="#final-words">Final words</a></h2>
+<p>Two clocks, one Moon.</p>
+</section>
+
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    <div class="row" id="g-sidereal-month">
+      <dt>sidereal month <a class="x-back" href="#t-sidereal-month" aria-label="back to first use">↩</a></dt>
+      <dd>The time for the Moon to complete one orbit measured against the distant stars: 27.322 days (27 d 7 h 43 m).</dd>
+    </div>
+    <div class="row" id="g-synodic-month">
+      <dt>synodic month <a class="x-back" href="#t-synodic-month" aria-label="back to first use">↩</a></dt>
+      <dd>The time between two successive new Moons: 29.530 days (29 d 12 h 44 m). Longer than the sidereal month because Earth moves along its orbit meanwhile.</dd>
+    </div>
+  </dl>
+</details>
+</main>
+</body>
+</html>

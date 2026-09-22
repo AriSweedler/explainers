@@ -1,0 +1,169 @@
+/* dist/explainers.v1.css — v1. Shared by every article: token defaults, the
+   reading column, the .x-fig aspect box, sliders, corner buttons, stepper,
+   the glossary tooltip and <details>, math overflow, prose refs. The article's
+   own inline :root (later in the cascade) overrides --bg / --fg / --c-*. */
+
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#faf8f5, #151412);
+  --fg: light-dark(#1d1c1a, #e8e4dc);
+  --x-accent: light-dark(#2f6fb0, #6fa8e6);
+  --x-muted: color-mix(in srgb, var(--fg) 62%, var(--bg));
+  --x-rule: color-mix(in srgb, var(--fg) 14%, var(--bg));
+  --x-panel: color-mix(in srgb, var(--fg) 3.5%, var(--bg));
+  --x-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --x-sans: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------------------------------------------------------------- page */
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 1.0625rem/1.65 var(--x-serif); text-rendering: optimizeLegibility; }
+main { max-width: 44rem; margin: 0 auto; padding: 0 1rem 5rem; }
+h1, h2, h3 { font-family: var(--x-sans); font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+h1 { font-size: 2.6rem; margin: 3rem 0 0.75rem; }
+h2 { font-size: 1.6rem; margin: 3rem 0 0.75rem; }
+h3 { font-size: 1.2rem; margin: 2rem 0 0.5rem; }
+p { margin: 0 0 1.1em; }
+a { color: var(--x-accent); text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+h2 .x-anchor, h3 .x-anchor { color: inherit; text-decoration: none; }
+h2 .x-anchor:hover::after { content: " #"; color: var(--x-muted); font-weight: 400; }
+.x-hero .x-lede { font-size: 1.3rem; line-height: 1.45; color: var(--x-muted); margin-bottom: 1.5rem; }
+.x-page-tools { font: 0.85rem/1.4 var(--x-sans); text-align: right; margin: -1rem 0 1.5rem; }
+.x-page-tools a { color: var(--x-muted); }
+.x-index { list-style: none; padding: 0; }
+.x-index li { padding: 0.5rem 0; border-bottom: 1px solid var(--x-rule); }
+cite { font-style: italic; }
+[hidden] { display: none !important; }
+
+/* -------------------------------------------------------------- figures */
+
+.x-fig { margin: 2.25rem 0; padding: 0; position: relative; font-family: var(--x-sans); }
+.x-fig > script { display: none; }
+/* Before the runtime scaffolds the figure, reserve the canvas box so the page
+   never shifts. The runtime sets the exact ratio inline; these cover the
+   common ratios for the first paint. */
+.x-fig:not([data-booted])::before { content: ""; display: block; aspect-ratio: 3 / 2; background: var(--x-panel); border-radius: 8px; }
+.x-fig[data-aspect="1:1"]:not([data-booted])::before { aspect-ratio: 1; }
+.x-fig[data-aspect="2:1"]:not([data-booted])::before { aspect-ratio: 2; }
+.x-fig[data-aspect="4:3"]:not([data-booted])::before { aspect-ratio: 4 / 3; }
+.x-fig[data-aspect="16:9"]:not([data-booted])::before { aspect-ratio: 16 / 9; }
+.x-fig[data-aspect="5:4"]:not([data-booted])::before { aspect-ratio: 5 / 4; }
+.x-fig[data-aspect="2:3"]:not([data-booted])::before { aspect-ratio: 2 / 3; }
+.x-fig[data-static]:not([data-booted])::before { display: none; }
+.x-canvas-box { position: relative; aspect-ratio: 3 / 2; background: var(--x-panel); border-radius: 8px; overflow: hidden; }
+.x-canvas-box > canvas { display: block; width: 100%; height: 100%; }
+.x-canvas-box > canvas.x-can-drag { cursor: grab; }
+.x-canvas-box > canvas.x-dragging { cursor: grabbing; }
+.x-poster { display: block; width: 100%; height: auto; }
+.x-fig[data-mounted] .x-poster { display: none; }
+.x-fig figcaption { margin-top: 0.75rem; font: 0.9rem/1.5 var(--x-sans); color: var(--x-muted); text-align: center; }
+.x-fig-error { font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color: light-dark(#a1120f, #ff8a80); background: light-dark(#fff1f0, #3a1412); padding: 0.6rem 0.8rem; border-radius: 6px; white-space: pre-wrap; }
+.x-readouts, .x-drag-proxy:not(:focus-visible), .x-ctl-segmented legend, .x-steps-seg legend { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* corner buttons: 44 px targets over the canvas, never over the drawing's center */
+.x-corner { position: absolute; bottom: 0.5rem; display: flex; gap: 0.375rem; }
+.x-corner-left { left: 0.5rem; }
+.x-corner-right { right: 0.5rem; }
+.x-fig button { font: 600 0.8125rem/1 var(--x-sans); color: var(--fg); background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid var(--x-rule); border-radius: 999px; min-height: 2.75rem; padding: 0 1rem; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; backdrop-filter: blur(6px); }
+.x-fig button:hover { border-color: var(--x-muted); }
+.x-fig button:focus-visible { outline: 2px solid var(--x-accent); outline-offset: 2px; }
+.x-fig button:disabled { opacity: 0.35; cursor: default; }
+.x-play[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.x-toggle::before { content: ""; display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; border: 1.5px solid var(--token); margin-right: 0.5em; vertical-align: -0.05em; }
+.x-toggle[aria-pressed="true"]::before { background: var(--token); }
+
+/* controls under the canvas, in spec order */
+.x-ctl { margin: 0.9rem auto 0; font: 0.9rem/1.3 var(--x-sans); }
+.x-ctl.x-hl { outline: 2px solid var(--token, var(--x-accent)); outline-offset: 6px; border-radius: 4px; }
+.x-ctl-slider { width: min(380px, 100%); }
+.x-ctl-slider.x-long { width: min(600px, 100%); }
+.x-ctl-slider label { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "input input" "label output"; align-items: center; column-gap: 0.75rem; }
+.x-ctl-slider .x-ctl-label { grid-area: label; color: var(--x-muted); }
+.x-ctl-slider output { grid-area: output; color: var(--token); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.x-ctl-slider input[type="range"] { grid-area: input; -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: pointer; }
+.x-ctl-slider input[type="range"]:focus { outline: none; }
+.x-ctl-slider input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--token) var(--x-pct, 0%), var(--x-rule) var(--x-pct, 0%)); }
+.x-ctl-slider input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--x-rule); }
+.x-ctl-slider input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--token); }
+/* the thumb is a 40 px target drawn as an 18 px knob with a 2 px page-colored ring */
+.x-ctl-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; margin-top: -18px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--token) 0 9px, var(--bg) 9.5px 11px, transparent 11.5px); }
+.x-ctl-slider input[type="range"]::-moz-range-thumb { width: 40px; height: 40px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--token) 0 9px, var(--bg) 9.5px 11px, transparent 11.5px); }
+.x-ctl-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--token) 40%, transparent); }
+.x-ctl-slider input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--token) 40%, transparent); }
+.x-ctl-toggle { text-align: center; }
+.x-ctl-segmented { text-align: center; }
+.x-ctl-segmented fieldset, .x-steps-seg { position: relative; display: inline-flex; margin: 0; padding: 0; border: 1px solid var(--x-rule); border-radius: 999px; overflow: hidden; }
+.x-ctl-segmented label, .x-steps-seg label { position: relative; display: inline-flex; align-items: center; min-height: 2.5rem; padding: 0 1rem; cursor: pointer; }
+.x-ctl-segmented label + label, .x-steps-seg label + label { border-left: 1px solid var(--x-rule); }
+.x-ctl-segmented input, .x-steps-seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.x-ctl-segmented label:has(input:checked) { background: var(--token, var(--x-accent)); color: var(--bg); }
+.x-steps-seg label:has(input:checked) { background: var(--fg); color: var(--bg); }
+.x-ctl-segmented label:has(input:focus-visible), .x-steps-seg label:has(input:focus-visible) { outline: 2px solid var(--x-accent); outline-offset: -2px; }
+.x-drag-proxy:focus-visible { position: static; width: auto; height: auto; margin: 0.75rem auto 0; clip: auto; display: block; }
+
+/* stepper */
+.x-stepper { margin: 1rem auto 0; text-align: center; }
+.x-stepper-row { display: inline-flex; align-items: center; gap: 0.75rem; }
+.x-stepper .x-prev, .x-stepper .x-next { width: 2.75rem; height: 2.75rem; padding: 0; border-radius: 50%; font-size: 1.6rem; font-weight: 400; line-height: 1; }
+.x-stepper output { min-width: 11ch; font-size: 0.9rem; color: var(--x-muted); font-variant-numeric: tabular-nums; }
+.x-caption { margin: 0.6rem 0 0; font: 0.95rem/1.5 var(--x-serif); }
+.x-caption:empty { display: none; }
+
+/* scene3d placeholder (phase 3 brings WebGL) */
+.x-3d-fallback { position: absolute; inset: 0; display: grid; place-content: center; gap: 0.5rem; padding: 1rem; text-align: center; }
+.x-3d-poster { max-width: 100%; max-height: 60%; margin: 0 auto; }
+.x-3d-caption { margin: 0; }
+.x-3d-notice { margin: 0; font-size: 0.85rem; color: var(--x-muted); }
+
+/* ------------------------------------------------------- prose hooks */
+
+dfn { font-weight: 700; font-style: normal; }
+dfn a { color: inherit; text-decoration: none; border-bottom: 2px solid color-mix(in srgb, var(--x-accent) 55%, transparent); }
+dfn a:hover { border-bottom-color: var(--x-accent); }
+a.term { color: inherit; text-decoration: underline dotted; text-decoration-color: var(--x-muted); text-decoration-thickness: 1.5px; text-underline-offset: 0.18em; cursor: help; }
+.x-ref { color: var(--tok, inherit); text-decoration: underline; text-decoration-color: currentColor; text-decoration-thickness: 1.5px; text-underline-offset: 0.18em; }
+.x-ref[data-dashed] { text-decoration-style: dashed; }
+.x-ref:hover { text-decoration-thickness: 2.5px; }
+/* pointing at something the figure hides right now: plain prose, both schemes, every width */
+.x-ref.x-ref-hidden, .x-ref.x-ref-hidden:hover { color: inherit; text-decoration: none; cursor: inherit; }
+a[data-state] { text-decoration-style: dotted; }
+
+/* the shared glossary tooltip (popover) */
+#x-tip { position: fixed; inset: auto; margin: 0; max-width: min(22rem, calc(100vw - 1rem)); padding: 0.6rem 0.85rem; border: 1px solid var(--x-rule); border-radius: 8px; background: var(--bg); color: var(--fg); font: 0.9rem/1.45 var(--x-sans); box-shadow: 0 8px 28px rgb(0 0 0 / 0.18); z-index: 20; pointer-events: none; }
+
+/* glossary */
+.x-glossary { margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid var(--x-rule); }
+.x-glossary summary { font: 600 1.25rem/1.3 var(--x-sans); cursor: pointer; }
+.x-glossary dl { margin: 1rem 0 0; }
+.x-glossary .row { padding: 0.7rem 0.5rem; margin: 0 -0.5rem; border-bottom: 1px solid var(--x-rule); border-radius: 6px; }
+.x-glossary dt { font: 600 1rem/1.4 var(--x-sans); }
+.x-glossary dd { margin: 0.25rem 0 0; }
+.x-glossary .x-back { font-size: 0.85rem; text-decoration: none; margin-left: 0.4rem; }
+.x-flash { animation: x-flash 1.6s ease-out; }
+@keyframes x-flash { 0%, 30% { background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); } 100% { background-color: transparent; } }
+
+/* math */
+.x-tex { overflow-x: auto; overflow-y: hidden; padding: 0.15rem 0; -webkit-overflow-scrolling: touch; }
+div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
+.x-tex .katex-display { margin: 0; }
+
+/* ---------------------------------------------------------- responsive */
+
+@media (max-width: 40rem) {
+  h1 { font-size: 2rem; margin-top: 2rem; }
+  h2 { font-size: 1.35rem; margin-top: 2.25rem; }
+  body { font-size: 1rem; }
+  .x-fig { margin-left: -0.5rem; margin-right: -0.5rem; }
+  .x-canvas-box, .x-fig:not([data-booted])::before { border-radius: 4px; }
+  .x-ctl-slider, .x-ctl-slider.x-long { width: 100%; padding: 0 0.5rem; box-sizing: border-box; }
+  .x-fig button { min-height: 2.5rem; padding: 0 0.8rem; }
+  .x-corner { bottom: 0.375rem; }
+  .x-corner-left { left: 0.375rem; }
+  .x-corner-right { right: 0.375rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .x-flash { animation: none; background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); }
+}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf8f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<meta property="og:title" content="{{title}}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{url}}">
+<meta property="og:image" content="{{url}}assets/og.png">
+<meta property="og:description" content="{{description}}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="../../dist/explainers.v1.css">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js"></script>
+<style>
+  /* The article palette: at most 6 tokens, each with a light and a dark value.
+     The same token names color canvas layers, slider tracks, \tok{} symbols in
+     equations, <span data-ref> prose and glossary rows. Every token needs
+     >= 3:1 contrast against --bg in both schemes (the validator checks). */
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#faf8f5, #151412);
+    --fg: light-dark(#1d1c1a, #e8e4dc);
+    {{tokens}}
+  }
+</style>
+</head>
+<body>
+<main>
+<header class="x-hero">
+  <h1>{{title}}</h1>
+  <p class="x-lede">{{lede}}</p>
+  {{hero}}
+</header>
+<nav class="x-page-tools"><a class="x-pause-all" href="#">Pause all animations</a></nav>
+
+{{sections}}
+
+<section id="further-watching-and-reading">
+<h2><a class="x-anchor" href="#further-watching-and-reading">Further watching and reading</a></h2>
+<ul>
+  {{further}}
+</ul>
+</section>
+
+<section id="final-words">
+<h2><a class="x-anchor" href="#final-words">Final words</a></h2>
+{{final}}
+</section>
+
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    {{glossary}}
+  </dl>
+</details>
+</main>
+</body>
+</html>

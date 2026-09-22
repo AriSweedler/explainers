@@ -1,0 +1,69 @@
+<!-- explainers-test: code=SPEC_STATE_OUT_OF_RANGE command=validate -->
+<!-- broken on purpose: state value outside the slider range -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Minimal</title>
+<link rel="stylesheet" href="../../dist/explainers.v1.css">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#ffffff, #111111);
+    --fg: light-dark(#111111, #eeeeee);
+    --c-ink: light-dark(#1f4e9c, #8ab4f8);
+    --c-mark: light-dark(#b3324a, #ee6c86);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>Minimal</h1>
+<section id="one">
+<h2><a class="x-anchor" href="#one">One</a></h2>
+<p>The <span data-fig="fig-dot" data-ref="dot">blue dot</span> rides a circle of <dfn id="t-radius"><a href="#g-radius">radius</a></dfn>, the distance from the center to the rim.</p>
+<figure class="x-fig" id="fig-dot" data-aspect="1:1">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene2d",
+    "view": { "x": [-2, 2], "y": [-2, 2] },
+    "layers": [
+      { "id": "rim", "kind": "circle", "cx": 0, "cy": 0, "r": 1, "stroke": "mark", "dash": [3, 3] },
+      { "id": "dot", "kind": "circle", "cx": "cos(a)", "cy": "sin(a)", "r": 0.1, "fill": "ink" }
+    ]
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "a", "label": "angle", "min": 0, "max": 6.283, "default": 0, "token": "ink", "format": "{deg(a):deg}" }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["dot"],
+    "states": [
+      { "name": "quarter", "a": 99, "caption": "A quarter turn." }
+    ]
+  }
+}
+</script>
+<figcaption>Drag the slider.</figcaption>
+</figure>
+<p>At <a href="#fig-dot" data-state="quarter">a quarter turn</a> the dot sits straight up, one <a class="term" href="#g-radius">radius</a> above the center.</p>
+</section>
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    <div class="row" id="g-radius">
+      <dt>radius <a class="x-back" href="#t-radius" aria-label="back to first use">↩</a></dt>
+      <dd>The distance from the center of a circle to its rim.</dd>
+    </div>
+  </dl>
+</details>
+</main>
+</body>
+</html>

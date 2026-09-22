@@ -1,0 +1,12 @@
+{
+  "name": "explainers",
+  "private": true,
+  "description": "Ciechanowski-style interactive explainers: a vendored widget runtime, a JSON figure-spec contract, and the Node validator/builder. Tooling dependencies live in tools/package.json; this root file only runs the tests.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.mjs'",
+    "build-cli": "node tools/build-cli.mjs",
+    "docs": "node tools/gen-docs.mjs"
+  }
+}

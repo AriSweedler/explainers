@@ -1,0 +1,94 @@
+# explainers
+
+Ciechanowski-style interactive explainers ([reference style](https://ciechanow.ski/gps/)) as plain static files:
+one HTML file per article, one shared vendored runtime, one stylesheet, zero third-party bytes from any CDN except Google Fonts.
+
+A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec with three keys, **shows** (what it draws), **manipulates** (what the reader changes) and **notice** (named states and what the prose points at). The runtime draws it; a Node CLI refuses anything outside the closed vocabulary.
+
+**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/poc-months/` (the sidereal and synodic month). Phase 3 adds WebGL figures (three.js), SVG posters and `integrity.json`; see "Phase 2 contract" in `DESIGN.md` for what is done and what is deferred.
+
+## Layout
+
+```
+index.html, 404.html, .nojekyll      site root (GitHub Pages via Actions; see .github/workflows/pages.yml)
+articles/<slug>/index.html           one article = one file (+ articles/<slug>/assets/ for posters and diagrams)
+template/article.html                the head, palette, reading column and glossary every article starts from
+dist/                                explainers-runtime.v1.js, explainers.v1.css (committed build outputs)
+lib/core/, lib/scene2d/, lib/controls/, lib/site/   runtime source (ES modules); tools/build-runtime.mjs concatenates them into dist/
+assets/katex/                        vendored KaTeX CSS + woff2 fonts (relative url() in the CSS)
+lib/spec.js, lib/expr.js             the closed vocabulary and expression grammar, shared by runtime and CLI
+tools/explainers.cjs                 single committed Node 22 CLI: validate | states | build | budget
+tools/src/, tools/build-cli.mjs      CLI source and its bundler (maintainers only)
+test/                                node --test suites and pass/fail fixtures
+DESIGN.md                            the contract: vocabulary (generated), grammar, error catalogue, phase-2 contract
+```
+
+## Author an article
+
+1. Copy `template/article.html` to `articles/<slug>/index.html` and fill the `{{...}}` placeholders. Declare at most 6 palette tokens as `--c-<name>: light-dark(#light, #dark)` in the `:root` rule.
+2. Write sections. Each interactive figure is
+
+   ```html
+   <figure class="x-fig" id="fig-<slug>" data-aspect="3:2">
+   <script type="application/json">{ "shows": {...}, "manipulates": {...}, "notice": {...} }</script>
+   <figcaption>...</figcaption>
+   </figure>
+   ```
+
+   Numeric properties are numbers or expression strings (`"R*cos(tau*t/T_sid)"`); colors are palette token names.
+3. Point prose at the figure: `<span data-fig="fig-x" data-ref="layer-id">the red line</span>`; jump to a state: `<a href="#fig-x" data-state="name">27.32 days</a>`.
+4. Mark a term's first use `<dfn id="t-slug"><a href="#g-slug">term</a></dfn>`, later uses `<a class="term" href="#g-slug">term</a>`, and add its row to the glossary `<details>` at the end of `<main>`.
+5. Write math as LaTeX in `<span class="x-tex">` / `<div class="x-tex">`, coloring symbols with `\tok{token}{...}`.
+6. Build and validate until exit 0:
+
+   ```sh
+   node tools/explainers.cjs build    articles/<slug>/index.html   # KaTeX -> HTML+MathML in place, idempotent
+   node tools/explainers.cjs validate articles/<slug>/index.html --budget 170k
+   node tools/explainers.cjs states   articles/<slug>/index.html   # list states; every expression finite at each
+   ```
+
+   Every failure is one line, `file:line: CODE figure-id: message`; the codes are listed in `DESIGN.md` and by `node tools/explainers.cjs errors`.
+7. Add a line to `index.html` and push. The Pages workflow re-validates and deploys.
+
+## Run the tools
+
+```sh
+npm test                                  # node --test: expr, spec, cli, docs
+node tools/explainers.cjs --help          # no install needed; single committed file
+node tools/explainers.cjs vocab           # the vocabulary as markdown (what DESIGN.md embeds)
+```
+
+Maintainers (changing `lib/` or `tools/src/`):
+
+```sh
+node tools/build-runtime.mjs                    # lib/ -> dist/explainers-runtime.v1.js (no dependencies; npm test checks it is current)
+cd tools && npm install && node build-cli.mjs   # rebundles tools/explainers.cjs, vendors assets/katex, regenerates DESIGN.md
+```
+
+Never hand-edit `tools/explainers.cjs` or `dist/explainers-runtime.v1.js`.
+
+## Preview locally
+
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1
+# open http://127.0.0.1:8765/articles/<slug>/            (relative includes and fragments work)
+# open http://127.0.0.1:8765/articles/<slug>/#fig-x=state  to land on a named state
+```
+
+Opening `articles/<slug>/index.html` directly from disk also works for fragment links and the runtime include. A headless screenshot without any install:
+
+```sh
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --hide-scrollbars \
+  --window-size=1200,2400 --screenshot=preview/poc.png http://127.0.0.1:8765/articles/poc-months/index.html
+```
+
+## How the runtime mounts
+
+`dist/explainers-runtime.v1.js` is loaded once with `<script defer>`. On `DOMContentLoaded` it
+
+1. reads the palette token names from the inline `<style>` and resolves them to real colors (canvas cannot parse `light-dark()`), re-resolving when the color scheme changes;
+2. for every `figure.x-fig` with a JSON block, runs the same `validateSpec` the CLI runs (a failure is printed inside the figure as `<p class="x-fig-error">`) and scaffolds the DOM the contract describes: `.x-canvas-box` (aspect from `data-aspect`) with corner Play/Restart and toggle buttons, then the controls in spec order (`<fig>_sl<i>`, `<fig>_tg<i>`, `<fig>_seg<i>`, `<fig>_drag_<name>`), then the stepper (`<fig>_steps`), before the `<figcaption>`;
+3. watches each figure with an `IntersectionObserver` (100 px margin); on first approach it sizes the canvas for DPR 1 or 2, draws, sets `data-mounted` and emits `x-fig:mount`; off screen it releases the canvas bitmap and stops ticking;
+4. routes `#fig-x=state` (on load and `hashchange`) to `figure.goto(state, { ease: false })`, intercepts `<a data-state href="#fig-x">` clicks (600 ms smoothstep ease, `history.replaceState`), colors `<span data-fig data-ref>` from the layer's token and highlights the layer on hover, fills one shared `#x-tip` tooltip from the glossary `<dd>` on hover/focus of `a.term`, and opens `<details id="glossary">` before the browser scrolls to a `#g-*` row.
+
+`window.explainers` (`version`, `figures`, `goto(figId, state)`, `pauseAll(bool)`) is a console handle for tests, not an authoring surface. Every value change goes through `figure.set(name, value)`, so the knob, the readouts and the canvas always agree; `x-fig:set`, `x-fig:state` and `x-fig:play` bubble from the figure element.
