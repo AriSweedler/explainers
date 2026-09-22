@@ -7,6 +7,14 @@ A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec
 
 **Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/poc-months/` (the sidereal and synodic month). Phase 3 adds WebGL figures (three.js), SVG posters and `integrity.json`; see "Phase 2 contract" in `DESIGN.md` for what is done and what is deferred.
 
+## Preview locally
+
+```
+npm run serve
+```
+
+then open http://127.0.0.1:8765/articles/hebrew-calendar/ (or `PORT=9000 npm run serve`). The server is `tools/serve.mjs`, zero dependencies, no caching.
+
 ## Layout
 
 ```
