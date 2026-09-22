@@ -5,7 +5,7 @@ one HTML file per article, one shared vendored runtime, one stylesheet, zero thi
 
 A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec with three keys, **shows** (what it draws), **manipulates** (what the reader changes) and **notice** (named states and what the prose points at). The runtime draws it; a Node CLI refuses anything outside the closed vocabulary.
 
-**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/poc-months/` (the sidereal and synodic month). Phase 3 adds WebGL figures (three.js), SVG posters and `integrity.json`; see "Phase 2 contract" in `DESIGN.md` for what is done and what is deferred.
+**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3 adds WebGL figures (three.js), SVG posters and `integrity.json`; see "Phase 2 contract" in `DESIGN.md` for what is done and what is deferred.
 
 ## explainers.sweedler.com
 
@@ -107,7 +107,7 @@ Opening `articles/<slug>/index.html` directly from disk also works for fragment 
 
 ```sh
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --hide-scrollbars \
-  --window-size=1200,2400 --screenshot=preview/poc.png http://127.0.0.1:8765/articles/poc-months/index.html
+  --window-size=1200,2400 --screenshot=preview/poc.png http://127.0.0.1:8765/articles/moon/index.html
 ```
 
 ## How the runtime mounts

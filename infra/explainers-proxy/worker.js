@@ -2,6 +2,7 @@
 //   /                 -> arisweedler.github.io/explainers/                 (the index)
 //   /XXX              -> .../explainers/articles/XXX                       (short article URLs)
 //   /articles/XXX     -> 301 to /XXX                                       (index-card links)
+//   /poc-months/…     -> 301 to /moon/…                                    (renamed article)
 //   /dist/…  /assets/…  /favicon.svg  /404.html  /index.html  /robots.txt
 //                     -> .../explainers/<same path>                        (assets the pages load relatively)
 //   /explainers/…     passes through unchanged.
@@ -22,9 +23,15 @@ const ROOT_PATHS = ['/dist/', '/assets/', '/favicon.svg', '/404.html', '/index.h
 const isRootPath = (pathname) =>
   ROOT_PATHS.some((p) => (p.endsWith('/') ? pathname.startsWith(p) : pathname === p));
 
+/** Old article slugs and where they moved; the Worker 301s them so early links keep working. */
+const RENAMED = { '/poc-months': '/moon' };
+
 /** Pure mapping from a pathname on this origin to what the Worker does with it. */
 export const mapPath = (pathname) => {
   if (pathname === '/' || pathname === '') return { kind: 'fetch', path: `${SITE}/` };
+  for (const [from, to] of Object.entries(RENAMED)) {
+    if (pathname === from || pathname.startsWith(`${from}/`)) return { kind: 'redirect', path: to + pathname.slice(from.length) };
+  }
   if (pathname.startsWith(`${SITE}/`)) return { kind: 'fetch', path: pathname };
   if (pathname.startsWith('/articles/')) return { kind: 'redirect', path: pathname.slice('/articles'.length) };
   if (isRootPath(pathname)) return { kind: 'fetch', path: SITE + pathname };

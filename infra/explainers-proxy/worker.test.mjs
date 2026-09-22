@@ -17,7 +17,7 @@ test('mapPath: the table in the file header (fetches)', () => {
     ['/', '/explainers/'], ['', '/explainers/'],
     ['/hebrew-calendar', '/explainers/articles/hebrew-calendar'],
     ['/hebrew-calendar/', '/explainers/articles/hebrew-calendar/'],
-    ['/poc-months/', '/explainers/articles/poc-months/'],
+    ['/moon/', '/explainers/articles/moon/'],
     ['/dist/explainers-runtime.v1.js', '/explainers/dist/explainers-runtime.v1.js'],
     ['/assets/katex/katex.min.css', '/explainers/assets/katex/katex.min.css'],
     ['/favicon.svg', '/explainers/favicon.svg'], ['/404.html', '/explainers/404.html'],
@@ -30,7 +30,8 @@ test('mapPath: the table in the file header (fetches)', () => {
 test('mapPath: /articles/… redirects to the short URL', () => {
   for (const [pathname, shortPath] of [
     ['/articles/hebrew-calendar/', '/hebrew-calendar/'], ['/articles/hebrew-calendar', '/hebrew-calendar'],
-    ['/articles/poc-months/assets/x.png', '/poc-months/assets/x.png'], ['/articles/', '/'],
+    ['/articles/moon/assets/x.png', '/moon/assets/x.png'], ['/articles/', '/'],
+    ['/poc-months/', '/moon/'], ['/poc-months', '/moon'], ['/poc-months/assets/x.png', '/moon/assets/x.png'],
   ]) assert.deepEqual(mapPath(pathname), { kind: 'redirect', path: shortPath }, pathname);
 });
 

@@ -33,7 +33,7 @@ const root = path.resolve(here, '..');
 const MINUS = '−', NBSP = ' ';
 
 function figMonths() {
-  const html = fs.readFileSync(path.join(root, 'articles/poc-months/index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(root, 'articles/moon/index.html'), 'utf8');
   const m = /<script type="application\/json">([\s\S]*?)<\/script>/.exec(html);
   return validateSpec(JSON.parse(m[1]), { figureId: 'fig-months', palette: ['sun', 'moon', 'earth', 'star', 'muted'] });
 }
