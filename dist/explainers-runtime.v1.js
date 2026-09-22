@@ -1692,8 +1692,8 @@ return shown;
 const px = (m, [wx, wy]) => [m.x(wx), m.y(wy)];
 const angleOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]);
 const shorten = (a, b, d) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [b[0] - ((b[0] - a[0]) / L) * d, b[1] - ((b[1] - a[1]) / L) * d]; };
-function geometryOf(L, scope, m) {
-const s = L.spec, g = L.g, path = new Path2D(), heads = [];
+function geometryOf(L, scope, m, makePath = () => new Path2D()) {
+const s = L.spec, g = L.g, path = makePath(), heads = [];
 const head = (s.head || HEAD_PX) * (L.highlight ? 1.3 : 1);
 const wantStart = s.arrow === 'start' || s.arrow === 'both';
 const wantEnd = s.arrow === 'end' || s.arrow === 'both' || s.kind === 'arrow';
@@ -2428,6 +2428,8 @@ const canvas = h('canvas');
 const cornerRight = h('div', { class: 'x-corner x-corner-right' });
 const readoutsEl = h('div', { class: 'x-readouts', 'aria-live': 'polite' });
 box.append(canvas, cornerRight, readoutsEl);
+const poster = el.querySelector(':scope > .x-poster');
+if (poster) canvas.after(poster);
 insert(box);
 el.dataset.booted = '';
 const mounted = [];
@@ -2698,6 +2700,7 @@ unsubscribe = null;
 if (ro) ro.disconnect();
 if (detachDrag) detachDrag();
 clearTimeout(mirrorTimer);
+if (poster) el.prepend(poster);
 for (const node of el.querySelectorAll(':scope > .x-canvas-box, :scope > .x-ctl, :scope > .x-stepper, :scope > .x-drag-proxy')) node.remove();
 delete el.dataset.mounted;
 delete el.dataset.booted;

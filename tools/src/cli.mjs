@@ -8,8 +8,11 @@ import { describeVocabulary, ERROR_CATALOGUE } from '../../lib/spec.js';
 import { describeFunctions } from '../../lib/expr.js';
 import { Problems } from './report.mjs';
 import { loadArticle, validateArticle, compileFigures, checkFigureStates } from './article.mjs';
+import { parseHtml } from './html.mjs';
 import { extractPalette } from './palette.mjs';
 import { buildTex } from './tex.mjs';
+import { buildPosters, buildCaptions } from './poster.mjs';
+import { buildIntegrity } from './integrity.mjs';
 import { parseBudget, checkBudget, formatReport, DEFAULT_BUDGET } from './budget.mjs';
 
 // Filled in by esbuild's define when bundled; see tools/build-cli.mjs.
@@ -31,8 +34,11 @@ validate  figure specs (schema, expressions, ranges, states), page structure,
           glossary contract, KaTeX parse and staleness; --budget adds the byte budget.
 states    enumerate notice.states per figure and evaluate every expression at
           the defaults, at each state, and with each played control at min/default/max.
-build     render every .x-tex with KaTeX (htmlAndMathml) in place, keeping the
-          source in data-tex; idempotent.
+build     in place, idempotent: render every .x-tex with KaTeX (htmlAndMathml),
+          keeping the source in data-tex; put each figure's first frame in front
+          of its JSON block as <svg class="x-poster"> (or assets/poster-<fig>.svg
+          above 8 KiB); append the caveat sentence to the figcaption; resolve
+          integrity="{{integrity:dist/...}}" from dist/integrity.json.
 budget    gzip bytes of HTML + runtime + CSS + KaTeX CSS against --budget (default ${DEFAULT_BUDGET}).
 
 Every failure prints  file:line: CODE figure-id: message  and exits 1.`;
@@ -85,15 +91,29 @@ function cmdStates(files, problems, out) {
   }
 }
 
-function cmdBuild(files, problems, out) {
+// Four passes, each re-parsing the text the previous one produced so their
+// edits never overlap: math, posters, caveat sentences, integrity.
+function cmdBuild(files, repoRoot, problems, out) {
   for (const file of files) {
     const article = loadArticle(file);
-    const palette = new Set(extractPalette(article.doc).names);
+    const palette = extractPalette(article.doc);
     const before = problems.errors.length;
-    const { html, count } = buildTex(article.doc, article.html, file, palette, problems);
+    const tex = buildTex(article.doc, article.html, file, new Set(palette.names), problems);
+    if (problems.errors.length > before) continue;
+    let html = tex.html, doc = parseHtml(html);
+    const figures = compileFigures({ file, doc }, palette.names, problems);
+    if (problems.errors.length > before) continue;
+    const valid = new Map([...figures].filter(([, c]) => c));
+    const posters = buildPosters(doc, html, file, valid, palette);
+    html = posters.html; doc = parseHtml(html);
+    const captions = buildCaptions(doc, html, valid);
+    html = captions.html; doc = parseHtml(html);
+    const integrity = buildIntegrity(doc, html, file, repoRoot, problems);
+    html = integrity.html;
     if (problems.errors.length > before) continue;
     if (html !== article.html) fs.writeFileSync(file, html);
-    out.write(`${file}: ${count} formula(s) rendered${html === article.html ? ' (unchanged)' : ''}\n`);
+    const ext = posters.external.length ? ` (${posters.external.length} external: ${posters.external.join(', ')})` : '';
+    out.write(`${file}: ${tex.count} formula(s) rendered, ${posters.count} poster(s) written${ext}, ${captions.count} caption(s) amended, ${integrity.count} integrity attribute(s) set${html === article.html ? ' (unchanged)' : ''}\n`);
   }
 }
 
@@ -125,7 +145,7 @@ export function main(argv, { stdout = process.stdout, stderr = process.stderr, h
     switch (args.command) {
       case 'validate': cmdValidate(args.files, budget, repoRoot, problems, stdout); break;
       case 'states': cmdStates(args.files, problems, stdout); break;
-      case 'build': cmdBuild(args.files, problems, stdout); break;
+      case 'build': cmdBuild(args.files, repoRoot, problems, stdout); break;
       case 'budget': cmdBudget(args.files, budget ?? parseBudget(DEFAULT_BUDGET), repoRoot, problems, stdout); break;
       default: break;
     }

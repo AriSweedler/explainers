@@ -16,6 +16,7 @@ const root = path.resolve(here, '..');
 const CLI = path.join(root, 'tools/explainers.cjs');
 const passDir = path.join(here, 'fixtures/pass');
 const failDir = path.join(here, 'fixtures/fail');
+const warnDir = path.join(here, 'fixtures/warn');
 
 function run(args, cwd = root) {
   const r = spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8' });
@@ -24,15 +25,17 @@ function run(args, cwd = root) {
 
 const passFiles = fs.readdirSync(passDir).filter((f) => f.endsWith('.html')).map((f) => path.join('test/fixtures/pass', f));
 const failFiles = fs.readdirSync(failDir).filter((f) => f.endsWith('.html')).sort();
+const warnFiles = fs.readdirSync(warnDir).filter((f) => f.endsWith('.html')).sort();
 
-function header(file) {
-  const first = fs.readFileSync(path.join(failDir, file), 'utf8').split('\n')[0];
+function header(file, dir = failDir) {
+  const first = fs.readFileSync(path.join(dir, file), 'utf8').split('\n')[0];
   const m = /<!-- explainers-test: (.*) -->/.exec(first);
   assert.ok(m, `${file} must start with an explainers-test header`);
   const opts = {};
-  for (const kv of m[1].match(/\w+=(?:"[^"]*"|\S+)/g) || []) {
+  for (const kv of m[1].match(/\w+=(?:"(?:[^"\\]|\\.)*"|\S+)/g) || []) {
     const [k, ...rest] = kv.split('=');
-    opts[k] = rest.join('=').replace(/^"(.*)"$/, '$1');
+    const v = rest.join('=');
+    opts[k] = v.startsWith('"') ? JSON.parse(v) : v; // quoted values are JSON strings (the warning regexes contain quotes)
   }
   return opts;
 }
@@ -66,26 +69,95 @@ test('pass fixtures validate, enumerate states and fit the budget', () => {
   assert.match(b.out, /total gzip bytes \(budget 170000, ok\)/);
 });
 
-test('build renders KaTeX in place, is idempotent, and validates clean afterwards', () => {
+test('build renders KaTeX, inserts the poster, resolves integrity, is idempotent, and validates clean afterwards', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-build-'));
   const file = path.join(tmp, 'fig-months.html');
   fs.copyFileSync(path.join(passDir, 'fig-months.html'), file);
   const first = run(['build', file]);
   assert.equal(first.code, 0, first.err);
-  assert.match(first.out, /1 formula\(s\) rendered/);
+  assert.match(first.out, /1 formula\(s\) rendered, 1 poster\(s\) written, 0 caption\(s\) amended, 2 integrity attribute\(s\) set/);
   const built = fs.readFileSync(file, 'utf8');
   assert.match(built, /<div class="x-tex" data-tex="\\frac\{1\}\{\\tok\{sun\}/);
   assert.match(built, /class="katex"/);
   assert.match(built, /<math /, 'htmlAndMathml output');
   assert.match(built, /enclosing sun/, '\\tok{sun} became an \\htmlClass span');
+  assert.match(built, /<figure class="x-fig" id="fig-months" data-aspect="3:2">\n<svg class="x-poster" id="fig-months-poster" [^>]*data-poster="[0-9a-f]{40}">[\s\S]*<\/svg>\n<script type="application\/json">/, 'the poster is the first child, before the JSON block');
+  assert.equal((built.match(/Not to scale\./g) || []).length, 1, 'the caption already said it; not repeated');
+  const integrity = JSON.parse(fs.readFileSync(path.join(root, 'dist/integrity.json'), 'utf8'));
+  assert.ok(built.includes(`<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="${integrity['dist/explainers.v1.css']}">`));
+  assert.ok(built.includes(`<script defer src="../../dist/explainers-runtime.v1.js" integrity="${integrity['dist/explainers-runtime.v1.js']}"></script>`));
+  assert.doesNotMatch(built, /\{\{integrity:/, 'placeholders resolved');
   const second = run(['build', file]);
   assert.equal(second.code, 0, second.err);
-  assert.match(second.out, /\(unchanged\)/);
+  assert.match(second.out, /0 poster\(s\) written, 0 caption\(s\) amended, 0 integrity attribute\(s\) set \(unchanged\)/);
   assert.equal(fs.readFileSync(file, 'utf8'), built, 'idempotent');
   const v = run(['validate', file]);
   assert.equal(v.code, 0, v.err);
-  assert.doesNotMatch(v.err, /formula not built/);
+  assert.doesNotMatch(v.err, /formula not built|run: explainers build|warning/, 'a built article validates without warnings');
+  // a stale integrity value is refreshed by build and refused by validate
+  const stale = built.replace(integrity['dist/explainers.v1.css'], 'sha384-' + 'A'.repeat(64));
+  fs.writeFileSync(file, stale);
+  const sv = run(['validate', file]);
+  assert.equal(sv.code, 1);
+  assert.match(sv.err, /INTEGRITY_STALE -: the stylesheet <link> has integrity="sha384-A+" but dist\/integrity\.json says sha384-/);
+  assert.equal(run(['build', file]).code, 0);
+  assert.equal(fs.readFileSync(file, 'utf8'), built, 'build refreshes a stale attribute');
   fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('build appends the caveat sentence once, and externalizes posters above 8 KiB as <img> + assets/poster-<fig>.svg', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-build-'));
+  const file = path.join(tmp, 'index.html');
+  const base = fs.readFileSync(path.join(passDir, 'minimal.html'), 'utf8');
+  const withCaveat = base.replace('"view": { "x": [-2, 2], "y": [-2, 2] },', '"view": { "x": [-2, 2], "y": [-2, 2] },\n    "caveats": { "not_to_scale": true },');
+  fs.writeFileSync(file, withCaveat);
+  const b1 = run(['build', file]);
+  assert.equal(b1.code, 0, b1.err);
+  assert.match(b1.out, /1 caption\(s\) amended/);
+  let built = fs.readFileSync(file, 'utf8');
+  assert.match(built, /<figcaption>Drag the slider\. Not to scale\.<\/figcaption>/);
+  assert.match(built, /<svg class="x-poster" id="fig-dot-poster"/, 'small poster inline');
+  assert.equal(run(['build', file]).code, 0);
+  assert.equal(fs.readFileSync(file, 'utf8'), built, 'idempotent: the sentence is not appended twice');
+  // 300 text layers push the poster over the inline limit
+  const many = Array.from({ length: 300 }, (_, i) => `{ "id": "t${i}", "kind": "text", "at": [${(i % 20) / 5 - 2}, ${Math.floor(i / 20) / 4 - 2}], "text": "label ${i}", "size": 9 }`).join(',\n      ');
+  fs.writeFileSync(file, built.replace('{ "id": "dot", "kind": "circle"', `${many},\n      { "id": "dot", "kind": "circle"`));
+  const b2 = run(['build', file]);
+  assert.equal(b2.code, 0, b2.err);
+  assert.match(b2.out, /1 poster\(s\) written \(1 external: fig-dot\)/);
+  built = fs.readFileSync(file, 'utf8');
+  assert.match(built, /<figure class="x-fig" id="fig-dot" data-aspect="1:1">\n<img class="x-poster" src="assets\/poster-fig-dot.svg" alt="" width="704" height="704" aria-hidden="true" data-poster="[0-9a-f]{40}">\n<script/);
+  assert.doesNotMatch(built, /<svg class="x-poster"/);
+  const asset = path.join(tmp, 'assets/poster-fig-dot.svg');
+  assert.ok(fs.existsSync(asset));
+  assert.ok(fs.statSync(asset).size > 8 * 1024);
+  assert.match(fs.readFileSync(asset, 'utf8'), /^<svg class="x-poster" id="fig-dot-poster" xmlns="http:\/\/www\.w3\.org\/2000\/svg"[\s\S]*>label 299<[\s\S]*<\/svg>$/);
+  const v = run(['validate', file]);
+  assert.equal(v.code, 0, v.err);
+  assert.doesNotMatch(v.err, /poster/);
+  fs.rmSync(asset);
+  assert.match(run(['validate', file]).err, /warning fig-dot: poster file assets\/poster-fig-dot.svg not found; run: explainers build/);
+  assert.equal(run(['build', file]).code, 0);
+  assert.ok(fs.existsSync(asset), 'build restores a missing external poster');
+  // shrinking the spec again brings the poster back inline and removes the file
+  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(`${many},\n      `, ''));
+  assert.equal(run(['build', file]).code, 0);
+  assert.match(fs.readFileSync(file, 'utf8'), /<svg class="x-poster" id="fig-dot-poster"/);
+  assert.ok(!fs.existsSync(asset), 'the orphaned asset is removed');
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('every warning fixture exits 0 and prints its warning in file:line: warning figure-id: message form', () => {
+  assert.ok(warnFiles.length >= 6, 'run node test/fixtures/make-fail.mjs');
+  for (const f of warnFiles) {
+    const opts = header(f, warnDir);
+    const rel = path.join('test/fixtures/warn', f);
+    const r = run([opts.command || 'validate', rel]);
+    assert.equal(r.code, 0, `${f}: expected exit 0\n${r.err}`);
+    assert.doesNotMatch(r.err, /: [A-Z]+_[A-Z_]+ /, `${f}: warnings only`);
+    const lineRe = new RegExp(`^${rel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\d+: warning (fig-[a-z0-9-]+|-): .*${opts.warning.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'm');
+    assert.match(r.err, lineRe, `${f}: stderr should contain the warning\n${r.err}`);
+  }
 });
 
 test('every fail fixture exits 1 and names its code in file:line: CODE figure-id: message form', () => {

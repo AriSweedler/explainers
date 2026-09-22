@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { writeIntegrity, INTEGRITY_FILE } from './integrity.mjs';
 
 export const VERSION = '1.0.0';
 export const OUTFILE = 'dist/explainers-runtime.v1.js';
@@ -134,10 +135,13 @@ if (invoked) {
   if (process.argv.includes('--check')) {
     const current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
     if (current !== out) { console.error(`${OUTFILE} is stale; run: node tools/build-runtime.mjs`); process.exit(1); }
-    console.log(`${OUTFILE} current`);
+    if (writeIntegrity(root, { check: true }).changed) { console.error(`${INTEGRITY_FILE} is stale; run: node tools/build-runtime.mjs`); process.exit(1); }
+    console.log(`${OUTFILE} and ${INTEGRITY_FILE} current`);
   } else {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, out);
     console.log(`wrote ${OUTFILE}: ${out.length} bytes, ${gzipSize(out)} gzip`);
+    const { changed } = writeIntegrity(root);
+    console.log(changed ? `wrote ${INTEGRITY_FILE}; run: node tools/explainers.cjs build articles/*/index.html` : `${INTEGRITY_FILE} current`);
   }
 }

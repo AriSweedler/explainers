@@ -47,7 +47,7 @@ const FIXTURES = [
   ['FIG_SCRIPT_COUNT', 'two JSON blocks in one figure', before('<figcaption>', '<script type="application/json">{}</script>\n')],
   ['HTML_DUP_ID', 'section id reused', r('<p>At <a href', '<p id="one">At <a href')],
   ['HTML_SCRIPT_FORBIDDEN', 'inline script in the body', before('<details id="glossary"', '<script>alert(1)</script>\n')],
-  ['HTML_INCLUDE_MISSING', 'runtime include removed', r('<script defer src="../../dist/explainers-runtime.v1.js"></script>\n', '')],
+  ['HTML_INCLUDE_MISSING', 'runtime include removed', r('<script defer src="../../dist/explainers-runtime.v1.js" integrity="{{integrity:dist/explainers-runtime.v1.js}}"></script>\n', '')],
   ['HTML_MAIN_MISSING', 'no <main>', (h) => replaceOnce(replaceOnce(h, '<main>', '<div>'), '</main>', '</div>')],
   ['PALETTE_MISSING', 'no --c- tokens', (h) => replaceOnce(replaceOnce(h, '    --c-ink: light-dark(#1f4e9c, #8ab4f8);\n', ''), '    --c-mark: light-dark(#b3324a, #ee6c86);\n', '')],
   ['PALETTE_TOO_MANY', 'seven tokens', after('--c-mark: light-dark(#b3324a, #ee6c86);', '\n    --c-a: light-dark(#111, #eee); --c-b: light-dark(#111, #eee); --c-c: light-dark(#111, #eee); --c-d: light-dark(#111, #eee); --c-e: light-dark(#111, #eee);')],
@@ -72,8 +72,21 @@ const FIXTURES = [
   ['TEX_BANNED', '\\textcolor is banned', before('<details id="glossary"', '<span class="x-tex">\\textcolor{red}{x}</span>\n')],
   ['TEX_RENDER_ERROR', 'an untrusted command renders red instead of throwing', before('<details id="glossary"', '<span class="x-tex">\\htmlId{q}{x}</span>\n')],
   ['TEX_STALE', 'built formula whose content no longer matches data-tex', before('<details id="glossary"', '<span class="x-tex" data-tex="x^2">stale</span>\n')],
+  ['INTEGRITY_MISSING', 'runtime include without its integrity attribute', r(' integrity="{{integrity:dist/explainers-runtime.v1.js}}"', '')],
+  ['INTEGRITY_STALE', 'a resolved integrity value that does not match dist/integrity.json', r('integrity="{{integrity:dist/explainers.v1.css}}"', 'integrity="sha384-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"')],
   ['BUDGET_OVER', 'a 1 kB budget', (h) => h, { variant: 'budget', command: 'budget', args: '--budget 1k' }],
   ['BUDGET_OVER', 'validate with --budget', (h) => h, { variant: 'validate', command: 'validate', args: '--budget 1k' }],
+];
+
+// Warnings: validate exits 0 and prints `file:line: warning figure-id: message`
+// matching the header's regex. [name, why, mutate, regex]
+const WARNINGS = [
+  ['point_at_unreferenced', 'point_at names a layer no <span data-ref> points at', r('"point_at": ["dot"]', '"point_at": ["dot", "rim"]'), 'point_at "rim" is not referenced by any <span data-fig="fig-dot" data-ref="rim">'],
+  ['ref_never_visible', 'a data-ref to a layer hidden at the defaults and in every state', (h) => before('<p>At <a href', '<p>The <span data-fig="fig-dot" data-ref="rim">rim</span> is never drawn.</p>\n')(replaceOnce(h, '"stroke": "mark", "dash": [3, 3] }', '"stroke": "mark", "dash": [3, 3], "visible": false }')), 'data-ref="rim" is hidden at the defaults and in every state of fig-dot'],
+  ['dfn_without_figure', 'a first use in a section that has no figure', (h) => before('  </dl>', '    <div class="row" id="g-extra"><dt>extra <a class="x-back" href="#t-extra" aria-label="back to first use">↩</a></dt><dd>An extra term.</dd></div>\n')(before('<details id="glossary"', '<section id="two">\n<h2><a class="x-anchor" href="#two">Two</a></h2>\n<p>An <dfn id="t-extra"><a href="#g-extra">extra</a></dfn> term with no figure.</p>\n</section>\n')(h)), '<dfn id="t-extra"> is a first use in <section id="two">, which has no <figure class="x-fig">'],
+  ['poster_missing', 'an unbuilt article: no poster yet', (h) => h, 'no poster; run: explainers build'],
+  ['poster_stale', 'a poster whose data-poster hash no longer matches the spec', after('<figure class="x-fig" id="fig-dot" data-aspect="1:1">', '\n<svg class="x-poster" id="fig-dot-poster" aria-hidden="true" data-poster="0000000000000000000000000000000000000000"></svg>'), 'poster is stale; run: explainers build'],
+  ['integrity_unresolved', 'an unbuilt article: the template placeholder is still in place', (h) => h, 'integrity not resolved yet on the runtime <script>; run: explainers build'],
 ];
 
 fs.rmSync(outDir, { recursive: true, force: true });
@@ -83,4 +96,11 @@ for (const [code, why, mutate, opts = {}] of FIXTURES) {
   const header = `<!-- explainers-test: code=${code} command=${opts.command || 'validate'}${opts.args ? ` args="${opts.args}"` : ''} -->\n<!-- broken on purpose: ${why} -->\n`;
   fs.writeFileSync(path.join(outDir, name), header + mutate(base));
 }
-console.log(`wrote ${FIXTURES.length} fixtures to ${path.relative(process.cwd(), outDir)}`);
+const warnDir = path.join(here, 'warn');
+fs.rmSync(warnDir, { recursive: true, force: true });
+fs.mkdirSync(warnDir, { recursive: true });
+for (const [name, why, mutate, expect] of WARNINGS) {
+  const header = `<!-- explainers-test: warning=${JSON.stringify(expect)} command=validate -->\n<!-- warns on purpose: ${why} -->\n`;
+  fs.writeFileSync(path.join(warnDir, `${name}.html`), header + mutate(base));
+}
+console.log(`wrote ${FIXTURES.length} fail fixtures to ${path.relative(process.cwd(), outDir)} and ${WARNINGS.length} warning fixtures to ${path.relative(process.cwd(), warnDir)}`);

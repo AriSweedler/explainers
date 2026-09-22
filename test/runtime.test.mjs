@@ -27,6 +27,7 @@ import { lunar } from '../lib/scene2d/models/lunar.js';
 import { MODEL_FUNCTIONS } from '../lib/scene2d/models/index.js';
 import { MODELS } from '../lib/spec.js';
 import { bundle, gzipSize, OUTFILE, ORDER } from '../tools/build-runtime.mjs';
+import { computeIntegrity, INTEGRITY_FILE, INTEGRITY_FILES } from '../tools/integrity.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -311,7 +312,7 @@ test('the concatenation build is valid JS, current in dist/, and under 40 KB gzi
   assert.equal(load.status, 0, load.stderr);
   assert.equal(load.stdout.trim(), 'undefined', 'without a document the runtime does not boot');
   fs.rmSync(tmp, { recursive: true, force: true });
-  for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState']) assert.ok(out.includes(needle), needle);
+  for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState', ':scope > .x-poster']) assert.ok(out.includes(needle), needle);
   assert.doesNotMatch(out, /^\s*(import|export)\b/m);
   assert.equal(fs.readFileSync(path.join(root, OUTFILE), 'utf8'), out, `${OUTFILE} is stale; run: node tools/build-runtime.mjs`);
   assert.ok(gzipSize(out) <= 40 * 1000, `runtime is ${gzipSize(out)} bytes gzipped`);
@@ -321,5 +322,15 @@ test('the concatenation build is valid JS, current in dist/, and under 40 KB gzi
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
   const css = fs.readFileSync(path.join(root, 'dist/explainers.v1.css'), 'utf8');
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
-  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }']) assert.ok(css.includes(sel), sel);
+});
+
+test('dist/integrity.json holds a current sha384 for the runtime and the stylesheet; the template carries the placeholders', () => {
+  const table = JSON.parse(fs.readFileSync(path.join(root, INTEGRITY_FILE), 'utf8'));
+  assert.deepEqual(Object.keys(table), INTEGRITY_FILES);
+  for (const v of Object.values(table)) assert.match(v, /^sha384-[A-Za-z0-9+/]{64}$/);
+  assert.deepEqual(table, computeIntegrity(root), `${INTEGRITY_FILE} is stale; run: node tools/build-runtime.mjs`);
+  const template = fs.readFileSync(path.join(root, 'template/article.html'), 'utf8');
+  for (const rel of INTEGRITY_FILES) assert.ok(template.includes(`integrity="{{integrity:${rel}}}"`), rel);
+  assert.doesNotMatch(template, /crossorigin="anonymous"/, 'same-origin SRI needs no crossorigin');
 });

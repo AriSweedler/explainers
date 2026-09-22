@@ -5,7 +5,7 @@ one HTML file per article, one shared vendored runtime, one stylesheet, zero thi
 
 A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec with three keys, **shows** (what it draws), **manipulates** (what the reader changes) and **notice** (named states and what the prose points at). The runtime draws it; a Node CLI refuses anything outside the closed vocabulary.
 
-**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3 adds WebGL figures (three.js), SVG posters and `integrity.json`; see "Phase 2 contract" in `DESIGN.md` for what is done and what is deferred.
+**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3A (done) adds SVG posters (the first frame, drawn at build time, shown before the runtime mounts and without JavaScript), `dist/integrity.json` with `integrity=` on the runtime and stylesheet includes, and three validator warnings; phase 3B adds WebGL figures (three.js). See "Phase 3 status" in `DESIGN.md`.
 
 ## explainers.sweedler.com
 
@@ -70,18 +70,20 @@ DESIGN.md                            the contract: vocabulary (generated), gramm
 6. Build and validate until exit 0:
 
    ```sh
-   node tools/explainers.cjs build    articles/<slug>/index.html   # KaTeX -> HTML+MathML in place, idempotent
+   node tools/explainers.cjs build    articles/<slug>/index.html   # in place, idempotent: KaTeX -> HTML+MathML; SVG poster per figure; caveat sentence; integrity= attributes
    node tools/explainers.cjs validate articles/<slug>/index.html --budget 170k
    node tools/explainers.cjs states   articles/<slug>/index.html   # list states; every expression finite at each
    ```
 
-   Every failure is one line, `file:line: CODE figure-id: message`; the codes are listed in `DESIGN.md` and by `node tools/explainers.cjs errors`.
+   Every failure is one line, `file:line: CODE figure-id: message`; the codes are listed in `DESIGN.md` and by `node tools/explainers.cjs errors`. Warnings (`file:line: warning figure-id: message`) do not fail: a `point_at` id no prose points at, a `data-ref` to something hidden in every state, a first-use `<dfn>` in a section with no figure, an unbuilt formula / poster / integrity attribute.
+
+   `build` puts each figure's first frame in front of its JSON block as `<svg class="x-poster">` (or, above 8 KiB, as `articles/<slug>/assets/poster-<fig>.svg` behind an `<img>`; commit those files too). Readers without JavaScript, and the first paint before the canvas mounts, see that frame. It also fills `integrity="sha384-..."` on the two includes from `dist/integrity.json`; whenever `dist/` changes, run `node tools/build-runtime.mjs` and then `build` on every article, or `validate` fails with `INTEGRITY_STALE`.
 7. Add a line to `index.html` and push. The Pages workflow re-validates and deploys.
 
 ## Run the tools
 
 ```sh
-npm test                                  # node --test: expr, spec, cli, docs
+npm test                                  # node --test: expr, spec, cli, runtime, poster, docs
 node tools/explainers.cjs --help          # no install needed; single committed file
 node tools/explainers.cjs vocab           # the vocabulary as markdown (what DESIGN.md embeds)
 ```
@@ -89,7 +91,8 @@ node tools/explainers.cjs vocab           # the vocabulary as markdown (what DES
 Maintainers (changing `lib/` or `tools/src/`):
 
 ```sh
-node tools/build-runtime.mjs                    # lib/ -> dist/explainers-runtime.v1.js (no dependencies; npm test checks it is current)
+node tools/build-runtime.mjs                    # lib/ -> dist/explainers-runtime.v1.js + dist/integrity.json (no dependencies; npm test checks both are current)
+node tools/explainers.cjs build articles/*/index.html   # then refresh every article's integrity= attributes (and posters)
 cd tools && npm install && node build-cli.mjs   # rebundles tools/explainers.cjs, vendors assets/katex, regenerates DESIGN.md
 ```
 

@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="../../dist/explainers.v1.css">
+<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="sha384-26VCLVL2/KHbeMoQsA5iLxithToGDt6qfRU4EO1+MWKTmk0a0LWUClpLjInfKs+s">
 <link rel="stylesheet" href="../../assets/katex/katex.min.css">
-<script defer src="../../dist/explainers-runtime.v1.js"></script>
+<script defer src="../../dist/explainers-runtime.v1.js" integrity="sha384-te8tcrrOqj2Sqg8a9ZVP96439m0v4qKfTdUhfCLYcchaz4j4XUxxfSSTRqCKfrhQ"></script>
 <style>
   /* The article palette: at most 6 tokens, each with a light and a dark value.
      The same token names color canvas layers, slider tracks, \tok{} symbols in
@@ -53,6 +53,17 @@
 <p>The Moon goes around Earth in about a month. Ask how long that month is, though, and you have to say what you measure it against. Let's start a clock at new Moon and watch two rulers at once. The <span data-fig="fig-months" data-ref="star-line">dotted yellow line</span> points at a distant star that never moves; the <span data-fig="fig-months" data-ref="sun-line">orange arrow</span> points at the Sun and creeps along as Earth travels its own orbit. The <span data-fig="fig-months" data-ref="moon">grey Moon</span> runs around the <span data-fig="fig-months" data-ref="orbit">dashed orbit</span>, leaving a trail behind it.</p>
 
 <figure class="x-fig" id="fig-months" data-aspect="3:2">
+<svg class="x-poster" id="fig-months-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="d2a853ba44acd9ee11c7416692792304e3b8af99"><style>#fig-months-poster:root{color-scheme:light dark}
+#fig-months-poster{font:13px 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif}
+#fig-months-poster .f-earth{fill:var(--c-earth, light-dark(#2f6fb0, #6fa8e6))}
+#fig-months-poster .f-moon{fill:var(--c-moon, light-dark(#5d5d63, #b8b8c0))}
+#fig-months-poster .f-panel{fill:var(--x-panel, light-dark(#f2f0ed, #1c1b19))}
+#fig-months-poster .f-star{fill:var(--c-star, light-dark(#6f6320, #d8c860))}
+#fig-months-poster .f-sun{fill:var(--c-sun, light-dark(#b8651a, #f2a144))}
+#fig-months-poster .h{paint-order:stroke;stroke:var(--bg, light-dark(#faf8f5, #151412));stroke-width:3;stroke-linejoin:round}
+#fig-months-poster .s-muted{stroke:var(--c-muted, light-dark(#7a756e, #8a857e))}
+#fig-months-poster .s-star{stroke:var(--c-star, light-dark(#6f6320, #d8c860))}
+#fig-months-poster .s-sun{stroke:var(--c-sun, light-dark(#b8651a, #f2a144))}</style><defs><clipPath id="fig-months-poster-c0"><path d="M0 0h704v409h-704Z"/></clipPath></defs><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect width="704" height="469" rx="8" class="f-panel"/><g clip-path="url(#fig-months-poster-c0)"><path d="M505.4 204.5A153.4 153.4 0 1 1 198.6 204.5A153.4 153.4 0 1 1 505.4 204.5" class="s-muted" stroke-width="1.5" stroke-dasharray="4 4"/><path d="M382.7 204.5A30.7 30.7 0 1 1 321.3 204.5A30.7 30.7 0 1 1 382.7 204.5" class="f-earth"/><text x="337" y="248.2" class="f-earth h" font-size="12" font-style="italic">Earth</text><path d="M352 204.5L638.3 204.5" class="s-star" stroke-width="1.5" stroke-dasharray="2 6"/><text x="530.3" y="220.5" class="f-star h" font-size="12" font-style="italic">to a distant star</text><path d="M352 204.5L629.8 204.5" class="s-sun" stroke-width="1.5"/><path d="M638.3 204.5L628.3 208.7L628.3 200.3Z" class="f-sun"/><text x="572.3" y="236.5" class="f-sun h" font-size="12" font-style="italic">to the Sun</text><path d="M514.6 204.5A9.2 9.2 0 1 1 496.2 204.5A9.2 9.2 0 1 1 514.6 204.5" class="f-moon"/><text x="519.4" y="190.5" class="f-moon h" dominant-baseline="central">day 0.0</text><text x="60.6" y="25.6" class="f-moon h" dominant-baseline="central">0 d 0 h 0 m</text><text x="60.6" y="383.4" class="f-sun h" dominant-baseline="central">Moon–Sun angle: 0°</text></g></g></svg>
 <script type="application/json">
 {
   "shows": {

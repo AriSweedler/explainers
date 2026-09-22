@@ -5,18 +5,21 @@ import { byTag, line, textOf } from './html.mjs';
 
 const TOKEN_RE = /--c-([a-zA-Z][\w-]*)\s*:\s*([^;}]+)/g;
 const BG_RE = /--bg\s*:\s*([^;}]+)/;
+const FG_RE = /--fg\s*:\s*([^;}]+)/;
 const LIGHT_DARK_RE = /^light-dark\(\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
 
 export function extractPalette(doc) {
   const tokens = new Map(); // name -> { value, line }
-  let bg = null;
+  let bg = null, fg = null;
   for (const style of byTag(doc, 'style')) {
     const css = textOf(style);
     for (const m of css.matchAll(TOKEN_RE)) tokens.set(m[1], { value: m[2].trim(), line: line(style) });
     const b = BG_RE.exec(css);
     if (b) bg = { value: b[1].trim(), line: line(style) };
+    const f = FG_RE.exec(css);
+    if (f) fg = { value: f[1].trim(), line: line(style) };
   }
-  return { tokens, bg, names: [...tokens.keys()] };
+  return { tokens, bg, fg, names: [...tokens.keys()] };
 }
 
 export function parseLightDark(value) {

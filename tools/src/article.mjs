@@ -2,11 +2,14 @@
 // references, URLs, palette, glossary, math and budget.
 import fs from 'node:fs';
 import { validateSpec, scopeForState, evaluateAll, windowToMs, FigSpecError } from '../../lib/spec.js';
-import { parseHtml, elements, byTag, attr, hasAttr, hasClass, line, elementChildren, textOf, isRelativeUrl, hostOf } from './html.mjs';
+import { visibleIds } from '../../lib/core/state.js';
+import { parseHtml, elements, byTag, attr, hasAttr, hasClass, line, elementChildren, textOf, closest, isRelativeUrl, hostOf } from './html.mjs';
 import { extractPalette, checkPalette } from './palette.mjs';
 import { checkGlossary } from './glossary.mjs';
 import { checkTex } from './tex.mjs';
 import { checkBudget } from './budget.mjs';
+import { checkIntegrity } from './integrity.mjs';
+import { checkPosters } from './poster.mjs';
 
 const ALLOWED_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
 const FIG_ID_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
@@ -100,16 +103,61 @@ function checkRefs({ file, doc }, figures, problems) {
   }
 }
 
+// Warnings, not errors: a point_at id no prose points at, and a ref whose
+// layer or readout is drawn neither at the defaults nor in any declared state
+// (it would never highlight; the runtime renders such a span as plain prose).
+function checkRefWarnings({ file, doc }, figures, problems) {
+  const spans = elements(doc, (n) => hasAttr(n, 'data-fig') && hasAttr(n, 'data-ref'));
+  const referenced = new Set(spans.map((s) => `${attr(s, 'data-fig')} ${attr(s, 'data-ref')}`));
+  const figLine = new Map(figureElements(doc).map((f) => [attr(f, 'id'), line(f)]));
+  for (const [figId, fig] of figures) {
+    if (!fig) continue;
+    for (const id of fig.spec.notice.point_at || []) {
+      if (!referenced.has(`${figId} ${id}`)) problems.warn(file, figLine.get(figId), figId, `point_at "${id}" is not referenced by any <span data-fig="${figId}" data-ref="${id}"> in the article`);
+    }
+  }
+  const everDrawn = new Map(); // figId -> ids drawn at the defaults or in some state
+  for (const span of spans) {
+    const figId = attr(span, 'data-fig'), ref = attr(span, 'data-ref'), fig = figures.get(figId);
+    if (!fig || !fig.refIds.includes(ref)) continue;
+    if (!everDrawn.has(figId)) everDrawn.set(figId, unionOfVisible(fig));
+    if (!everDrawn.get(figId).has(ref)) problems.warn(file, line(span), figId, `data-ref="${ref}" is hidden at the defaults and in every state of ${figId}; it would never highlight`);
+  }
+}
+
+function unionOfVisible(fig) {
+  const out = new Set();
+  const add = (scope, stateVisible) => {
+    try { for (const id of visibleIds(fig, scope, stateVisible)) out.add(id); } catch { /* not finite here: the states check reports it */ }
+  };
+  add(scopeForState(fig, null), null);
+  for (const st of fig.spec.notice.states) add(scopeForState(fig, st.name), st.visible || null);
+  return out;
+}
+
+// Warning: a first use (<dfn>) inside a <section> that shows no figure.
+function checkDfnSections({ file, doc }, problems) {
+  for (const dfn of byTag(doc, 'dfn')) {
+    const section = closest(dfn, (n) => n.tagName === 'section');
+    if (!section || figureElements(section).length) continue;
+    problems.warn(file, line(dfn), null, `<dfn id="${attr(dfn, 'id')}"> is a first use in <section id="${attr(section, 'id') || ''}">, which has no <figure class="x-fig">`);
+  }
+}
+
 export function validateArticle(article, { repoRoot, budget, problems }) {
   const palette = extractPalette(article.doc);
   checkPalette(palette, article.file, problems);
   checkStructure(article, problems);
+  checkIntegrity(article.doc, article.file, repoRoot, problems);
   const figures = compileFigures(article, palette.names, problems);
   checkRefs(article, figures, problems);
+  checkRefWarnings(article, figures, problems);
   checkUrls(article, problems);
   checkGlossary(article.doc, article.file, problems);
+  checkDfnSections(article, problems);
   checkTex(article.doc, article.html, article.file, new Set(palette.names), problems);
   const valid = validFigures(figures);
+  checkPosters(article.doc, article.file, valid, palette, problems);
   for (const fig of valid.values()) checkFigureStates(article.file, fig, problems);
   const report = budget !== undefined ? checkBudget(article.file, article.html, article.doc, repoRoot, budget, problems) : null;
   return { figures: valid, palette, report };

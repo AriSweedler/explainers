@@ -29,7 +29,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/cli.mjs
+// tools/src/cli.mjs
 var cli_exports = {};
 __export(cli_exports, {
   main: () => main2
@@ -39,11 +39,11 @@ module.exports = __toCommonJS(cli_exports);
 // <define:__EXPLAINERS_VERSIONS__>
 var define_EXPLAINERS_VERSIONS_default = { cli: "1.0.0", katex: "0.18.7", parse5: "8.0.1", esbuild: "0.28.2" };
 
-// src/cli.mjs
-var import_node_fs3 = __toESM(require("node:fs"), 1);
-var import_node_path2 = __toESM(require("node:path"), 1);
+// tools/src/cli.mjs
+var import_node_fs5 = __toESM(require("node:fs"), 1);
+var import_node_path4 = __toESM(require("node:path"), 1);
 
-// ../lib/expr.js
+// lib/expr.js
 var ExprError = class extends Error {
   constructor(code, message, pos, src) {
     super(`${message} (at ${pos} in "${src}")`);
@@ -134,10 +134,10 @@ function tokenize(src) {
   tokens.push({ type: "eof", value: "", pos: src.length });
   return tokens;
 }
-function arityOk(arity, n) {
-  if (typeof arity === "number") return n === arity;
-  if (arity.oneOf) return arity.oneOf.includes(n);
-  return n >= arity[0] && n <= arity[1];
+function arityOk(arity, n2) {
+  if (typeof arity === "number") return n2 === arity;
+  if (arity.oneOf) return arity.oneOf.includes(n2);
+  return n2 >= arity[0] && n2 <= arity[1];
 }
 function arityText(arity) {
   if (typeof arity === "number") return String(arity);
@@ -235,20 +235,20 @@ function parse(src) {
 }
 function identifiers(ast, { includeConstants = false } = {}) {
   const out = /* @__PURE__ */ new Set();
-  (function walk2(n) {
-    switch (n.type) {
+  (function walk2(n2) {
+    switch (n2.type) {
       case "id":
-        if (includeConstants || !(n.name in CONSTANTS)) out.add(n.name);
+        if (includeConstants || !(n2.name in CONSTANTS)) out.add(n2.name);
         break;
       case "neg":
-        walk2(n.arg);
+        walk2(n2.arg);
         break;
       case "bin":
-        walk2(n.left);
-        walk2(n.right);
+        walk2(n2.left);
+        walk2(n2.right);
         break;
       case "call":
-        n.args.forEach(walk2);
+        n2.args.forEach(walk2);
         break;
       default:
         break;
@@ -277,24 +277,24 @@ function evaluate(ast, scope = {}, src = "") {
     if (!Number.isFinite(v)) throw new ExprError("EXPR_NOT_FINITE", `${what} is not finite`, node.pos, src);
     return v;
   }
-  function ev(n) {
-    switch (n.type) {
+  function ev(n2) {
+    switch (n2.type) {
       case "num":
-        return n.value;
+        return n2.value;
       case "id": {
-        let v = lookup(scope, n.name);
+        let v = lookup(scope, n2.name);
         if (v === void 0) {
-          if (n.name in CONSTANTS) return CONSTANTS[n.name];
-          throw new ExprError("EXPR_UNKNOWN_IDENT", `unknown identifier "${n.name}"`, n.pos, src);
+          if (n2.name in CONSTANTS) return CONSTANTS[n2.name];
+          throw new ExprError("EXPR_UNKNOWN_IDENT", `unknown identifier "${n2.name}"`, n2.pos, src);
         }
-        return finite(num(v, n), n, `"${n.name}"`);
+        return finite(num(v, n2), n2, `"${n2.name}"`);
       }
       case "neg":
-        return -ev(n.arg);
+        return -ev(n2.arg);
       case "bin": {
-        const a = ev(n.left), b = ev(n.right);
+        const a = ev(n2.left), b = ev(n2.right);
         let r;
-        switch (n.op) {
+        switch (n2.op) {
           case "+":
             r = a + b;
             break;
@@ -314,16 +314,16 @@ function evaluate(ast, scope = {}, src = "") {
             r = a ** b;
             break;
           default:
-            throw new ExprError("EXPR_SYNTAX", `bad operator ${n.op}`, n.pos, src);
+            throw new ExprError("EXPR_SYNTAX", `bad operator ${n2.op}`, n2.pos, src);
         }
-        return finite(r, n, `"${n.op}"`);
+        return finite(r, n2, `"${n2.op}"`);
       }
       case "call": {
-        const args = n.args.map(ev);
-        return finite(FUNCTIONS[n.name].fn(...args), n, `${n.name}(...)`);
+        const args = n2.args.map(ev);
+        return finite(FUNCTIONS[n2.name].fn(...args), n2, `${n2.name}(...)`);
       }
       default:
-        throw new ExprError("EXPR_SYNTAX", `bad node ${n.type}`, n.pos ?? 0, src);
+        throw new ExprError("EXPR_SYNTAX", `bad node ${n2.type}`, n2.pos ?? 0, src);
     }
   }
   return ev(ast);
@@ -336,14 +336,14 @@ function describeFunctions() {
   return lines.join("\n");
 }
 
-// ../lib/spec.js
+// lib/spec.js
 var FigSpecError = class extends Error {
-  constructor(code, figureId, path4, detail) {
-    super(`${path4 || "(spec)"}: ${detail}`);
+  constructor(code, figureId, path6, detail) {
+    super(`${path6 || "(spec)"}: ${detail}`);
     this.name = "FigSpecError";
     this.code = code;
     this.figureId = figureId;
-    this.path = path4 || "(spec)";
+    this.path = path6 || "(spec)";
     this.detail = detail;
   }
 };
@@ -400,6 +400,9 @@ var ERROR_CATALOGUE = Object.freeze({
   TEX_BANNED: "\\color or \\textcolor used; only \\tok{token}{...} colors symbols",
   TEX_RENDER_ERROR: "KaTeX output contains its error color (#cc0000): an untrusted or rejected command",
   TEX_STALE: "an .x-tex element has data-tex but its rendered content does not match a fresh render",
+  // subresource integrity
+  INTEGRITY_MISSING: "the runtime <script> or the stylesheet <link> has no integrity attribute (run: explainers build)",
+  INTEGRITY_STALE: "an integrity attribute does not match dist/integrity.json (run: explainers build)",
   // budget
   BUDGET_OVER: "gzip bytes of HTML + runtime + CSS + KaTeX CSS exceed --budget"
 });
@@ -763,13 +766,13 @@ var WINDOW_RE = /^(\d+(\.\d+)?)([hdy])$/;
 var CONSTRAIN_RE = /^(free|x|y|view|circle:(\d+(\.\d+)?)|segment:\[\[-?\d+(\.\d+)?,-?\d+(\.\d+)?\],\[-?\d+(\.\d+)?,-?\d+(\.\d+)?\]\]|surface:[A-Za-z_][A-Za-z0-9_-]*)$/;
 var isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 var isNumber = (v) => typeof v === "number" && Number.isFinite(v);
-var join = (path4, key) => typeof key === "number" ? `${path4}[${key}]` : path4 ? `${path4}.${key}` : key;
+var join = (path6, key) => typeof key === "number" ? `${path6}[${key}]` : path6 ? `${path6}.${key}` : key;
 function windowToMs(w) {
   if (isNumber(w)) return w * 864e5;
   const m = WINDOW_RE.exec(w);
   if (!m) return NaN;
-  const n = Number(m[1]);
-  return n * { h: 36e5, d: 864e5, y: 365.25 * 864e5 }[m[3]];
+  const n2 = Number(m[1]);
+  return n2 * { h: 36e5, d: 864e5, y: 365.25 * 864e5 }[m[3]];
 }
 function parseTemplate(text2) {
   const parts = [];
@@ -806,202 +809,202 @@ var Ctx = class {
     this.exprScope = "figure";
     this.plotVar = null;
   }
-  fail(code, path4, detail) {
-    throw new FigSpecError(code, this.figureId, path4, detail);
+  fail(code, path6, detail) {
+    throw new FigSpecError(code, this.figureId, path6, detail);
   }
 };
-function checkType(value, type, path4, ctx) {
-  if (typeof type === "string") return checkScalar(value, type, path4, ctx);
+function checkType(value, type, path6, ctx) {
+  if (typeof type === "string") return checkScalar(value, type, path6, ctx);
   if (type.enum) {
     if (!type.enum.includes(value)) {
-      const code = /(\.kind|\.type|model\.name)$/.test(path4) ? "SPEC_UNKNOWN_KIND" : "SPEC_BAD_TYPE";
-      ctx.fail(code, path4, `expected one of ${type.enum.map((v) => JSON.stringify(v)).join(" | ")}, got ${JSON.stringify(value)}`);
+      const code = /(\.kind|\.type|model\.name)$/.test(path6) ? "SPEC_UNKNOWN_KIND" : "SPEC_BAD_TYPE";
+      ctx.fail(code, path6, `expected one of ${type.enum.map((v) => JSON.stringify(v)).join(" | ")}, got ${JSON.stringify(value)}`);
     }
     return;
   }
   if (type.array) {
-    if (!Array.isArray(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected an array");
-    if (value.length < type.min) ctx.fail("SPEC_RANGE", path4, `needs at least ${type.min} element(s)`);
-    value.forEach((v, i2) => checkType(v, type.array, join(path4, i2), ctx));
+    if (!Array.isArray(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected an array");
+    if (value.length < type.min) ctx.fail("SPEC_RANGE", path6, `needs at least ${type.min} element(s)`);
+    value.forEach((v, i2) => checkType(v, type.array, join(path6, i2), ctx));
     return;
   }
-  if (type.object) return checkObject(value, type.object, path4, ctx);
+  if (type.object) return checkObject(value, type.object, path6, ctx);
   if (type.map) {
-    if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected an object");
+    if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected an object");
     for (const [k, v] of Object.entries(value)) {
-      if (!NAME_RE.test(k)) ctx.fail("SPEC_BAD_TYPE", join(path4, k), `key "${k}" is not an identifier`);
-      checkType(v, type.map, join(path4, k), ctx);
+      if (!NAME_RE.test(k)) ctx.fail("SPEC_BAD_TYPE", join(path6, k), `key "${k}" is not an identifier`);
+      checkType(v, type.map, join(path6, k), ctx);
     }
     return;
   }
-  ctx.fail("SPEC_BAD_TYPE", path4, "internal: unknown schema type");
+  ctx.fail("SPEC_BAD_TYPE", path6, "internal: unknown schema type");
 }
-function checkObject(value, fields, path4, ctx) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected an object");
+function checkObject(value, fields, path6, ctx) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected an object");
   for (const key of Object.keys(value)) {
     if (!Object.prototype.hasOwnProperty.call(fields, key)) {
-      ctx.fail("SPEC_UNKNOWN_KEY", join(path4, key), `unknown key "${key}"; allowed: ${Object.keys(fields).join(", ")}`);
+      ctx.fail("SPEC_UNKNOWN_KEY", join(path6, key), `unknown key "${key}"; allowed: ${Object.keys(fields).join(", ")}`);
     }
   }
   for (const [key, field] of Object.entries(fields)) {
     if (!(key in value)) {
-      if (field.req) ctx.fail("SPEC_MISSING_KEY", join(path4, key), `missing required key "${key}"`);
+      if (field.req) ctx.fail("SPEC_MISSING_KEY", join(path6, key), `missing required key "${key}"`);
       continue;
     }
-    checkType(value[key], field.type, join(path4, key), ctx);
+    checkType(value[key], field.type, join(path6, key), ctx);
   }
 }
-function addExpr(value, path4, ctx) {
+function addExpr(value, path6, ctx) {
   if (isNumber(value)) return;
-  if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path4, "expected a number or an expression string");
+  if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path6, "expected a number or an expression string");
   try {
     const { ast } = compile(value);
-    ctx.exprs.push({ path: path4, src: value, ast, scope: ctx.exprScope });
+    ctx.exprs.push({ path: path6, src: value, ast, scope: ctx.exprScope });
   } catch (e) {
-    if (e instanceof ExprError) ctx.fail("SPEC_BAD_EXPR", path4, e.message);
+    if (e instanceof ExprError) ctx.fail("SPEC_BAD_EXPR", path6, e.message);
     throw e;
   }
 }
-function checkPoint(value, n, path4, ctx) {
-  if (!Array.isArray(value) || value.length !== n) ctx.fail("SPEC_BAD_TYPE", path4, `expected [${Array(n).fill("expr").join(", ")}]`);
-  value.forEach((v, i2) => addExpr(v, join(path4, i2), ctx));
+function checkPoint(value, n2, path6, ctx) {
+  if (!Array.isArray(value) || value.length !== n2) ctx.fail("SPEC_BAD_TYPE", path6, `expected [${Array(n2).fill("expr").join(", ")}]`);
+  value.forEach((v, i2) => addExpr(v, join(path6, i2), ctx));
 }
-function checkNumberTuple(value, n, path4, ctx) {
-  if (!Array.isArray(value) || value.length !== n || !value.every(isNumber)) {
-    ctx.fail("SPEC_BAD_TYPE", path4, `expected [${Array(n).fill("number").join(", ")}]`);
+function checkNumberTuple(value, n2, path6, ctx) {
+  if (!Array.isArray(value) || value.length !== n2 || !value.every(isNumber)) {
+    ctx.fail("SPEC_BAD_TYPE", path6, `expected [${Array(n2).fill("number").join(", ")}]`);
   }
 }
-function checkScalar(value, type, path4, ctx) {
+function checkScalar(value, type, path6, ctx) {
   switch (type) {
     case "number":
-      if (!isNumber(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected a finite number");
+      if (!isNumber(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected a finite number");
       return;
     case "boolean":
-      if (typeof value !== "boolean") ctx.fail("SPEC_BAD_TYPE", path4, "expected true or false");
+      if (typeof value !== "boolean") ctx.fail("SPEC_BAD_TYPE", path6, "expected true or false");
       return;
     case "string":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path4, "expected a string");
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path6, "expected a string");
       return;
     case "expr":
-      return addExpr(value, path4, ctx);
+      return addExpr(value, path6, ctx);
     case "flag":
       if (typeof value === "boolean") return;
-      return addExpr(value, path4, ctx);
+      return addExpr(value, path6, ctx);
     case "token":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path4, "expected a token name");
-      ctx.tokens.push({ path: path4, token: value });
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path6, "expected a token name");
+      ctx.tokens.push({ path: path6, token: value });
       return;
     case "id":
-      if (typeof value !== "string" || !ID_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path4, `expected an id matching ${ID_RE}`);
+      if (typeof value !== "string" || !ID_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path6, `expected an id matching ${ID_RE}`);
       return;
     case "name":
-      if (typeof value !== "string" || !NAME_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path4, `expected an identifier matching ${NAME_RE}`);
-      if (value in FUNCTIONS) ctx.fail("SPEC_DUP_ID", path4, `"${value}" is a built-in function name`);
+      if (typeof value !== "string" || !NAME_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path6, `expected an identifier matching ${NAME_RE}`);
+      if (value in FUNCTIONS) ctx.fail("SPEC_DUP_ID", path6, `"${value}" is a built-in function name`);
       return;
     case "point":
-      return checkPoint(value, 2, path4, ctx);
+      return checkPoint(value, 2, path6, ctx);
     case "point3":
-      return checkPoint(value, 3, path4, ctx);
+      return checkPoint(value, 3, path6, ctx);
     case "rect":
-      return checkPoint(value, 4, path4, ctx);
+      return checkPoint(value, 4, path6, ctx);
     case "pair":
-      return checkNumberTuple(value, 2, path4, ctx);
+      return checkNumberTuple(value, 2, path6, ctx);
     case "range":
-      checkNumberTuple(value, 2, path4, ctx);
-      if (value[0] >= value[1]) ctx.fail("SPEC_RANGE", path4, "min must be less than max");
+      checkNumberTuple(value, 2, path6, ctx);
+      if (value[0] >= value[1]) ctx.fail("SPEC_RANGE", path6, "min must be less than max");
       return;
     case "labels":
-      if (!Array.isArray(value) || value.length !== 2 || !value.every((s) => typeof s === "string")) ctx.fail("SPEC_BAD_TYPE", path4, "expected [off label, on label]");
+      if (!Array.isArray(value) || value.length !== 2 || !value.every((s) => typeof s === "string")) ctx.fail("SPEC_BAD_TYPE", path6, "expected [off label, on label]");
       return;
     case "template":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path4, "expected a template string");
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path6, "expected a template string");
       try {
-        for (const part of parseTemplate(value)) if (part.src) addExpr(part.src, path4, ctx);
+        for (const part of parseTemplate(value)) if (part.src) addExpr(part.src, path6, ctx);
       } catch (e) {
         if (e instanceof FigSpecError) throw e;
-        ctx.fail("SPEC_BAD_FORMAT", path4, e.message);
+        ctx.fail("SPEC_BAD_FORMAT", path6, e.message);
       }
       return;
     case "relpath":
-      if (typeof value !== "string" || !RELPATH_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected a relative path");
+      if (typeof value !== "string" || !RELPATH_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected a relative path");
       return;
     case "epoch":
-      if (value !== "now" && !(typeof value === "string" && ISO_RE.test(value))) ctx.fail("SPEC_BAD_TYPE", path4, "expected 'now' or an ISO 8601 instant");
+      if (value !== "now" && !(typeof value === "string" && ISO_RE.test(value))) ctx.fail("SPEC_BAD_TYPE", path6, "expected 'now' or an ISO 8601 instant");
       return;
     case "window":
-      if (!Number.isFinite(windowToMs(value)) || windowToMs(value) <= 0) ctx.fail("SPEC_BAD_TYPE", path4, "expected '24h' | '30d' | '18.61y' or a positive number of days");
+      if (!Number.isFinite(windowToMs(value)) || windowToMs(value) <= 0) ctx.fail("SPEC_BAD_TYPE", path6, "expected '24h' | '30d' | '18.61y' or a positive number of days");
       return;
     case "constrain":
-      if (typeof value !== "string" || !CONSTRAIN_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path4, `expected a constraint matching ${CONSTRAIN_RE}`);
-      if (value.startsWith("surface:")) ctx.refs.push({ path: path4, kind: "object", id: value.slice(8) });
+      if (typeof value !== "string" || !CONSTRAIN_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path6, `expected a constraint matching ${CONSTRAIN_RE}`);
+      if (value.startsWith("surface:")) ctx.refs.push({ path: path6, kind: "object", id: value.slice(8) });
       return;
     case "plane":
       if (value === "x" || value === "y" || value === "z") return;
-      return checkNumberTuple(value, 3, path4, ctx);
+      return checkNumberTuple(value, 3, path6, ctx);
     case "asset":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path4, "expected an asset name");
-      ctx.refs.push({ path: path4, kind: "asset", id: value });
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path6, "expected an asset name");
+      ctx.refs.push({ path: path6, kind: "asset", id: value });
       return;
     case "ref:layer":
     case "ref:shape":
     case "ref:object":
     case "ref:control":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path4, "expected an id string");
-      ctx.refs.push({ path: path4, kind: type.slice(4), id: value });
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path6, "expected an id string");
+      ctx.refs.push({ path: path6, kind: type.slice(4), id: value });
       return;
     case "constant":
       if (isNumber(value)) return;
-      if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected a number or {value, expect, tol}");
-      return checkObject(value, SCHEMA.constant, path4, ctx);
+      if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected a number or {value, expect, tol}");
+      return checkObject(value, SCHEMA.constant, path6, ctx);
     case "layer":
-      return checkLayer(value, path4, ctx);
+      return checkLayer(value, path6, ctx);
     case "object":
-      return checkObject3d(value, path4, ctx);
+      return checkObject3d(value, path6, ctx);
     case "control":
-      return checkControl(value, path4, ctx);
+      return checkControl(value, path6, ctx);
     case "state":
-      return checkStateShape(value, path4, ctx);
+      return checkStateShape(value, path6, ctx);
     case "shows":
-      return checkShows(value, path4, ctx, false);
+      return checkShows(value, path6, ctx, false);
     case "panelShows":
-      return checkShows(value, path4, ctx, true);
+      return checkShows(value, path6, ctx, true);
     default:
-      ctx.fail("SPEC_BAD_TYPE", path4, `internal: unknown scalar type ${type}`);
+      ctx.fail("SPEC_BAD_TYPE", path6, `internal: unknown scalar type ${type}`);
   }
 }
-function declareId(ctx, id, path4, what) {
-  if (ctx.ids.has(id)) ctx.fail("SPEC_DUP_ID", path4, `"${id}" already declared as a ${ctx.ids.get(id).what} at ${ctx.ids.get(id).path}`);
-  ctx.ids.set(id, { path: path4, what });
+function declareId(ctx, id, path6, what) {
+  if (ctx.ids.has(id)) ctx.fail("SPEC_DUP_ID", path6, `"${id}" already declared as a ${ctx.ids.get(id).what} at ${ctx.ids.get(id).path}`);
+  ctx.ids.set(id, { path: path6, what });
 }
-function discriminated(value, key, table2, common, path4, ctx, noun) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected an object");
-  if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path4, key), `missing required key "${key}"`);
+function discriminated(value, key, table2, common, path6, ctx, noun) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected an object");
+  if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path6, key), `missing required key "${key}"`);
   const kind = value[key];
   if (!Object.prototype.hasOwnProperty.call(table2, kind)) {
-    ctx.fail("SPEC_UNKNOWN_KIND", join(path4, key), `unknown ${noun} ${JSON.stringify(kind)}; one of ${Object.keys(table2).join(" | ")}`);
+    ctx.fail("SPEC_UNKNOWN_KIND", join(path6, key), `unknown ${noun} ${JSON.stringify(kind)}; one of ${Object.keys(table2).join(" | ")}`);
   }
-  checkObject(value, { ...common, ...table2[kind] }, path4, ctx);
+  checkObject(value, { ...common, ...table2[kind] }, path6, ctx);
   return kind;
 }
-function checkLayer(value, path4, ctx) {
-  const kind = discriminated(value, "kind", SCHEMA.layers, SCHEMA.layerCommon, path4, ctx, "layer kind");
-  declareId(ctx, value.id, join(path4, "id"), `${kind} layer`);
-  if (kind === "region" && !("fill" in value)) ctx.fail("SPEC_MISSING_KEY", join(path4, "fill"), "a region needs a fill token");
+function checkLayer(value, path6, ctx) {
+  const kind = discriminated(value, "kind", SCHEMA.layers, SCHEMA.layerCommon, path6, ctx, "layer kind");
+  declareId(ctx, value.id, join(path6, "id"), `${kind} layer`);
+  if (kind === "region" && !("fill" in value)) ctx.fail("SPEC_MISSING_KEY", join(path6, "fill"), "a region needs a fill token");
 }
-function checkObject3d(value, path4, ctx) {
-  const kind = discriminated(value, "kind", SCHEMA.objects, SCHEMA.objectCommon, path4, ctx, "object kind");
-  declareId(ctx, value.id, join(path4, "id"), `${kind} object`);
-  if (kind === "label") exactlyOne(value, "anchor", "position", path4, ctx);
+function checkObject3d(value, path6, ctx) {
+  const kind = discriminated(value, "kind", SCHEMA.objects, SCHEMA.objectCommon, path6, ctx, "object kind");
+  declareId(ctx, value.id, join(path6, "id"), `${kind} object`);
+  if (kind === "label") exactlyOne(value, "anchor", "position", path6, ctx);
 }
-function exactlyOne(value, a, b, path4, ctx) {
+function exactlyOne(value, a, b, path6, ctx) {
   const hasA = a in value, hasB = b in value;
-  if (hasA && hasB) ctx.fail("SPEC_CONFLICT", path4, `give exactly one of "${a}" / "${b}", not both`);
-  if (!hasA && !hasB) ctx.fail("SPEC_MISSING_KEY", path4, `give exactly one of "${a}" / "${b}"`);
+  if (hasA && hasB) ctx.fail("SPEC_CONFLICT", path6, `give exactly one of "${a}" / "${b}", not both`);
+  if (!hasA && !hasB) ctx.fail("SPEC_MISSING_KEY", path6, `give exactly one of "${a}" / "${b}"`);
 }
-function checkControl(value, path4, ctx) {
-  const kind = discriminated(value, "kind", SCHEMA.controls, SCHEMA.controlCommon, path4, ctx, "control kind");
-  if (kind !== "play") declareId(ctx, value.name, join(path4, "name"), `${kind} control`);
-  const p = (k) => join(path4, k);
+function checkControl(value, path6, ctx) {
+  const kind = discriminated(value, "kind", SCHEMA.controls, SCHEMA.controlCommon, path6, ctx, "control kind");
+  if (kind !== "play") declareId(ctx, value.name, join(path6, "name"), `${kind} control`);
+  const p = (k) => join(path6, k);
   switch (kind) {
     case "slider":
       if ("values" in value) {
@@ -1040,22 +1043,22 @@ function checkControl(value, path4, ctx) {
       break;
   }
 }
-function checkStateShape(value, path4, ctx) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected an object");
-  for (const key of ["name", "caption"]) if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path4, key), `missing required key "${key}"`);
-  for (const [key, field] of Object.entries(SCHEMA.stateFixed)) if (key in value) checkType(value[key], field.type, join(path4, key), ctx);
+function checkStateShape(value, path6, ctx) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected an object");
+  for (const key of ["name", "caption"]) if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path6, key), `missing required key "${key}"`);
+  for (const [key, field] of Object.entries(SCHEMA.stateFixed)) if (key in value) checkType(value[key], field.type, join(path6, key), ctx);
 }
-function checkShows(value, path4, ctx, isPanel) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path4, "expected an object");
-  if (!("type" in value)) ctx.fail("SPEC_MISSING_KEY", join(path4, "type"), 'missing required key "type"');
+function checkShows(value, path6, ctx, isPanel) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path6, "expected an object");
+  if (!("type" in value)) ctx.fail("SPEC_MISSING_KEY", join(path6, "type"), 'missing required key "type"');
   const allowed = isPanel ? ["scene2d", "plot"] : FIGURE_TYPES;
-  if (!allowed.includes(value.type)) ctx.fail("SPEC_UNKNOWN_KIND", join(path4, "type"), `unknown figure type ${JSON.stringify(value.type)}; one of ${allowed.join(" | ")}`);
+  if (!allowed.includes(value.type)) ctx.fail("SPEC_UNKNOWN_KIND", join(path6, "type"), `unknown figure type ${JSON.stringify(value.type)}; one of ${allowed.join(" | ")}`);
   let fields = SCHEMA.shows[value.type];
   if (isPanel) {
     fields = { ...fields };
     for (const k of ["constants", "model", "caveats", "split"]) delete fields[k];
   }
-  checkObject(value, fields, path4, ctx);
+  checkObject(value, fields, path6, ctx);
 }
 function controlNames(control) {
   switch (control.kind) {
@@ -1103,17 +1106,17 @@ function controlDefaults(control) {
 function constantValue(c) {
   return isNumber(c) ? c : c.value;
 }
-function collectShows(shows, out, path4 = "shows") {
+function collectShows(shows, out, path6 = "shows") {
   for (const l of shows.layers || []) out.layers.set(l.id, l);
   for (const o of shows.objects || []) out.objects.set(o.id, o);
   const push = (list, key) => (shows[list] || []).forEach((item, i2) => {
-    if (item[key]) out.other.push({ id: item[key], path: `${path4}.${list}[${i2}].${key}` });
+    if (item[key]) out.other.push({ id: item[key], path: `${path6}.${list}[${i2}].${key}` });
   });
   push("series", "id");
   push("guides", "id");
   push("bars", "id");
   push("readouts", "id");
-  (shows.split || []).forEach((p, i2) => collectShows(p.shows, out, `${path4}.split[${i2}].shows`));
+  (shows.split || []).forEach((p, i2) => collectShows(p.shows, out, `${path6}.split[${i2}].shows`));
 }
 function plotVars(shows, out = []) {
   if (shows.type === "plot") out.push(shows.x.var);
@@ -1126,7 +1129,7 @@ function checkSemantics(spec, ctx) {
   const constants = shows.constants || {};
   const cat = { layers: /* @__PURE__ */ new Map(), objects: /* @__PURE__ */ new Map(), other: [] };
   collectShows(shows, cat);
-  for (const { id, path: path4 } of cat.other) declareId(ctx, id, path4, "series/guide/bar/readout");
+  for (const { id, path: path6 } of cat.other) declareId(ctx, id, path6, "series/guide/bar/readout");
   for (const name of Object.keys(constants)) declareId(ctx, name, `shows.constants.${name}`, "constant");
   const scope = /* @__PURE__ */ new Map();
   for (const [name, c] of Object.entries(constants)) scope.set(name, constantValue(c));
@@ -1142,13 +1145,13 @@ function checkSemantics(spec, ctx) {
   for (const [i2, r] of (shows.readouts || []).entries()) exactlyOne(r, "anchor", "at", `shows.readouts[${i2}]`, ctx);
   for (const [i2, g] of (shows.guides || []).entries()) exactlyOne(g, "x", "y", `shows.guides[${i2}]`, ctx);
   if (ctx.palette) {
-    for (const { path: path4, token } of ctx.tokens) {
-      if (!ctx.palette.has(token)) ctx.fail("SPEC_BAD_TOKEN", path4, `token "${token}" is not in the palette (${[...ctx.palette].join(", ") || "empty"})`);
+    for (const { path: path6, token } of ctx.tokens) {
+      if (!ctx.palette.has(token)) ctx.fail("SPEC_BAD_TOKEN", path6, `token "${token}" is not in the palette (${[...ctx.palette].join(", ") || "empty"})`);
     }
   }
   const controlByName = new Map(controls.filter((c) => c.kind !== "play").map((c) => [c.name, c]));
   const assets = shows.assets || {};
-  for (const { path: path4, kind, id } of ctx.refs) {
+  for (const { path: path6, kind, id } of ctx.refs) {
     let ok;
     switch (kind) {
       case "layer":
@@ -1169,71 +1172,71 @@ function checkSemantics(spec, ctx) {
       default:
         ok = false;
     }
-    if (!ok) ctx.fail("SPEC_UNKNOWN_REF", path4, `no ${kind === "shape" ? "circle/ellipse/polygon layer" : kind === "control" ? "slider/time control" : kind} with id "${id}"`);
+    if (!ok) ctx.fail("SPEC_UNKNOWN_REF", path6, `no ${kind === "shape" ? "circle/ellipse/polygon layer" : kind === "control" ? "slider/time control" : kind} with id "${id}"`);
   }
   const constScope = new Map(Object.entries(constants).map(([k, c]) => [k, constantValue(c)]));
   for (const ex of ctx.exprs) {
     const inConstants = ex.path.startsWith("shows.constants.");
     const inSeries = /\.series\[\d+\]\.y$/.test(ex.path);
-    for (const n of identifiers(ex.ast)) {
-      const known = inConstants ? constScope.has(n) : scope.has(n) || n in CONSTANTS || inSeries && plotScope.has(n);
+    for (const n2 of identifiers(ex.ast)) {
+      const known = inConstants ? constScope.has(n2) : scope.has(n2) || n2 in CONSTANTS || inSeries && plotScope.has(n2);
       if (!known) {
-        const hint = inConstants ? " (expect expressions may only use constants)" : plotScope.has(n) ? " (plot variables are visible only to series.y)" : "";
-        ctx.fail("SPEC_UNKNOWN_IDENT", ex.path, `unknown identifier "${n}"${hint}`);
+        const hint = inConstants ? " (expect expressions may only use constants)" : plotScope.has(n2) ? " (plot variables are visible only to series.y)" : "";
+        ctx.fail("SPEC_UNKNOWN_IDENT", ex.path, `unknown identifier "${n2}"${hint}`);
       }
     }
   }
   for (const [name, c] of Object.entries(constants)) {
     if (isNumber(c)) continue;
-    const path4 = `shows.constants.${name}.expect`;
+    const path6 = `shows.constants.${name}.expect`;
     let got;
     try {
       got = evaluate(compile(c.expect).ast, constScope, c.expect);
     } catch (e) {
-      ctx.fail("SPEC_BAD_EXPR", path4, e.message);
+      ctx.fail("SPEC_BAD_EXPR", path6, e.message);
     }
-    if (Math.abs(got - c.value) > c.tol) ctx.fail("SPEC_EXPECT_MISMATCH", path4, `value ${c.value} differs from expect = ${got} by more than tol ${c.tol}`);
+    if (Math.abs(got - c.value) > c.tol) ctx.fail("SPEC_EXPECT_MISMATCH", path6, `value ${c.value} differs from expect = ${got} by more than tol ${c.tol}`);
   }
   const notice = spec.notice;
   if (notice.steps !== "none" && notice.states.length === 0) ctx.fail("SPEC_RANGE", "notice.states", `steps "${notice.steps}" needs at least one state`);
   for (const id of notice.point_at || []) if (!cat.layers.has(id)) ctx.fail("SPEC_POINT_AT_MISSING", "notice.point_at", `no layer with id "${id}"`);
   const seen = /* @__PURE__ */ new Set();
   notice.states.forEach((st, i2) => {
-    const path4 = `notice.states[${i2}]`;
-    if (seen.has(st.name)) ctx.fail("SPEC_DUP_ID", `${path4}.name`, `state "${st.name}" declared twice`);
+    const path6 = `notice.states[${i2}]`;
+    if (seen.has(st.name)) ctx.fail("SPEC_DUP_ID", `${path6}.name`, `state "${st.name}" declared twice`);
     seen.add(st.name);
-    if (st.camera && shows.type !== "scene3d") ctx.fail("SPEC_CONFLICT", `${path4}.camera`, "camera applies to scene3d figures only");
+    if (st.camera && shows.type !== "scene3d") ctx.fail("SPEC_CONFLICT", `${path6}.camera`, "camera applies to scene3d figures only");
     for (const [k, v] of Object.entries(st)) {
       if (k in SCHEMA.stateFixed) continue;
       const c = controlByName.get(k);
-      if (!c) ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path4}.${k}`, `"${k}" is not a control of this figure (drag positions go under "drag")`);
-      checkStateValue(c, v, `${path4}.${k}`, ctx);
+      if (!c) ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path6}.${k}`, `"${k}" is not a control of this figure (drag positions go under "drag")`);
+      checkStateValue(c, v, `${path6}.${k}`, ctx);
     }
     for (const k of Object.keys(st.drag || {})) {
       const c = controlByName.get(k);
-      if (!c || c.kind !== "drag") ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path4}.drag.${k}`, `"${k}" is not a drag control of this figure`);
+      if (!c || c.kind !== "drag") ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path6}.drag.${k}`, `"${k}" is not a drag control of this figure`);
     }
   });
   return { scope, cat, controlByName };
 }
-function checkStateValue(c, v, path4, ctx) {
+function checkStateValue(c, v, path6, ctx) {
   switch (c.kind) {
     case "slider":
-      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path4, "expected a number");
-      if ("values" in c ? !c.values.includes(v) : v < c.min || v > c.max) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path4, `${v} is outside the range of slider "${c.name}"`);
+      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path6, "expected a number");
+      if ("values" in c ? !c.values.includes(v) : v < c.min || v > c.max) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path6, `${v} is outside the range of slider "${c.name}"`);
       return;
     case "time":
-      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path4, "expected a number");
-      if (c.mode === "scrub" ? v < 0 || v > windowToMs(c.window) : !c.rates.includes(v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path4, `${v} is outside the window/rates of time control "${c.name}"`);
+      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path6, "expected a number");
+      if (c.mode === "scrub" ? v < 0 || v > windowToMs(c.window) : !c.rates.includes(v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path6, `${v} is outside the window/rates of time control "${c.name}"`);
       return;
     case "toggle":
-      if (typeof v !== "boolean") ctx.fail("SPEC_BAD_TYPE", path4, "expected true or false");
+      if (typeof v !== "boolean") ctx.fail("SPEC_BAD_TYPE", path6, "expected true or false");
       return;
     case "segmented":
-      if (!c.options.some((o) => o.value === v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path4, `${JSON.stringify(v)} is not an option of "${c.name}"`);
+      if (!c.options.some((o) => o.value === v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path6, `${JSON.stringify(v)} is not an option of "${c.name}"`);
       return;
     case "drag":
-      ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", path4, `drag positions go under "drag": {"${c.name}": [x, y]}`);
+      ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", path6, `drag positions go under "drag": {"${c.name}": [x, y]}`);
       return;
     default:
       return;
@@ -1281,7 +1284,7 @@ function evaluateAll(compiled, scope) {
   const results = /* @__PURE__ */ new Map();
   for (const ex of compiled.expressions) {
     if (ex.path.startsWith("shows.constants.")) continue;
-    const free = identifiers(ex.ast).filter((n) => compiled.plotVars.includes(n) && !scope.has(n));
+    const free = identifiers(ex.ast).filter((n2) => compiled.plotVars.includes(n2) && !scope.has(n2));
     const samples = free.length ? plotSamples(compiled, free[0]) : [null];
     for (const sample of samples) {
       const s = sample === null ? scope : new Map([...scope, [free[0], sample]]);
@@ -1410,7 +1413,7 @@ function modelsTable() {
   return rows.join("\n");
 }
 
-// src/report.mjs
+// tools/src/report.mjs
 function format({ file, line: line2, code, figureId, message }) {
   return `${file}:${line2 || 0}: ${code} ${figureId || "-"}: ${message}`;
 }
@@ -1435,10 +1438,53 @@ var Problems = class {
   }
 };
 
-// src/article.mjs
-var import_node_fs2 = __toESM(require("node:fs"), 1);
+// tools/src/article.mjs
+var import_node_fs4 = __toESM(require("node:fs"), 1);
 
-// node_modules/parse5/dist/common/unicode.js
+// lib/scene2d/getters.js
+function getter(v) {
+  if (typeof v === "number") return () => v;
+  if (typeof v === "boolean") return () => v ? 1 : 0;
+  const { ast } = compile(v);
+  return (scope) => evaluate(ast, scope, v);
+}
+function pointGetter(p) {
+  const gx = getter(p[0]), gy = getter(p[1]);
+  return (scope) => [gx(scope), gy(scope)];
+}
+
+// lib/core/state.js
+var visibilityRules = /* @__PURE__ */ new WeakMap();
+function rulesFor(compiled) {
+  let rules = visibilityRules.get(compiled);
+  if (rules) return rules;
+  rules = [];
+  const previews = /* @__PURE__ */ new Map();
+  for (const c of compiled.controls) for (const id of c.preview || []) previews.set(id, c.name);
+  const walk2 = (shows) => {
+    for (const L of shows.layers || []) rules.push({ id: L.id, owner: previews.get(L.id) || null, visible: "visible" in L ? getter(L.visible) : null });
+    for (const R of shows.readouts || []) if (R.id && "visible" in R) rules.push({ id: R.id, owner: null, visible: getter(R.visible) });
+    for (const p of shows.split || []) walk2(p.shows);
+  };
+  walk2(compiled.spec.shows);
+  visibilityRules.set(compiled, rules);
+  return rules;
+}
+function visibleIds(compiled, scope, stateVisible = null) {
+  const hide = new Set(stateVisible && stateVisible.hide || []), show = new Set(stateVisible && stateVisible.show || []);
+  const out = new Set(compiled.refIds);
+  for (const r of rulesFor(compiled)) {
+    let drawn;
+    if (r.owner && scope.get(`${r.owner}.dragging`) !== 1) drawn = false;
+    else if (hide.has(r.id)) drawn = false;
+    else if (show.has(r.id)) drawn = true;
+    else drawn = !r.visible || r.visible(scope) !== 0;
+    if (!drawn) out.delete(r.id);
+  }
+  return out;
+}
+
+// tools/node_modules/parse5/dist/common/unicode.js
 var UNDEFINED_CODE_POINTS = /* @__PURE__ */ new Set([
   65534,
   65535,
@@ -1529,7 +1575,7 @@ function isUndefinedCodePoint(cp) {
   return cp >= 64976 && cp <= 65007 || UNDEFINED_CODE_POINTS.has(cp);
 }
 
-// node_modules/parse5/dist/common/error-codes.js
+// tools/node_modules/parse5/dist/common/error-codes.js
 var ERR;
 (function(ERR2) {
   ERR2["controlCharacterInInputStream"] = "control-character-in-input-stream";
@@ -1594,7 +1640,7 @@ var ERR;
   ERR2["eofInElementThatCanContainOnlyText"] = "eof-in-element-that-can-contain-only-text";
 })(ERR || (ERR = {}));
 
-// node_modules/parse5/dist/tokenizer/preprocessor.js
+// tools/node_modules/parse5/dist/tokenizer/preprocessor.js
 var DEFAULT_BUFFER_WATERLINE = 1 << 16;
 var Preprocessor = class {
   constructor(handler2) {
@@ -1763,7 +1809,7 @@ var Preprocessor = class {
   }
 };
 
-// node_modules/parse5/dist/common/token.js
+// tools/node_modules/parse5/dist/common/token.js
 var TokenType;
 (function(TokenType2) {
   TokenType2[TokenType2["CHARACTER"] = 0] = "CHARACTER";
@@ -1785,7 +1831,7 @@ function getTokenAttr(token, attrName) {
   return null;
 }
 
-// node_modules/entities/dist/decode-codepoint.js
+// tools/node_modules/entities/dist/decode-codepoint.js
 var c1 = [
   8364,
   0,
@@ -1836,7 +1882,7 @@ function replaceCodePointXML(codePoint) {
   return isInvalidCodePoint(codePoint) ? 65533 : codePoint;
 }
 
-// node_modules/entities/dist/internal/decode-shared.js
+// tools/node_modules/entities/dist/internal/decode-shared.js
 var BASE91_INVERSE = /* @__PURE__ */ (() => {
   const table2 = new Uint8Array(127);
   let code = 0;
@@ -1941,10 +1987,10 @@ function decodeTrieDict(input, resultLength, atomCount, dict1AtomCount, ngramCou
   return out;
 }
 
-// node_modules/entities/dist/generated/decode-data-html.js
+// tools/node_modules/entities/dist/generated/decode-data-html.js
 var htmlDecodeTree = /* @__PURE__ */ decodeTrieDict("!}.&u%}'&}*'~!6*)%&,~!J~!J~%L~y<~!R,~~%Lu~~#GD~~#|)1#%}^%}2%+#.##%##%}&%##%'#%##&%#%#'%#&#%#&#'#%%#&#%##%#)%''%&%#%#'%#%%#%%}%%%#%#&(23#%%#&-%0%('1#(##%#'##+%'*.:1}#%#6-+(%'%%#%%%}#L'2351&('%}&/N'(0(/*-%(%%}#'+&T%7.2}#&%&#%#36/5##%&%%#&#%%#))2%%##%&&'0~!#*+&'%1~!%).'3q?&%'1~!.##%6(~!+%%%(Gw'rT~!E#<nA%#jZ~!H%(~!42##~!*31&~!G%U~#)5~#`3~!J~!Z~%]~%Y~%C~!q~!u~#kz~%#~!6'~!D~!U~!?~#T~!c%~!G#'~%7|~!G~!J~!G&~#pb~(Df}#%}*&}#%##%##%##&#-}&'#'&%#.++}%mI,#,@&(}*%}*'%&##&#%##%}&0}#.},U},%}+%}&%}#%##&}B%(}(%}+%)})%##%#&}&%##%&}<%}>%#%&}*%}(%}9%}/%})%}*%}*%}?&}&%}3%}&*#%})%#%#)}#&#-#+*%E%%'%'#%}#*V##&##I}#&&##%&%#&&Qf%%))w/0+&%#(#.%-''''++++7}>%4'',##1,#%#&%##&#'##&#*#9)%&%}#*}%,#+P(%A&%#'&##wSD',9E00#y#@}(+}&%&>~!#~!X}#*}(&&}(&}(,%}%&#+&}#&}I%#%}%)#(},'%#*}4%%#%}(''}#/##(##),%-##%%)#&}(.}&%#&}%%}*&#%},&&}&%}#%*'#%})%}D&}&%}-&}6&#&}-,%}#%})-(~+`~,=?~I9'9%~!,#%})%})%}@%}?%}(~!?~#<~#pP~#BG~#=1#%K+~#?#~%;)~#A~#mF1~#A'~'X%'~#lR~#N~'N~#r~#m#-~#i'?%#'%~#B%##%,%#~#_%#0%~#]732~,w~2+#:&#%&'0%&>%}#>##F+)#%&&#(+_}4&}-%}(&}@&}O7Fdf0@+/v4}&WU##&/0#&'('B#%}.%}'+#%}#%%&#&%#%##+#&#)#6#'#.},%}c%},%#%##%&#&%#&~#>'*-.%##%##%}#%%}%'~#)D1}#%*&~#_%%'(~#S2%'.}#~#=##*'*-%}&'%'##&&~'E%.#&~#M4}%%##&'%#~#O1##%&#'+~#<B%##%%'%+~#;#@%}#&%#&&%#(~#H1}'%'##&&~#?A}&'~#D#%32}'&&&&~#[}'(#%}'~#;C})&}%%#%~#=&%,3}%'(#%%~#^'#&&)#%'~#Y%-~#d-%'~#^%%&#&&&}#~#b~2t*&'~&(~&@~0%~e~3}%*''0})&}+~!9##-}#%-hD*)1fC#%/&/fB#40~!+#)*4~!+~!K'&:~!/*7~!.#~!H~!L':~%x&~!H#~!*~%1~!I#~!+A~#p'~!F~~#-#~,,(~.Z~!V~%;'B'mq-W~!N~%I%#&&#&}#%},%%}'%}+X#%}#&}(%}'%}<%}#%}%%'}'%}:~![)9@~%>~#UA%-%##&~!C%~!-.9:~!1~!-^2/:a~!y,D*J#-5)/4~%23,~#G~!L1~!0X3`~!2+~!!0-~&E~!W~!o,>Y&]~%cZx_&~#O*9#A#'#+I'%#)~!0B*-5A+-((F&*M#)(-7-5+'-3a5Vi~!Y~!?+[)%3),ERHm~!+:D,VG.+)?fB%%*(%)'(#&80%1'8`K8?`+'Z#&O&'H5#*9)A%%5&3))0%39+.*7#()&&*=4@**L)<'_&*+..;(#*+)./&0#3)%')-8(4ixD(&.}%,('aI:,)%,k2231T)I'#/-W7,/'Q#.'Y24+h')37</31&83##&0#),H(?'&?/1##%#&&#%''-%&&&#(&''&#.-'%#%%(,')*'&#&#'##%(%(#%('#&##%%%%('%#%#%%#%#&%##h>w+v<ayvyvcg.uuhKr}g/v|g>u9i[~>g5uI~=RvdwEg;v/g;uk!!TTSx]@RT!U!#!@VBRUU!'UTe-d0c`e&gSdicedFcrdTaqb.kYcAohdYd@a3e+d}dMdtd.aJ#bqcK`dle/e.e'dwdPdodddjbEb}ogd^ofdpduc6j?l%d{drdqc)d7bacOdQ%T#Y)X.sR[yH>6Vyv3[xwLu>vo'!*.[yBacahoj>6Rew3[xqdZa#!a&#^(X-[yG>6Vyu3[xvg3sEr|g.u/Ri9db0T#^(Xa)!-[y;>6Vylg4wKs{JwNZt3@3r=c4Z([xlg;wKt!cpq's@v7A'*a(a+!-a#[y<3Dt?3Dt'>6Vym3[xmg9rxsNJwLZt4~?r?db1T#`-!(Xa,!0[yS>6Vz%NuQs.g4wKtnJwNZtS@3r>c4Z([y%g;wKtrdga8!a(!#&T*Y-Xa#!a0<or[yc3Dtq>6Vz43[y3JwNZtf@3s!Ju}!%Dti:pm3c_%X#tjB5pkd6q!r]u?voC'*-a.a2!0a&a+[yI3DtI3Ds~3DtH>6Vyw3[xx;:s#~<5pKJwNZtE@3r~d`a)!a2T#a.(!+U.X1[yT3Dt`3Dtv>6Vz&3[y&g9rxwzcxstPu.<rAJwLZtT~?r@dZa%!a.&^*Za(/Reu[ya>6Vz23[y1g3sEr}wkg{NuQRg{ci(U#5@b`~,cg#U(2WnH5wugcRh7dX#T(Y,a'Ta!!a,[yZ<]mj>6Vz,3[y+Pv#5ReZKu+=,%!H}7ABwkaS?Rh:BcW(X#<]mrj:ubv/ARekdg%!(!a.*Ta(Y.X1!#sP>Rl*Dt6[y>>6Vyo3Wf*jOvuumvuRgRJuq*!:9<B@bX~3jVv&v@s@5Re[d/rQt{uAvo&a&a*)a2!,0Wf!3Dt0=Bs'>6Re}3[xy~<5s%JwJZt1~Gs)c;&!#2sJkNuXvzq7rxu,Re8dka4!a8(aEZ+a@Y.X1Xa)[yd=Bs(3DtP>6Vz53[y4cX#X&Re:avRe9~<5s&JwJZtQ~Gs*i^rzvdRg+Jv{%!2sbB@bX}kdga,!Za?&^*T1/!a'Dt+[y6>6Vyf3Wf%g/u;s4hGu6?Rh-JvZ,!c%#&RoX54Rivj7uyvf8RgTKvZB%*!2sGh<vu5Rgq<=C::9bb~#dZ#T&Ta6Y.X*Dt>[y93Wf)coZ(T,6VyifluvRgC@95@B@bX~/hFu34cC#T,k/unq8w8Q5RkUklwQuzunq8w8Q5Rk8d/rJu?v8w9)-&!a0a;a&aIWejg3sEr/h1s<DtDJvyZqY5aws3Jvy!&Wei~Hr1:au5@Bag>23E~5c:Z&bX};kKv?w&unuVu5Rjc;>bs)#~@:Rh.=ay<a]C;b`}Vd6s/t{uAvoaxa()!a,a7%-a#a2Dt,[yF2Wo[>6Vyt3[xuNuPRi&NuPwpi#RoWh?vf8Ri%Jv]!%Ri:KvxD!.'2WeAjZu`q9rxu,Re7woeAg-unLq(qA_/*2Wg_g3u5q^9:4E}/jTrxrzv=Wkkd~0UX#^^Xa-a1a5T&a=U1a'*aEa]!a*aPaA-adok[y54Rn>;:p3~Dp5g9rpsFNvZqjg3uJp4~<5p0Pw;5qlJwNZt*@3p1Pw:5p/Ou!5p2JvG'!6Vye=<qnJvh_[xhg3v,Rh3kOwOw-sDuev/Re^dha[a%!%!a+#Ta7)-5TaCaO!aka!a)sf[yb2>Rl!9ARiq5E}Qg=ucRkBE|oJrJ_@Wk~@Wk{JrJ_@Wk|@WkyJrJ_@Wk}@WkzJvO_[y2g-vMRmiKuYC!)&>Ri;>Ri<@3RkNc](X#@9Rk=g5vuRmhKvDB!+'=]meg3u4Rmgd)#Y'Vz3CARmfd`a+!%T'!+#Ta1Ta6TaM-sTDt9[yA9sYd'%Y#s[[xpj:ueunaXRgEjRq,v-vuqdd2'`#6Rev<32@5>:2<E}5xIo9a*X#Y(;5RePJvD_g>vyRgNj8w)v8<wggs:RgXiZt|vjx,hSq3ah!-(~@:Ro/Ou!5RhWj^v(pyw8unRhUdx-UY#^Ua.a3a70!)%UX1TaDa)'omRiRRhE[y:3Dsz=Br,>6Vyj3[xkg6ruwjcqsrPw;5r*Ku]D'Zt-@3r(~?r.i[vwv]dU1a--U#`a4(g/vsRhPOu!5RhLj:rmu9Wo!~@:wdh@g/vsRiTjXuvvNr}:RhBj^v(pyw8unRn]dz1UYa'a+^Y(!aETZalaRY.Ta?a4[yDJw1!#qLsW>6Vyrfzq-pLflpwRe|Js>%!Dt@3Dt&Jvy_[xs~HrnjMuwpsw'RecKu+D#'!t<~Grl~?rjg5u-x,gwp{ah!-(~@:Rg~Ou!5Rh'jXuvvNr}:Rh#cW#X/c;&!#2sLi[v7u7RgpJv)(!iLrxu,Re6j7v@s@5Se[e7d`aW!Za(a`T.a#!a3!&aDa-!9)Dt_=6s+3[x~~DR|h~DS6avhGun5RkZj3w)v-]mkKunB!&*]kb97R|i<ARk<c:Z(6Vy}Juh'!wziMRoS:F|vkLuauJv5vtvQRh1d='T+Y#VyO~DR|jcF#T'7R|g97R|kJv3'!ay<Rj,Jvh&!:ReXcsa6*a+#a#_aIRf9aLRf?c,Z&Rf5Rf7c.Z&Rf;Rf>cQ#%T'p-Rf8Rf=ct#%'(*!,p,Rf4p+Rf6Rf:Rf<d~'Ua%U*^UYa(!a,-!#a4YaTalaEX0a8a<Weo3Dt/3Dsx=Br93Wen~Dr;~<5p<JwNZt2@3p=Pw:5p;Ou!5r3c7&!#:p>3Ds}KvGB)_6Vyk2sM=<r7x'eovA(!hFu1ARf}cV#X&@r5j6rvwQa^Rf3c=Za'wkghJv__g;unRggA53B9=b^}%j6uduo5Jq;!(hIv%2Re`Ou4ARe_e%a#^^^Xa&!a*a2!&a6YaP!*ad!#a:aE/5Rn?[y@>6Vyp;:pE~DrY~<5pBJwNZt8@3pCh=rt3rWPw:5pAJup_[xoNuPpF9c!#'45pD5ARn)d8#X'X*3@rU72s]h>v<<sSjJpqvewOJq/(!hNw'5ReBk0s2u3w/w'5ReE5@Jq.!a+JQ!&WeU23d(#Y&RjG5]jBk!u7w&u0udARjEe#+^^^Ub#!a2/a`Z(agT1!a-a;|@TaG!aS[yV=Re~fow'RguNuPRe?bz#'>RoUWeL>:Cbb|?JwPZtVg6ruRmzJvD'!6Vz(g/vmRh~Jvy_[y(g9voRgyx*cy(#2>Ri2B9b]~9kIw9u7rluJu3Rg]dI#a%UY'@=p%CAx.gQZ&RhwwygtRm{x5g_Z'+ABqR9Woa=Bp&dV#^*Xa'!&@o{g4v]Rk;Jv{!%Rk[wkkiA5RkiwwfUB=x,fUuqC&*!>RfTg8v0RfV~ARfSd;rJsAuAv9wR'ae+/aO!a@aza/a#[yQ@Wg!2Wemg3sEr0JvB_g>uvReWg2v+Re=KupB_+[y!2AbY~-~Hr2AJwD!(h<~El>h<~El?Kun@+_:9b`}Kg-v/Ri3g;vtwyk_9]k_d=&T#*U.6qh@Ab`|K9:H|CJv[!&3Dtex'fDwC%!Rf[9WlMd[(^X,!a%Z06Vz!@WgBg=v~Rgvg,QRe@awd,#Y+jTv|Q~EfWj]uNr|~FRfXdy#Y&^Ua%!aO.!(a)Ua;=!a@aKap!a-,a!Ta]a[rSa]p?[y82sK=Bq~;:p:~<5p8Pw:5p7d'#Y'Wf(;RnRi[u4w&RgJJvG'!6Vyh=<r#ijuuv/sIKuYD'ZtG@3p9~Gr&d2#`(g<vtRgFj`u5w&rqpxRf2CJuY!+:wfnTOu!5Rg}jNs1ucv&RfwJvA!&3@q|BDcC#T,k/unq8w8Q5RkTklwQuzunq8w8Q5Rk9dga#!a'!a=#a0!:+Tb*b@aO.a4!aba8aFJv^}?!VyR~Dr<g;u%Rn.~<5p[x'e`wNZtR@3p]Pw:5pZhNvjBp.woe_g5u-r4JwF!%DtO3:ooc7&!#:p^3DtpLuGw(!+%)Dtk6Vz#2sd=<r8d'#Y([y#<x3gJt`w@!)%}MRiowzikRij=]ilxAf3,U(#B2Rf#g0v-Rm[ck{`U#]giKv3>)!&6Ri154s,KuGB_%@r68r:dJ|t`#X(9<E|u2@H|rx3gJu?w'!+'1Nu7Reg4=H~+9<wxgY95Rm]xLggZ-`(X}U2:Ri4h<uOawRmsJv__5@bb{jbV~3dka#a'a]!,#a+U=a>b6a3b%!/aKa/)!arwve^VyJ;:pR~DpTg3uJpS~<5pOPw;5qmPw:5pNOu!5pQJvG'!6Vyx=<qoJvA!{~Jup!%@qk7Rn/KvyD!}''[xz;>wkh'?Rh,x8gyt`w5D!&),(SgyccRgztJ@3pPB5p#d'(Y#<]mmifubw&RgoJvE&!82s^JvF&!8Rf,ADb]~;x=h'rNu]vK!,%'*0RnORh)4Rh*AqQg-vaRnNg;wHwkh'ba~4cE#Ta*x3gctyw@'!+%RnFRnD<4Rn@hFvK5RnCxWg[#`&a0Ua()`1Rm75Rg[c]%X#qi8Rg^NvdRj>BwzgZauwji7Rm6A4wgg]d1#&(*,.0a#Rm;Rm<Rm=Rm>Rm?Rm@RmARmBe%#^^^Xaea?aC/b+(,!a+a#!a/!>a&Ta<aKbD!2wphBRnk[yPw}hE|.=Br-3Dtm>6Vy~g6urRf.x,hPrNav!%'RnqRo%Ro#Nu;q[Pw;5r+JwNZtM@3r)d'#Y'Weh;xChL#`&RnmRnoKu}>%(!Rne~Bs-;2wjcussJv+'!aYSO}6@B<5?ba~8LrNvj!.%*ROwungw~ng~:9;Ri^>wtnig;wHRnixDh@|(UZ.x1h@|)!#:2<H|*xHn]#-UX'3Ro)z=iT}6ARns=Bwsn_wpnaRncw]aR(#UXa&Ua*a/=]iPd'#Y&Ro'WnXf{QRm2hNvj]nZd`'T~&1`{|`#9b]{}c:'!#Wl{>@=be}]?cl{{U#:5Abb}Jds#^YaF!a*b4a#a3aPa>&Tb!bH!*a_!Eau?/a&RjY<]gj>6Vz*;:pe~DrZg,QRj1JwNZtX@wihspcJvZ&!VyX9WmOJu|!|N2WmHJvh&!]ht~Bpbcn&T(!#RmQ<s7Nu;padH#X'`+WmJ@>RmKCARhnKup=!)&Wf+:RhqNuPpf9c!#'45pd5AwghpARn(Ls@w!%,)!RmP@Wfe<E|IJva!&WmNg8vsRmLd`*.`#Y'Xa!axRn*]hrA8Rhug5s@rXg8u!RmMd8#X'X*3@rV72smdI*#UY&RmICARho~GsgxVgd)Ta'U-Y&Xa!T#RnEWnA@Wffg1uDRi0hFvK5RnBxGnG&#`%owp)@wsf+bX}Ze-*1!a*^^^Ua|!#a.aq&Ya2!a>.a6!a:aO`aJDtL[y`@Wg#>6Vz12@wzoYRoZNuPRi!NuPRhzg=ucRi,@=b`{Yg=ucRi-ACJvB!&Sh[ebSh]ebi`wUuFRm4Jw2_[y0JvB!.<Ju(!&SoG}6Shd}6<Ju(!&SoH}6She}6Kur@._g5vHRieJvx!{L2G{Kx6gd'T#?Rh82Wi5cZ#X(g1w)Rm5dW-Y(Ta#!a)!#aYa=wnfE=su2>>bU{0j9udv:<svj8uQv-7RgHdE%#^'sq9sp=>Bb_{TJv`!&g/r|snj6v(us5d,#Y(56H}[978H}]Jw5!&g1rushJvB!+j;v{u5?zDhd}6}bj;v{u5?zDhe}6}ce*#`(^^^a[aea!=!a6a*aoXb1a.!aAbL!b>,b'aL!aV@Wf|2Wlg3[y/JwNZt^@3piPw:5pgJunZou3@rsJva&!Vy_g<v~Rm#JvG'!6Vz0=<r{Ju{%!:pj@WfsiXuJu3Rm:JvZ&!WfA~Bph@c4Z&Dtwax5rubx(#:awRk1@d,#Y&RfjRfid1#,Y(@Wfp2Wlrg5s@ryKu[@!,'=]ig9wlk?Rk>g5u-rqJvy'!@9RkQcH(T#=>Ri~@<wkj(Wj(KuZB*!&<7rw@9RkRcH(T#=>Ri}@<wkj)Wj)dg(Ta2Xa9X#`-!a*CARhg@@=I}d9x;c~#X%so=<sj>2@@=aybb}XjWv0Q~EfEj3vLv;<d,#Y(56H}`978H}_dgaPaFa'a/!#a3Y0a_a;a|!1(a7-[yE3[xt;:pJNvZrrg3uJrvJwNZt=@3pIh=rt3rxPw:5pGOu!5rpJvG'!6Vys=<rz@c4Z&Dt(ax5rtJvZ!&~BpH@wsfNg-vaRlNci*U#=<wei<F}a5@Jq.!a*JQ!%@qZ23d(#Y&RjH5]jCk!u7w&u0udARjFd/prq=tyvpaEa(a:.!a1aZ(@@=I}:9wpd%=<sX55w_h}@@=I{t=ay<aU@@=I}T=ay<2@@=I})?C9:9au@9Cb]}DP~=x-fAZ(2Wl1=ay<aU@@=I}>5@d##Y+jTv|vV~EfFj]uNpn~FRfGdgaK!Z2&!a8a-Tb({E!acTbM*!a(DtY[yYd'%Y#sl[y*hHvh>Re5x2c{Z}.j4uCvcawRiMd+#X+_x&d!},<5RkX;2Hzw@x,gavfB-!{CcF&T#Roe;RodwWbBg5urRgaKvHC*_6Vz+<4opieuew&Rmq@d]&Y)X,T#X0Rh}<BqP=4qS9:ReMg/ujReNJw0!/<Jui%!bd{kawwnemRelAxUa?a3#*.&UX(Ya+a/RhvRnQ<o}9Wmtd-#Y&RgSRmw9;Rmxay=Rmyg-vaRmuxEhSrNu,v-voC!%(aR.a(a7+1Ro1>Ro5CE{A9b]{@;5x#eO{:g;urRi+KrNA!%(Ro3>Ro79;Ri_Ku@>{;&!x%gX|{KunA_+g5QRj/g3u5Rj#g>uERj%wio/xRhS&!,!#^1U}wba{8>>@=be}qC@:D5ba{7Ku+A&!}x?ba}t>>@=be}se(aA^^^Uat!b0#{pa+awUazbGa#aLb9bgaWac'a5TbS=Br!d1#`%scp_Jvl!#rT>Re0JvX&!VyN=H{Fcm#U&:pY=ReaJv2&!]h0=]nUJvG'!6Vy|=<r%JrM_=]h2@Wlud'#)U'Wf'b]{i=]h/Jvh!&~BpWg=v]RnMx+ny#'Nu;pVwjnu=]nwxJnx,T#`&Reqwjnt=]nvieu9vrRjLLuYwP(#+!th@wih5pX~Gr'g5v/Rh4KunA'!-CARnP@wwiN:Rm_9x'cvw>!|l=<saKvAA!0&3@q}>w^e1bp#&Re2Re3BDx7gH#T|f5H|eKuZ>!%(:qNAH{]Jv6!+3B2B9=b^{X<5<B92:E{ZLvhwA(a;a%!igQuyRmad+#Y}m@3Rh5d8#X'X*:AqUAHzmaxwbh<aXRnVcF}RT#Nw&cj#U(BWnug/vsRntdka)(a3+.Zb7aYYan1!bVa@Xa}[y^@b[{G=H{+hFu73Rj&Pv#5ReQcK%T#sig1v{Rj'Ku+D#'!t]~Grm~?rkKuMB!01d5#`'Vy.ta3Dtu~Hroc8#'{^45s85AwZbP&!#Rn!wghxWn#KvEA!)&2RlA2RlBx:h|#(T,=]j09Wobz>x]z/@awRoTd+#Y(az]hFhCrm4d,#Y+jTv|Q~EfMj]uNr|~FRfOdCa!Xa9_X#@<plJvf!%b`{(9;Rgwc;.!#2x7cw#T|UDb]|T5Ju={(!=@E{&Jv)&!Ab`{'awJvf!~*>>@=be{#KuY>!+&4Ezyi[ugv&RjIdea+T)#UXa&T-T&a!Rh9auRmW=]kLg5vuRn+g3u4Rn-Ow6ARn,hHus5xNk?#UX(U~)/g8v0RkD~AwkkF?Ri.OuNBwkkA?Ri/d|a2`a*^UYa.!aBTZaTa'Xa;!(!2!-a#b2[yC>6Vyq3[xr2Wi?g1rusVh%s?DtF~<5rbJs;%!DtBfswKtCj[uvuSsEu3RgVx3o:u+wN'*Zt;@3rd~Grh~?rfg8w)Lq)qE&-a%!>bI|`jWv0vV~EfCjTv|vV~Ef@j]uNpn~FRfBcK#T']gWNu7x,k7q4ai(0!hHv8<RhmkMu9vrsBuev/RhlCJvB!,g<v{wchh~@:Rhji[vrv{wchi~@:RhkdS&a5UY#Ta!RgPwwiI5BwciI~@:Rh`x'iJvj'!5]iJPu8Bwch]~@:Rhach)U#h3rp]gLh@t|Ax,hTq3ah!-(~@:Ro0Ou!5RhXj^v(pyw8unRhVd|)`,^UYas!a?/a2Z'a^Ta{Tb7Ta(a#!a,Wf&9sZ3DtAadamov=Bqt3[xig8vsRm~>waiL2b`{QJv*_Ouv2qgj<v]v2BqfdR'X*X#Y-@3qr~Gqv~?p6hHv-]glPup5Lq+q?_%*b_{qF{n9b^{rOu4ARhpKvCD!+&~Bqp:5Dbb}nwoiKl&unuTuBv]v+ueunaXRf0=Jvh!0nKufu8v1w&w7q%w&uHrz:Rgnj5w,uxDJq/(!hNw'5ReCk0s2u3w/w'5ReFd>Za&!*UaA=<wkgsRnSJv^!%Refifw3vyRgOKu_B'!,<]gkiiu:w&Rh<=C@a^<B57@2F{[<B5@aW:=3away9A5aW=<B=C@a^<B57@2F{Ie-#`(^^^bCara.b8aza6!/bZ,!adTbnTbOb+aFaS!aAT9@Wf~2Wli3Dtl2@d,#Y&RfnRfmJwJZtN~GqyJva&!VyMg<v~Rm%iXuJu3Rm9Jv[_=]ih9wlkDRkCd1#`(@Wg>2Wls3cH#T(@<Rj*=>Ri|b~'#23s9h<~El.d'#Y&Dtxi^rzvdRl#d*#U%(o|B2s`hJwSaxRmDKv4B&!1:Rmdd5#`'Vx}to~Hq{x'f1v3(!BA5ba|bJv_&!Wfug1v]ReIdO+U/Y#&G}-8wze=Rh{g1v]ReHg/uQRf/by#)ibQwERl/cH#T(@<Rj+=>Ri{cNu+vlax-!(#a0qa9<Rii2;;bU{H;x<i=&X#Rk`<4wwi=C9H~8xAI(Y#<azRi@45wXI<B9;5bb~7dL(X#Xa(+!aL6Vy{g5QqOau:5au2@ay547EzbxOcU(UX-T#Ta#:Cbb|A?wjh/b_|SOw6ARgtihr}u7Rhy<d1#T)X1@@=I|~=ay<2@@=aybb}Sj3vLv;<d,#Y(56H}A978H}@dGpvs@uAu`vcw9*!aFa+ai%(b!aXa8.a?a[ozWey=sU2@G}Nch&U#Rf_WexKu+D#'!t:~Gr`~?r^j]uNr|~FRg*j^psurwJt|RmcKv)@&!)7Rkv~Br[@wxfO:Rl3co#U'6Rezj_q#vIuavjRltwzeyh@vr5JqD0!>aY?C9:9au@9Cb]}9cl#U*5;5<H||jbuus1ucv&Rfvg1v~d/pppzqFr^a--a~!aMat1(hFv;Wiz@@=Izoj5uuv-7Rix~Cw`fk2WlVcZ#X,k)u3vWs@u2]ktg;wEx'fBq(_2Wg/jTv|vV~EfoJv]!15x'hzqG!(P~EfU~CRl_j6v(us5x4i-#T(2WmZ?C2F|d>Kq<aj1!*jTqIsBv=Wl`~Cw`fi2WlWj`v0u*~>RlR=c>Z,k#u3vWs@u2]kr<c1Z+jTqIsBv=Wla~Cw`fm2WlXdmb3!a{(arZa`bkTa%TbQTa-a9+c'!aM!/[yL=Bqug.w'RifhFvyDRj.g>vgwyk^9]k^Jv3_@WfbAARkhJw2_[x|JvB_wkoIRoKwkoJRoLd'(Y#<]gm=<9<H|yd'%_X#skDtb3awwqkgNulRkgdB#^',9:p'hJwSaxRmEBwVb8@4=H|qLu+w50&!)@3qs~?pU>Awwn;;Rn=c:Z'ARn<=<qwKvC@!/&~BqqJv6!&]eVb^z^xRge'/a%+^`#Sge}6<4Rn3=]n0Pw2>Rn8Jw0!&>Rn:>Rn6cY#a7+!a&=<wkaNw~h3z_c5Z{=wjh#=]nLKv^D!&)Vyz=bW|swYb<WetcG#T(2wxa@qVx@gD#Y&b^|V5JwG&!5bb|pg/w&RgD@x=kHs=uAvn!a%%/'+RmSRh694Ro`g-vaRmRhHv-]mlxCcS#`&ba~.5cD#Ta)P~=d,#Y(56H{>978H{Dd_#{2^Y%_+qbbb{6g3sERhsbU{?dfa.,`a(Xa<!aiX#(55RiG54RiHcI#T'WiU3RiVNvdwtfcRlKNvdd,#Y&RlHRlExQgf.1*^T'X#Sgf}6Wn4=]hfPrk>Rn7Jw0!&>Rn5>Rn9Lunw?&a2!,5<oq@@wqfdRlJj5Q~=d,#Y(~ARfcOuN]fdDKw;ay(}i!547E}j?cI#T(@5bV}iCbV}hdv(^^Tb?a40,b##Tbo!a*bR!a<b|a/!aKai!aU[yK=]o^g:v>ReGJwPZtK<7Rh+h<~El,Pv#5ReR@awwxjCg,ulRjDJv6&!]j!z?aQeeg>w=Sh<eeJw;!&axEzOg,Qosc!#*:wkeJ]eJ>x'h-u(!%Ro.w~h.zPdNZ(X,Ya![x{;9ReY;wkgxRiF:x?ap#Y&RmUg<s2Rkod]+UY0TZ'!a&A9sw<=bczLNvuw{gqzNhJwSaxRmCKuLay!#&s_Rf-55b^{uJvZa!!c%#(55Ri654wmiu5RiuawLu,vp!+}^%b_}Y9;wkgxba}o>A9:=b^}zKuh=a''!3awRk3c*'!#aHRk6c+Z&Rk5Rk4Jv)&!awRjSawd9*`#0?C2@EzMj8u<uJ5RmbjQrquJu3x,k>uq@_+=ayb^|W~ARkEOuN]k@7dhzV^X/X&a-#zRzSb`zXcJzTT#2WkVKvDBzW!%FzY9;5bbzWjQrquJu3Jw3%!b`zU=ayb^zQd:#X(T-a!6Vyywxh}=b]{Jg=u1RiAdGp~qHtzv!w(wA+a+a;<!aJaYai'anasb(=azRmV:Cbb{MLq2vb!%')RjuRjrRjtRjqx3jnqCw3!%')Rk(Rk+Rk&Rk)Lq2vb!%')Rj{RjxRjzRjwLq2vb!%')RjsRjpRjfRjex3jcqCw3!%')Rk'Rk*RjkRjl9<CbbzfOu4ARhxLq2vb!%')RjyRjvRjhRjgx=joq*uKvb!%')+-Rk.Rk%Rj~Rk-Rk#Rj}x=jdq*uKvb!%')+-Rk,Rk!Rj|RjmRjjRjidAq&qKs@uAv8Aa.'*-a@a&0!aM@a5[y73Dsy3Ds|3Dt):wxgI2sHJwJZt.~Gqxwsf0ikrzt}Rl0Jvy_[xj~HqzKv_A|D!&WfP8axRoVcf,U#k(v]v+ueunaXRf1Ju}'!g8u#Ri=jQw!sCunLprq>!,')~<5qeGzq9F{W=c##%s5au:5aU3CBE|;d4#X(D!a&6Vygx(b;#(=]ed?C2F{N<capoq2r[a&!aPa9,'Pw;5s:@@=I|,55w_h|@@=IzcP~=x'fCqB_2Wl2>aU@@=I|1OuNBc1Z+jTqIsBv=Wlc~Cw`fl2WlZ~AcTa%!Z+jTqIsBv=Wlb~Cw`fh2WlYk+uNqJsBv=WlSg,u3dca3#UXaMYa)TaB-=cM|7T#<bI}l5@B932:aV2G{BOuNBJq:|M!5Ezt=<B=C@a^<B57@2F{v>cB{/T#=ay<bI{3Jv6!a.6BKq0ah&+!5E}HP~Ef{978BaU@@=Iza<7d#.Y#978BaU@@=IzH~AJq0!(@@=IzG978BaU@@=IzFe,aU*Y&^^^bvJb,b:bFad!a,c2Ta>aL.bo6!a#CbTa'T#Re{2Wlh2@G{yg6t~Ro_NvdRfticuRQRllJv3&!x&c|zs@Jw3!%RflwpfkRlpKuL;%(!Re<@G|C2GzdhIvuBwgjAg-u0RjAKQB%!(GzZ@G|5NuuRl7d='T+Y#Vy[g<v~Rm!==G|>JvA!)@wma=]m1ifuaw&RmnLs@vT'!|/+[y,g:v>ReTJw1!#qX=x!eC{bLu+wT&)ZtZauq_~Graci&U#F|89:r_Lupvq!.)&2RlG8RfaC=x!eF{_h?rpWlmd&'!#X|&]k::xJey#`'T|+<E|&2@H|%dE#(^,g;u.RiEg6vjRiC9xCkA{O|zY#g=ucRmXKs0@!&*@G|m@awRknJuh!,3d(}gY}eJvj!%Rm):Jw3!%Rm+Rm-Ls0w(&!a(a#@b[|6cZ#X'7RkxWgAOu4ARn'dH'U#Y*Vz-Wm'CARm}d]*#a%^a*T'aK!a<9bV{PC=p*Jw4!&SgxcbB5r]idw(wBRmF7xFkt#&`(Rm/Rm8E|!JuY_9:Rl5=wrgr2:bbxd@xXfB(a*#T+!.X0X1Ta/a'T&RlDRfL>RlyARl9b[z[>RfZ:RlL:RfRwlg/ARl;9;RlxKv,A/!%7s69<74=BA5ba{-8Bde#`a<XaKYa1,a'P~=wxfB2bZ}}?C972@@=I}r8@55B9;5bb}G978B2@@=aybb}3j3vLv;<Jw3&!>Rfk=ayb^}4~Ad1#`*@@=aybb{w2@>==<bbz]dx+UY#^UaF!a9!bB'Ya1.!ajXa#%olRhD[y=3Dt#Ov5BrHKuMB%!(Rf^Wep~HrJwkiQjKr|~FRg)Ku+D#'!t5~GrF~?rDdV)UY,Z/_7RkuG{<~BrBg,rlsO:235B@bX}|d?a1!#`(6Vyn5@d##Y+jTv|vV~EfIj]uNpn~FRfH7Lq2vb1!a9-978BaU@@=Iz9978BbU}#~AJq0!(@@=Iz8978BaU@@=Iz7~AJQ|}!978BbU}!JvkaK!AdUa21-U#`a+(g/vsRn~Ou!5RPj:rmu9WhOjXuvvNr}:RhAj^v(pyw8unRn[kPr}p|u7vwv]RiSBd;pppzq@qHQa?(b.!a.a`@.|xa(hFv;Wiyj5uuv-7Riw~Cw`fg2WlU978BbU|wOuNBJqG!(P~EfD~CRlQcZ#X,k)u3vWs@u2]ksg;wEx'f@q1_2Wg.j]uNpn~FRfqJv]!15x'h{qG!(@@=IzK~CRl^j6v(us5x4i,#T(2WmY?C2F{1>Kq<aj1!*jTqIsBv=Wld~Cw`fj2Wl[j`v0u*~>RlT=c>Z,k#u3vWs@u2]kq<c1Z+jTqIsBv=Wle~Cw`fn2Wl]dn1#c(a(b^a2!b/bAT(bj!aDa7bu,a_a{c0!2T0g:v>ReD2@G{42@G{5~DpM~<5rc=Bx6i>{RT#RnI@zCx]y]z:2Jv[!zr5Awyk]9]k]dD(Y+X#6Vz.g=wKtgwhaCwgmTWj2Lu,w%_+/[y-B;b^xeg3u3Rj-2@bX{*KrJ<!+'@Wg(g?QRlC@Jv`!%b[zIwsfII}8JQ_@w|kW|=Jv(%!AqcOuNBJvEzh!bYzjLs@wP#(0!oy@>RkdJwMZtc3Dtd@BcG#T'9bWxg2@2Fznd*#Y+;2x'c}w<zizixNgwa#Z'U+!/!a'!a+w~g~z6wcn{Rn}wcnzRn|5Rh%=]nJg5vuRmvNvdRlvcprJu}w*az*a#!%.a.'Bot9qT]kj@Wg'ay2Gzv@Jv`!%b[zEwsfHI}1;ck#Ux`<Cbbx_Lu+w!a&0*!wko*wwo,So,}6Juqxf!E}PigQuyRm`d3(`#8>Rn%:A5B;bZ~%KvhCa!a2!x>k7#Uxb@b{#xaRk7Jw0!)>wwhlShl}6>wwhmShm}6CJvB!.x'hhvj{!!5Bwkhhbaz}x'hivjz~!5Bwkhibaz|xEhTrNu,v-vpD!a%&/)a3a.,%Ro2t[CE{)@3re9b]{%wjo09:rgc:Z&Ro6=<riifuaw&RmoKrNA!%(Ro4>Ro89;Ri`dSaL'UYzxZb)7Rka3xRhT&!,!#^1U}vbaz{>>@=be}yC@:D5bazzKu+A&!}{?ba}y>>@=be}wxBh[t`u~vJvr!%a!a()a,a0a4RoC=]o;Ju(!%RoGRhdwjh`=]oAg>w#Ro?g5vuRo=NvdRl|Ku]C.!&;RoEJvB!%RoORoMBx'h[v+_?w~h`}~5?w~hd~!xKh]oiptu-utv.vp!#%&a30a@a'a+(a/aOp(o~p!RoDJu(!%RoHRhewjha=]oBNvdRl}g>w#Ro@g5vuRo>c[#X']o<CauRoRAd-#Y':RkpauRoQKu]C.!&;RoFJvB!%RoNRoPBx'h]v+_?w~ha}t5?w~he}ue!/UbhYacXaW^Tc&a;b:a-c/#b&aja1(!cL+!bKbt!bmcRc9aIc?8[yW3Dtt94Rg`Jv}!&SiRMzBhEebShEMNuPRe>x7gL#TzuwjirRipc<Z&>on;>z=h-MSh.Mwqczx'a7vj&!>Re4@=ResJt__NuPRi*NuPRi)j]uNr|~FRfzKrJ>_+@Wfy@Wf]2WocKrJ<!+'@Wg%g/QRl@@Jv`!&awRl<wsfFIzgLu(w*!.*&ShBMwvhIRhI9;RhNx1hK'!#Sn]Mx1hK~0!#:2<H~7cNu+w7D*'1ZtW>Rn1~?rOc:Z&Rn2=<rQ<7wjh&=BSnLMc]#X(6Vz)w[b=a!U#9wzgMc3#&(RgMRitRis<x,gKt`ax!&+SioM=BSilMc3#&(RgKRinRimKurB,!&SiQMzBhDebShDM6BJQ!(P~Efx978B2@@=I}WLrJw!!,a*&@G}O@9wkibRid@@x'fKwC!&SlDMSfLMjUv~Q~EfKKv3@a+!(hFv-]mpx/hYZ(C5RiWz<o/MwkhY?So/M@x,gbvfB*&!SgEM:SoeeehFu3:Rgbda(,^TZa)X/7Sg[eb:2RgI~BrMC@wgkc:wwkcRerx3h(uUvK!&*,SnOM4Sh*MArRg;wHRh(x=h;rJvPwI!a4',a'0@Wg&=BSh/Mg>w=Rh=g3w*wwgGRgGcW(X#;Sg}M2Gzk@Jv`!&awRl=wsfGIz`dKZ*T'Y-:RhR7RhQg5u-p`j6v(us5d,#Y+~Awkia?RicOuNBwkibba}Ld6p~tyu_vbAa'a+!a/'a3aEa8a!>Sh,ebJv{!&Sh@ebSaReb9;SgwebNuPRi(NvdRl)NuPRi'hHu^<Rm^Jvv_@Wl(g;u1Si/ebKu'B&!*Sh?eb@Wl'z@aPeb95Si.ebcpputyvjB)!,&a+0a%ShAMWeK@G}C@WfJ9;RhMwvhH9w{ia}ix,hJvRA1(!zAn[MRhHx1hJ~*!#hFv(BSn[MBJQ!(@@=I~'978B2@@=I}2db.Ua<'X}+T#a0XaG2G}E;wkg|wuh!Rh!x,hZu,@)!&So0MVy)C5RiXACJvB!&5RiY5RiZg8w)cG}*T#2@bU}=KsA>(!a.3wkhZba~(x,h^u(A!&(SoCMRhb5Bz=h[eb?w~hb~6x,h_u(A!&(SoDMRhc5Bz=h]eb?w~hc~6e)aA1T#T,^^^c-bMb&blcPaP(a/!0!bA=b5c@a(!bfbrc#2afwmhARnjwchORnp2Wlf3DtsNvdRl-2@wpa<]m0bx(#:awRk2@Jw3!%RfhwpfgRlnKQB%!(G{V@G|'NuuRl6d='T+Y#VyUg<v~Rl~==G|<Jv+'!aYShC}6@B<5?ba~8@Jw3'!g2QRljhLrpWlOd+#Y'g.w'rIg>w*wgj@g-u0Rj@Lu+wT&)ZtUauq]~GrGci&U#F|39:rELrNvj!.%*RhCwunfw~nf~:9;Ri]>wtnhg;wHRnhx3hDs@v~!/+'@Wfr@9RkSNu&Rlo=@<5GzoKs0@_+@Wl+@awRkmJuh!-3d(}pY#qWJvj!%Rm(:Jw3!%Rm,Rm*de&!1U-U#`)Re;@G|.@9Ri82@wjfvRlq=@<5GzpLvOvr!).&2RlF8Rf`C=x!eE{.Jw3_g2QRlkhLrpWlPde(!#U{s,UXa*Ta'[y'g:v>ReS;x0PZ&RnlRnn~HrKJw1}f!=x!eB|2w]aP(#Xa&a*Ta.Ua2a7=]iOd'#Y&Ro&WnWg;u.RiDg6vjRiBNvdRlzhNvj]nYJuW_2Wm3x)kFze{9d])!a.!,Y01!#&aC!a3RndC=ox~BrC@2b^{pg,rlse7x'ksuq!%Rm.E{xidw(wBRmGx9o+)X#wwo-So-}69:Rl4@xSf@a#XZ'X)X,Ta(/ARl8b[xc>RfY:RlI:RfQwlg.ARl:9;Rlwdn'#^XafaQa1X1TaHTa)@b[{zcZ#X'7RkwWg@Ou4ARn&x)kG#{,g7u/RkGdH'U#Y*Vz'Wm&CARm|bx#(A]gUbUzJj9Q~=d,#Y(56H}l978H{U7d,0#U*2>ABb_xZ978BbU{e~AJQ{g!978BbU{hxMh?ad{oUYZ.x1h?{l!#:2<H{mx3n[t{vl!,&a%3Ro(z=iS}6ARnr=Bwsn^wvn`Rnbd`*T}B0!#^X'BG{c9b]{a>>@=be}F?JvS!&BG{d7BG}(Bde#`a1X,Ya@!a'P~=wxf@2bZ}I56B2@@=aybb}08@55B9;5bb}<j3vLv;<Jw3&!>Rfg=ayb^}&OuNBKuLA!)a!P~=x#fD{f2@>==<bbzl?C972@@=Ix^d6rSu,v7w*C(0a)a6#B+a%!sQ[y?3Dt%3[xn~<5rLOu!5p@Ku+D#'!t7~GrP~?rNKvlaya7'!h+v-5qMg=t|cd,U#5AAaa5Abb{S@52B5@a[@52B5Gx[iXueu;d<#`a(!/549C;ag>23ExY5@Dah89b^~689Jv)!~2b[~1Lv'w(%*!a#bX|aPrmawRe]keu7uhv-q6rxu,q`xTo]/a5aU!bNaDXbi!b-!ao!b<bwA!#5@B932:aV2G|:d-)Y#hJrL>RhG<7@C5<H|_=Cau:5aj5@B932:bJ|ng>vIbs)#?C2F|9jPv0w.vISh-MKvUaz(.!9ABbb|[5;5<H|Eg>unwfh;9:4E|YjQsBt|vjx'hYq3!(?C2F|J:2<BaY?C2F|GOu!5x,g|p{ah!-(?C2F|c9:4E|OjXuvvNr}:Rh&i[w*t|cd+U#jJvsu)vsSn~Mkfrmu9p}u7vwv]So!McW#Xa!ax5@A5aY:5;5<H|>kJv~vYrquJu3x4ib#T)2@SmZM?C2F|Bj:rmu9@xPhI(a*a#U#`a3-5Abb|L~@:RhK9:4E|0@52B5G|#C::aY?C2F|-:2<BaY?C2F|.5Jvk!a)javYrquJu3x4ia#T)2@SmYM?C2F|HAxPhH(!a#U#`a*-5Abb|4~@:RhJ9:4E|R@52B5G|F:2<BaY?C2F|Sc^#Xa2j=Qq5CJvB!-g<v{z;hhM?C2F|Zi[vrv{z;hiM?C2F|XKsA>!a)-g<v{z;h[eb?C2F|]i[vrv{z;h]eb?C2F|^iZu.vix,hZq3ah!.(?C2F|QOu!5ShXM:2<BaY?C2F|P", 13494, 2713, 49, 25, 61);
 
-// node_modules/entities/dist/generated/decode-data-xml.js
+// tools/node_modules/entities/dist/generated/decode-data-xml.js
 var xmlDecodeTree = /* @__PURE__ */ new Uint16Array([
   512,
   26465,
@@ -1972,7 +2018,7 @@ var xmlDecodeTree = /* @__PURE__ */ new Uint16Array([
   24615
 ]);
 
-// node_modules/entities/dist/internal/bin-trie-flags.js
+// tools/node_modules/entities/dist/internal/bin-trie-flags.js
 var BinTrieFlags;
 (function(BinTrieFlags2) {
   BinTrieFlags2[BinTrieFlags2["VALUE_LENGTH"] = 49152] = "VALUE_LENGTH";
@@ -1982,7 +2028,7 @@ var BinTrieFlags;
   BinTrieFlags2[BinTrieFlags2["VALUE_MASK"] = 8191] = "VALUE_MASK";
 })(BinTrieFlags || (BinTrieFlags = {}));
 
-// node_modules/entities/dist/decode.js
+// tools/node_modules/entities/dist/decode.js
 var CharCodes;
 (function(CharCodes2) {
   CharCodes2[CharCodes2["AMP"] = 38] = "AMP";
@@ -2432,7 +2478,7 @@ function determineBranch(decodeTree, current, nodeIndex, char) {
   return -1;
 }
 
-// node_modules/parse5/dist/common/html.js
+// tools/node_modules/parse5/dist/common/html.js
 var NS;
 (function(NS2) {
   NS2["HTML"] = "http://www.w3.org/1999/xhtml";
@@ -2943,7 +2989,7 @@ var UNESCAPED_TEXT = /* @__PURE__ */ new Set([
   TAG_NAMES.PLAINTEXT
 ]);
 
-// node_modules/parse5/dist/tokenizer/index.js
+// tools/node_modules/parse5/dist/tokenizer/index.js
 var State;
 (function(State2) {
   State2[State2["DATA"] = 0] = "DATA";
@@ -5559,7 +5605,7 @@ var Tokenizer = class {
   }
 };
 
-// node_modules/parse5/dist/parser/open-element-stack.js
+// tools/node_modules/parse5/dist/parser/open-element-stack.js
 var IMPLICIT_END_TAG_REQUIRED = /* @__PURE__ */ new Set([TAG_ID.DD, TAG_ID.DT, TAG_ID.LI, TAG_ID.OPTGROUP, TAG_ID.OPTION, TAG_ID.P, TAG_ID.RB, TAG_ID.RP, TAG_ID.RT, TAG_ID.RTC]);
 var IMPLICIT_END_TAG_REQUIRED_THOROUGHLY = /* @__PURE__ */ new Set([
   ...IMPLICIT_END_TAG_REQUIRED,
@@ -5876,7 +5922,7 @@ var OpenElementStack = class {
   }
 };
 
-// node_modules/parse5/dist/parser/formatting-element-list.js
+// tools/node_modules/parse5/dist/parser/formatting-element-list.js
 var NOAH_ARK_CAPACITY = 3;
 var EntryType;
 (function(EntryType2) {
@@ -5981,7 +6027,7 @@ var FormattingElementList = class {
   }
 };
 
-// node_modules/parse5/dist/tree-adapters/default.js
+// tools/node_modules/parse5/dist/tree-adapters/default.js
 var defaultTreeAdapter = {
   //Node construction
   createDocument() {
@@ -6153,7 +6199,7 @@ var defaultTreeAdapter = {
   }
 };
 
-// node_modules/parse5/dist/common/doctype.js
+// tools/node_modules/parse5/dist/common/doctype.js
 var VALID_DOCTYPE_NAME = "html";
 var VALID_SYSTEM_ID = "about:legacy-compat";
 var QUIRKS_MODE_SYSTEM_ID = "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd";
@@ -6262,7 +6308,7 @@ function getDocumentMode(token) {
   return DOCUMENT_MODE.NO_QUIRKS;
 }
 
-// node_modules/parse5/dist/common/foreign-content.js
+// tools/node_modules/parse5/dist/common/foreign-content.js
 var MIME_TYPES = {
   TEXT_HTML: "text/html",
   APPLICATION_XML: "application/xhtml+xml"
@@ -6482,7 +6528,7 @@ function isIntegrationPoint(tn, ns, attrs, foreignNS) {
   return (!foreignNS || foreignNS === NS.HTML) && isHtmlIntegrationPoint(tn, ns, attrs) || (!foreignNS || foreignNS === NS.MATHML) && isMathMLTextIntegrationPoint(tn, ns);
 }
 
-// node_modules/parse5/dist/parser/index.js
+// tools/node_modules/parse5/dist/parser/index.js
 var HIDDEN_INPUT_TYPE = "hidden";
 var AA_OUTER_LOOP_ITER = 8;
 var AA_INNER_LOOP_ITER = 3;
@@ -9507,7 +9553,7 @@ function endTagInForeignContent(p, token) {
   }
 }
 
-// node_modules/parse5/dist/serializer/index.js
+// tools/node_modules/parse5/dist/serializer/index.js
 var VOID_ELEMENTS = /* @__PURE__ */ new Set([
   TAG_NAMES.AREA,
   TAG_NAMES.BASE,
@@ -9529,12 +9575,12 @@ var VOID_ELEMENTS = /* @__PURE__ */ new Set([
   TAG_NAMES.WBR
 ]);
 
-// node_modules/parse5/dist/index.js
+// tools/node_modules/parse5/dist/index.js
 function parse2(html, options) {
   return Parser.parse(html, options);
 }
 
-// src/html.mjs
+// tools/src/html.mjs
 function parseHtml(text2) {
   return parse2(text2, { sourceCodeLocationInfo: true });
 }
@@ -9543,7 +9589,7 @@ function* walk(node) {
   for (const c of node.childNodes || []) yield* walk(c);
   if (node.content) yield* walk(node.content);
 }
-var isElement = (n) => typeof n.tagName === "string";
+var isElement = (n2) => typeof n2.tagName === "string";
 var attr = (el, name) => el.attrs?.find((a) => a.name === name)?.value;
 var hasAttr = (el, name) => !!el.attrs?.some((a) => a.name === name);
 var classes = (el) => (attr(el, "class") || "").split(/\s+/).filter(Boolean);
@@ -9553,18 +9599,18 @@ var offset = (node) => node.sourceCodeLocation?.startOffset ?? 0;
 var elementChildren = (el) => (el.childNodes || []).filter(isElement);
 function elements(root, pred = () => true) {
   const out = [];
-  for (const n of walk(root)) if (isElement(n) && pred(n)) out.push(n);
+  for (const n2 of walk(root)) if (isElement(n2) && pred(n2)) out.push(n2);
   return out;
 }
 function byTag(root, tag) {
-  return elements(root, (n) => n.tagName === tag);
+  return elements(root, (n2) => n2.tagName === tag);
 }
 function textOf(node) {
   if (node.nodeName === "#text") return node.value;
   return (node.childNodes || []).map(textOf).join("");
 }
 function closest(node, pred) {
-  for (let n = node.parentNode; n; n = n.parentNode) if (isElement(n) && pred(n)) return n;
+  for (let n2 = node.parentNode; n2; n2 = n2.parentNode) if (isElement(n2) && pred(n2)) return n2;
   return null;
 }
 function innerRange(el) {
@@ -9595,20 +9641,23 @@ function hostOf(url) {
   }
 }
 
-// src/palette.mjs
+// tools/src/palette.mjs
 var TOKEN_RE = /--c-([a-zA-Z][\w-]*)\s*:\s*([^;}]+)/g;
 var BG_RE = /--bg\s*:\s*([^;}]+)/;
+var FG_RE = /--fg\s*:\s*([^;}]+)/;
 var LIGHT_DARK_RE = /^light-dark\(\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
 function extractPalette(doc) {
   const tokens = /* @__PURE__ */ new Map();
-  let bg = null;
+  let bg = null, fg = null;
   for (const style of byTag(doc, "style")) {
     const css = textOf(style);
     for (const m of css.matchAll(TOKEN_RE)) tokens.set(m[1], { value: m[2].trim(), line: line(style) });
     const b = BG_RE.exec(css);
     if (b) bg = { value: b[1].trim(), line: line(style) };
+    const f2 = FG_RE.exec(css);
+    if (f2) fg = { value: f2[1].trim(), line: line(style) };
   }
-  return { tokens, bg, names: [...tokens.keys()] };
+  return { tokens, bg, fg, names: [...tokens.keys()] };
 }
 function parseLightDark(value) {
   const m = LIGHT_DARK_RE.exec(value.trim());
@@ -9617,8 +9666,8 @@ function parseLightDark(value) {
 function hexToRgb(hex) {
   let h = hex.slice(1);
   if (h.length === 3 || h.length === 4) h = [...h].map((c) => c + c).join("");
-  const n = parseInt(h.slice(0, 6), 16);
-  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  const n2 = parseInt(h.slice(0, 6), 16);
+  return [n2 >> 16 & 255, n2 >> 8 & 255, n2 & 255];
 }
 function luminance(hex) {
   const [r, g, b] = hexToRgb(hex).map((c) => {
@@ -9658,11 +9707,11 @@ function checkPalette(palette, file, problems) {
   }
 }
 
-// src/glossary.mjs
+// tools/src/glossary.mjs
 var slugOf = (id, prefix) => id && id.startsWith(prefix) ? id.slice(prefix.length) : null;
 function checkGlossary(doc, file, problems) {
   const main3 = byTag(doc, "main")[0];
-  const details = elements(doc, (n) => n.tagName === "details" && attr(n, "id") === "glossary");
+  const details = elements(doc, (n2) => n2.tagName === "details" && attr(n2, "id") === "glossary");
   let glossary = null;
   if (details.length !== 1) {
     problems.error(file, details[1] ? line(details[1]) : 0, "GLOSSARY_NOT_LAST", null, details.length ? 'more than one <details id="glossary">' : 'no <details id="glossary" class="x-glossary"> found');
@@ -9674,14 +9723,14 @@ function checkGlossary(doc, file, problems) {
   }
   const glossaryOffset = glossary ? offset(glossary) : Infinity;
   const rows = /* @__PURE__ */ new Map();
-  for (const el of elements(doc, (n) => (attr(n, "id") || "").startsWith("g-"))) {
+  for (const el of elements(doc, (n2) => (attr(n2, "id") || "").startsWith("g-"))) {
     const slug = slugOf(attr(el, "id"), "g-");
-    if (!glossary || !closest(el, (n) => n === glossary)) {
+    if (!glossary || !closest(el, (n2) => n2 === glossary)) {
       problems.error(file, line(el), "GLOSSARY_NOT_LAST", null, `row #g-${slug} is outside <details id="glossary">`);
       continue;
     }
     rows.set(slug, el);
-    const back = elements(el, (n) => n.tagName === "a" && hasClass(n, "x-back"));
+    const back = elements(el, (n2) => n2.tagName === "a" && hasClass(n2, "x-back"));
     if (back.length !== 1 || attr(back[0], "href") !== `#t-${slug}`) {
       problems.error(file, line(el), "GLOSSARY_BACK_MISSING", null, `row #g-${slug} needs exactly one <a class="x-back" href="#t-${slug}">`);
     }
@@ -9689,7 +9738,7 @@ function checkGlossary(doc, file, problems) {
     if (dd.length !== 1 || textOf(dd[0]).trim() === "") problems.error(file, line(el), "GLOSSARY_EMPTY_DD", null, `row #g-${slug} needs one non-empty <dd>`);
   }
   const firstUse = /* @__PURE__ */ new Map();
-  for (const dfn of elements(doc, (n) => n.tagName === "dfn")) {
+  for (const dfn of elements(doc, (n2) => n2.tagName === "dfn")) {
     const slug = slugOf(attr(dfn, "id"), "t-");
     if (!slug) {
       problems.error(file, line(dfn), "GLOSSARY_DFN_NO_LINK", null, '<dfn> needs id="t-<slug>"');
@@ -9700,7 +9749,7 @@ function checkGlossary(doc, file, problems) {
       continue;
     }
     firstUse.set(slug, dfn);
-    const links = elementChildren(dfn).filter((n) => n.tagName === "a");
+    const links = elementChildren(dfn).filter((n2) => n2.tagName === "a");
     if (links.length !== 1 || !(attr(links[0], "href") || "").startsWith("#g-")) {
       problems.error(file, line(dfn), "GLOSSARY_DFN_NO_LINK", null, `<dfn id="t-${slug}"> must wrap exactly one <a href="#g-${slug}">`);
       continue;
@@ -9710,7 +9759,7 @@ function checkGlossary(doc, file, problems) {
     else if (!rows.has(slug)) problems.error(file, line(dfn), "GLOSSARY_ROW_MISSING", null, `no glossary row #g-${slug} for the first use`);
     if (offset(dfn) > glossaryOffset) problems.error(file, line(dfn), "GLOSSARY_ORDER", null, `first use of "${slug}" is inside or after the glossary`);
   }
-  for (const a of elements(doc, (n) => n.tagName === "a" && hasClass(n, "term"))) {
+  for (const a of elements(doc, (n2) => n2.tagName === "a" && hasClass(n2, "term"))) {
     const href = attr(a, "href") || "";
     const slug = href.startsWith("#g-") ? href.slice(3) : null;
     if (!slug || !rows.has(slug)) {
@@ -9725,7 +9774,7 @@ function checkGlossary(doc, file, problems) {
   }
 }
 
-// node_modules/katex/dist/katex.mjs
+// tools/node_modules/katex/dist/katex.mjs
 var ParseError = class _ParseError extends Error {
   // The underlying error message without any context added.
   constructor(message, token) {
@@ -9896,9 +9945,9 @@ var SETTINGS_SCHEMA = {
     type: "number",
     default: 1e3,
     description: "Limit the number of macro expansions to the specified number, to prevent e.g. infinite macro loops. If set to Infinity, the macro expander will try to fully expand as in LaTeX.",
-    processor: (n) => Math.max(0, n),
+    processor: (n2) => Math.max(0, n2),
     cli: "-e, --max-expand <n>",
-    cliProcessor: (n) => n === "Infinity" ? Infinity : parseInt(n)
+    cliProcessor: (n2) => n2 === "Infinity" ? Infinity : parseInt(n2)
   },
   globalGroup: {
     type: "boolean",
@@ -10213,27 +10262,27 @@ var sqrtTall = function sqrtTall2(extraVinculum, hLinePad2, viewBoxHeight) {
 };
 var sqrtPath = function sqrtPath2(size, extraVinculum, viewBoxHeight) {
   extraVinculum = 1e3 * extraVinculum;
-  var path4 = "";
+  var path6 = "";
   switch (size) {
     case "sqrtMain":
-      path4 = sqrtMain(extraVinculum, hLinePad);
+      path6 = sqrtMain(extraVinculum, hLinePad);
       break;
     case "sqrtSize1":
-      path4 = sqrtSize1(extraVinculum, hLinePad);
+      path6 = sqrtSize1(extraVinculum, hLinePad);
       break;
     case "sqrtSize2":
-      path4 = sqrtSize2(extraVinculum, hLinePad);
+      path6 = sqrtSize2(extraVinculum, hLinePad);
       break;
     case "sqrtSize3":
-      path4 = sqrtSize3(extraVinculum, hLinePad);
+      path6 = sqrtSize3(extraVinculum, hLinePad);
       break;
     case "sqrtSize4":
-      path4 = sqrtSize4(extraVinculum, hLinePad);
+      path6 = sqrtSize4(extraVinculum, hLinePad);
       break;
     case "sqrtTall":
-      path4 = sqrtTall(extraVinculum, hLinePad, viewBoxHeight);
+      path6 = sqrtTall(extraVinculum, hLinePad, viewBoxHeight);
   }
-  return path4;
+  return path6;
 };
 var innerPath = function innerPath2(name, height) {
   switch (name) {
@@ -10484,8 +10533,8 @@ var calculateSize = function calculateSize2(sizeValue, options) {
   }
   return Math.min(sizeValue.number * scale, options.maxSize);
 };
-var makeEm = function makeEm2(n) {
-  return +n.toFixed(4) + "em";
+var makeEm = function makeEm2(n2) {
+  return +n2.toFixed(4) + "em";
 };
 var createClass = function createClass2(classes2) {
   return classes2.filter((cls) => cls).join(" ");
@@ -14407,8 +14456,8 @@ var svgData = {
 };
 var staticSvg = function staticSvg2(value, options) {
   var _svgData$value = svgData[value], pathName = _svgData$value[0], width = _svgData$value[1], height = _svgData$value[2];
-  var path4 = new PathNode(pathName);
-  var svgNode = new SvgNode([path4], {
+  var path6 = new PathNode(pathName);
+  var svgNode = new SvgNode([path6], {
     "width": makeEm(width),
     "height": makeEm(height),
     // Override CSS rule `.katex svg { width: 100% }`
@@ -14637,8 +14686,8 @@ var _traverseNonSpaceNodes = function traverseNonSpaceNodes(nodes, callback, pre
     } else if (isRoot && node.hasClass("katex-newline")) {
       prev.node = makeSpan(["leftmost"]);
     }
-    prev.insertAfter = /* @__PURE__ */ ((index) => (n) => {
-      nodes.splice(index + 1, 0, n);
+    prev.insertAfter = /* @__PURE__ */ ((index) => (n2) => {
+      nodes.splice(index + 1, 0, n2);
       i2++;
     })(i2);
   }
@@ -15549,8 +15598,8 @@ var stretchySvg = function stretchySvg2(group, options) {
           pathName = "tilde" + imgIndex;
         }
       }
-      var path4 = new PathNode(pathName);
-      var svgNode = new SvgNode([path4], {
+      var path6 = new PathNode(pathName);
+      var svgNode = new SvgNode([path6], {
         "width": "100%",
         "height": makeEm(_height),
         "viewBox": "0 0 " + viewBoxWidth + " " + viewBoxHeight,
@@ -16754,8 +16803,8 @@ var makeGlyphSpan = function makeGlyphSpan2(symbol, font, mode) {
 };
 var makeInner = function makeInner2(ch2, height, options) {
   var width = fontMetricsData["Size4-Regular"][ch2.charCodeAt(0)] ? fontMetricsData["Size4-Regular"][ch2.charCodeAt(0)][4] : fontMetricsData["Size1-Regular"][ch2.charCodeAt(0)][4];
-  var path4 = new PathNode("inner", innerPath(ch2, Math.round(1e3 * height)));
-  var svgNode = new SvgNode([path4], {
+  var path6 = new PathNode("inner", innerPath(ch2, Math.round(1e3 * height)));
+  var svgNode = new SvgNode([path6], {
     "width": makeEm(width),
     "height": makeEm(height),
     // Override CSS rule `.katex svg { width: 100% }`
@@ -16924,10 +16973,10 @@ var makeStackedDelim = function makeStackedDelim2(delim, heightTotal, center, op
     var midHeight = realHeightTotal - topHeightTotal - bottomHeightTotal;
     var viewBoxHeight = Math.round(realHeightTotal * 1e3);
     var pathStr = tallDelim(svgLabel, Math.round(midHeight * 1e3));
-    var path4 = new PathNode(svgLabel, pathStr);
+    var path6 = new PathNode(svgLabel, pathStr);
     var width = makeEm(viewBoxWidth / 1e3);
     var height = makeEm(viewBoxHeight / 1e3);
-    var svg = new SvgNode([path4], {
+    var svg = new SvgNode([path6], {
       "width": width,
       "height": height,
       "viewBox": "0 0 " + viewBoxWidth + " " + viewBoxHeight
@@ -16968,8 +17017,8 @@ var makeStackedDelim = function makeStackedDelim2(delim, heightTotal, center, op
 var vbPad = 80;
 var emPad = 0.08;
 var sqrtSvg = function sqrtSvg2(sqrtName, height, viewBoxHeight, extraVinculum, options) {
-  var path4 = sqrtPath(sqrtName, extraVinculum, viewBoxHeight);
-  var pathNode = new PathNode(sqrtName, path4);
+  var path6 = sqrtPath(sqrtName, extraVinculum, viewBoxHeight);
+  var pathNode = new PathNode(sqrtName, path6);
   var svg = new SvgNode([pathNode], {
     // Note: 1000:1 ratio of viewBox to document em width.
     "width": "400em",
@@ -17468,8 +17517,8 @@ var htmlBuilder$7 = (group, options) => {
     var angleHeight = inner2.height + inner2.depth + lineWeight + clearance;
     inner2.style.paddingLeft = makeEm(angleHeight / 2 + lineWeight);
     var viewBoxHeight = Math.floor(1e3 * angleHeight * scale);
-    var path4 = phasePath(viewBoxHeight);
-    var svgNode = new SvgNode([new PathNode("phase", path4)], {
+    var path6 = phasePath(viewBoxHeight);
+    var svgNode = new SvgNode([new PathNode("phase", path6)], {
       "width": "400em",
       "height": makeEm(viewBoxHeight / 1e3),
       "viewBox": "0 0 400000 " + viewBoxHeight,
@@ -23123,7 +23172,7 @@ var Parser2 = class _Parser {
     if (this.mode === "text") {
       return base;
     }
-    var superscript;
+    var superscript2;
     var subscript;
     while (true) {
       this.consumeSpaces();
@@ -23141,17 +23190,17 @@ var Parser2 = class _Parser {
         }
         this.consume();
       } else if (lex.text === "^") {
-        if (superscript) {
+        if (superscript2) {
           throw new ParseError("Double superscript", lex);
         }
-        superscript = this.handleSupSubscript("superscript");
+        superscript2 = this.handleSupSubscript("superscript");
       } else if (lex.text === "_") {
         if (subscript) {
           throw new ParseError("Double subscript", lex);
         }
         subscript = this.handleSupSubscript("subscript");
       } else if (lex.text === "'") {
-        if (superscript) {
+        if (superscript2) {
           throw new ParseError("Double superscript", lex);
         }
         var prime = {
@@ -23168,7 +23217,7 @@ var Parser2 = class _Parser {
         if (this.fetch().text === "^") {
           primes.push(this.handleSupSubscript("superscript"));
         }
-        superscript = {
+        superscript2 = {
           type: "ordgroup",
           mode: this.mode,
           body: primes
@@ -23197,7 +23246,7 @@ var Parser2 = class _Parser {
             body
           };
         } else {
-          superscript = {
+          superscript2 = {
             type: "ordgroup",
             mode: "math",
             body
@@ -23207,20 +23256,20 @@ var Parser2 = class _Parser {
         break;
       }
     }
-    if (superscript && subscript) {
+    if (superscript2 && subscript) {
       return {
         type: "supsub",
         mode: this.mode,
         base,
-        sup: superscript,
+        sup: superscript2,
         sub: subscript
       };
-    } else if (superscript) {
+    } else if (superscript2) {
       return {
         type: "supsub",
         mode: this.mode,
         base,
-        sup: superscript
+        sup: superscript2
       };
     } else if (subscript) {
       return {
@@ -23562,8 +23611,8 @@ var Parser2 = class _Parser {
    * The group will be modified in place.
    */
   formLigatures(group) {
-    var n = group.length - 1;
-    for (var i2 = 0; i2 < n; ++i2) {
+    var n2 = group.length - 1;
+    for (var i2 = 0; i2 < n2; ++i2) {
       var a = group[i2];
       if (a.type !== "textord") {
         continue;
@@ -23575,14 +23624,14 @@ var Parser2 = class _Parser {
       }
       if (v === "-" && next.text === "-") {
         var afterNext = group[i2 + 2];
-        if (i2 + 1 < n && afterNext && afterNext.type === "textord" && afterNext.text === "-") {
+        if (i2 + 1 < n2 && afterNext && afterNext.type === "textord" && afterNext.text === "-") {
           group.splice(i2, 3, {
             type: "textord",
             mode: "text",
             loc: SourceLocation.range(a, afterNext),
             text: "---"
           });
-          n -= 2;
+          n2 -= 2;
         } else {
           group.splice(i2, 2, {
             type: "textord",
@@ -23590,7 +23639,7 @@ var Parser2 = class _Parser {
             loc: SourceLocation.range(a, next),
             text: "--"
           });
-          n -= 1;
+          n2 -= 1;
         }
       }
       if ((v === "'" || v === "`") && next.text === v) {
@@ -23600,7 +23649,7 @@ var Parser2 = class _Parser {
           loc: SourceLocation.range(a, next),
           text: v + v
         });
-        n -= 1;
+        n2 -= 1;
       }
     }
   }
@@ -23870,10 +23919,10 @@ var katex = {
   __domTree
 };
 
-// src/tex.mjs
+// tools/src/tex.mjs
 var CLASS_RE = /\\(?:htmlClass|tok)\s*\{([^}]*)\}/g;
 var BANNED_RE = /\\(textcolor|color)\b/;
-var texElements = (doc) => elements(doc, (n) => (n.tagName === "span" || n.tagName === "div") && hasClass(n, "x-tex"));
+var texElements = (doc) => elements(doc, (n2) => (n2.tagName === "span" || n2.tagName === "div") && hasClass(n2, "x-tex"));
 function prescan(src, palette) {
   const banned = BANNED_RE.exec(src);
   if (banned) return { code: "TEX_BANNED", message: `\\${banned[1]} is not allowed; use \\tok{token}{...}` };
@@ -23949,7 +23998,7 @@ function buildTex(doc, html, file, palette, problems) {
   return { html: splice(html, edits), count };
 }
 
-// src/budget.mjs
+// tools/src/budget.mjs
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var import_node_zlib = require("node:zlib");
@@ -23982,7 +24031,7 @@ function measure(file, html, doc, repoRoot) {
     const resolved = resolveInclude(file, ref, repoRoot);
     items.push(resolved ? { label: import_node_path.default.basename(ref), path: resolved, gz: gz(import_node_fs.default.readFileSync(resolved)) } : { label: import_node_path.default.basename(ref), path: ref, gz: 0, missing: true });
   }
-  return { items, total: items.reduce((n, i2) => n + i2.gz, 0) };
+  return { items, total: items.reduce((n2, i2) => n2 + i2.gz, 0) };
 }
 function checkBudget(file, html, doc, repoRoot, budgetBytes, problems) {
   const report = measure(file, html, doc, repoRoot);
@@ -23998,16 +24047,1076 @@ function formatReport(report, budgetBytes) {
   return lines.join("\n");
 }
 
-// src/article.mjs
+// tools/src/integrity.mjs
+var import_node_fs2 = __toESM(require("node:fs"), 1);
+var import_node_path2 = __toESM(require("node:path"), 1);
+var INTEGRITY_FILE = "dist/integrity.json";
+var PLACEHOLDER_RE = /^\{\{integrity:[^}]*\}\}$/;
+var RUNTIME_RE = /(^|\/)dist\/explainers-runtime\.v\d+\.js$/;
+var CSS_RE = /(^|\/)dist\/explainers\.v\d+\.css$/;
+var distKey = (url) => {
+  const m = /(?:^|\/)(dist\/[^/?#]+)$/.exec(url || "");
+  return m ? m[1] : null;
+};
+function integrityIncludes(doc) {
+  const out = [];
+  for (const s of byTag(doc, "script")) {
+    const src = attr(s, "src");
+    if (src && RUNTIME_RE.test(src)) out.push({ el: s, key: distKey(src), what: "runtime <script>" });
+  }
+  for (const l of byTag(doc, "link")) {
+    const href = attr(l, "href");
+    if (attr(l, "rel") === "stylesheet" && href && CSS_RE.test(href)) out.push({ el: l, key: distKey(href), what: "stylesheet <link>" });
+  }
+  return out;
+}
+function loadIntegrity(repoRoot) {
+  const file = import_node_path2.default.join(repoRoot, INTEGRITY_FILE);
+  if (!import_node_fs2.default.existsSync(file)) return null;
+  return JSON.parse(import_node_fs2.default.readFileSync(file, "utf8"));
+}
+function checkIntegrity(doc, file, repoRoot, problems) {
+  const table2 = loadIntegrity(repoRoot);
+  if (!table2) {
+    problems.warn(file, 0, null, `integrity not checked: ${INTEGRITY_FILE} not found; run: node tools/build-runtime.mjs`);
+    return;
+  }
+  for (const { el, key, what } of integrityIncludes(doc)) {
+    const expected = table2[key];
+    if (!expected) {
+      problems.warn(file, line(el), null, `integrity not checked: ${INTEGRITY_FILE} has no entry for ${key}; run: node tools/build-runtime.mjs`);
+      continue;
+    }
+    const value = attr(el, "integrity");
+    if (value === void 0) {
+      problems.error(file, line(el), "INTEGRITY_MISSING", null, `the ${what} has no integrity attribute; run: explainers build`);
+      continue;
+    }
+    if (PLACEHOLDER_RE.test(value)) {
+      problems.warn(file, line(el), null, `integrity not resolved yet on the ${what}; run: explainers build`);
+      continue;
+    }
+    if (value !== expected) problems.error(file, line(el), "INTEGRITY_STALE", null, `the ${what} has integrity="${value}" but ${INTEGRITY_FILE} says ${expected}; run: explainers build`);
+  }
+}
+function buildIntegrity(doc, html, file, repoRoot, problems) {
+  const table2 = loadIntegrity(repoRoot);
+  if (!table2) {
+    problems.warn(file, 0, null, `integrity not written: ${INTEGRITY_FILE} not found; run: node tools/build-runtime.mjs`);
+    return { html, count: 0 };
+  }
+  const edits = [];
+  let count = 0;
+  for (const { el, key, what } of integrityIncludes(doc)) {
+    const expected = table2[key];
+    if (!expected) {
+      problems.warn(file, line(el), null, `integrity not written: ${INTEGRITY_FILE} has no entry for ${key} (${what}); run: node tools/build-runtime.mjs`);
+      continue;
+    }
+    if (attr(el, "integrity") === expected) continue;
+    const loc = el.sourceCodeLocation;
+    const tag = loc.startTag || loc;
+    const a = loc.attrs && loc.attrs.integrity;
+    if (a) edits.push({ start: a.startOffset, end: a.endOffset, text: `integrity="${expected}"` });
+    else {
+      const gt = tag.endOffset - (html.slice(tag.endOffset - 2, tag.endOffset) === "/>" ? 2 : 1);
+      edits.push({ start: gt, end: gt, text: ` integrity="${expected}"` });
+    }
+    count++;
+  }
+  return { html: splice(html, edits), count };
+}
+
+// tools/src/poster.mjs
+var import_node_fs3 = __toESM(require("node:fs"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
+var import_node_crypto = __toESM(require("node:crypto"), 1);
+
+// lib/core/layout.js
+function worldToPx(view, box) {
+  const vw = view.x[1] - view.x[0], vh = view.y[1] - view.y[0];
+  const s = Math.min(box.width / vw, box.height / vh);
+  const ox = (box.x || 0) + (box.width - vw * s) / 2;
+  const oy = (box.y || 0) + (box.height - vh * s) / 2;
+  return {
+    s,
+    x: (wx) => ox + (wx - view.x[0]) * s,
+    y: (wy) => oy + (view.y[1] - wy) * s,
+    len: (l) => l * s,
+    wx: (px2) => view.x[0] + (px2 - ox) / s,
+    wy: (py) => view.y[1] - (py - oy) / s,
+    rect: { x: ox, y: oy, width: vw * s, height: vh * s }
+  };
+}
+function splitBoxes(box, panels) {
+  let main3 = { ...box };
+  const out = [];
+  for (const p of panels) {
+    const at = p.at;
+    if (at === "right") {
+      const w = Math.round(main3.width * 0.4);
+      out.push({ x: main3.x + main3.width - w, y: main3.y, width: w, height: main3.height, inset: false });
+      main3 = { ...main3, width: main3.width - w };
+    } else if (at === "below") {
+      const h = Math.round(main3.height * 0.38);
+      out.push({ x: main3.x, y: main3.y + main3.height - h, width: main3.width, height: h, inset: false });
+      main3 = { ...main3, height: main3.height - h };
+    } else {
+      const w = Math.round(box.width * 0.36), h = Math.round(box.height * 0.36), pad2 = 10;
+      const right = at.endsWith("right"), bottom = at.startsWith("inset:bottom");
+      out.push({ x: right ? box.x + box.width - w - pad2 : box.x + pad2, y: bottom ? box.y + box.height - h - pad2 : box.y + pad2, width: w, height: h, inset: true });
+    }
+  }
+  return { main: main3, panels: out };
+}
+
+// lib/core/format.js
+var MINUS = "\u2212";
+var NBSP = "\xA0";
+var SUPER = { "-": "\u207B", 0: "\u2070", 1: "\xB9", 2: "\xB2", 3: "\xB3", 4: "\u2074", 5: "\u2075", 6: "\u2076", 7: "\u2077", 8: "\u2078", 9: "\u2079" };
+var KM_PER_MI = 1.609344;
+var realMinus = (s) => s.replace(/-/g, MINUS);
+var intFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+function dhm(days) {
+  const total = Math.round(Math.abs(days) * 1440);
+  const d = Math.floor(total / 1440), h = Math.floor(total % 1440 / 60), m = total % 60;
+  return `${days < 0 ? MINUS : ""}${d}${NBSP}d ${h}${NBSP}h ${m}${NBSP}m`;
+}
+function hms(hours) {
+  const total = Math.round(Math.abs(hours) * 3600);
+  const h = Math.floor(total / 3600), m = Math.floor(total % 3600 / 60), s = total % 60;
+  return `${hours < 0 ? MINUS : ""}${h}${NBSP}h ${m}${NBSP}m ${s}${NBSP}s`;
+}
+var DATE_OPTS = {
+  date: { year: "numeric", month: "short", day: "numeric" },
+  time: { hour: "2-digit", minute: "2-digit" },
+  datetime: { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
+};
+function dateLike(ms, kind, { locale = "en-US", timeZone } = {}) {
+  return new Intl.DateTimeFormat(locale, { ...DATE_OPTS[kind], timeZone }).format(new Date(ms));
+}
+function sci(v) {
+  if (v === 0) return "0";
+  const [mant, exp] = v.toExponential(2).split("e");
+  const sup2 = [...String(Number(exp))].map((c) => SUPER[c]).join("");
+  return `${realMinus(mant)}\xD710${sup2}`;
+}
+function unitLength(v, unit, imperial) {
+  let shown = unit, value = v;
+  if (imperial) {
+    shown = unit === "km" ? "mi" : "km";
+    value = unit === "km" ? v / KM_PER_MI : v * KM_PER_MI;
+  }
+  const num = Math.abs(value) >= 100 ? intFmt.format(Math.round(value)) : value.toFixed(1);
+  return `${realMinus(num)}${NBSP}${shown}`;
+}
+function format2(value, fmt, opts = {}) {
+  const v = typeof value === "boolean" ? value ? 1 : 0 : Number(value);
+  if (!Number.isFinite(v)) return "\u2014";
+  const fixed = /^\.(\d)f$/.exec(fmt);
+  if (fixed) return realMinus(v.toFixed(Number(fixed[1])));
+  switch (fmt) {
+    case ",d":
+      return realMinus(intFmt.format(Math.round(v)));
+    case "deg":
+      return `${realMinus(v.toFixed(1))}\xB0`;
+    case "dhm":
+      return dhm(v);
+    case "hms":
+      return hms(v);
+    case "date":
+    case "time":
+    case "datetime":
+      return dateLike(v, fmt, opts);
+    case "sci":
+      return sci(v);
+    case "unit:km":
+      return unitLength(v, "km", opts.imperial);
+    case "unit:mi":
+      return unitLength(v, "mi", opts.imperial);
+    default:
+      throw new Error(`unknown format "${fmt}"`);
+  }
+}
+function compileTemplate(text2) {
+  return parseTemplate(text2).map((p) => p.src ? { ...p, ast: compile(p.src).ast } : p);
+}
+function renderTemplate(parts, scope, opts) {
+  let out = "";
+  for (const p of parts) out += p.src ? format2(evaluate(p.ast, scope, p.src), p.fmt, opts) : p.text;
+  return out;
+}
+
+// lib/scene2d/label.js
+var overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+function fitBox(rect, bounds, { pad: pad2 = 4, obstacles = [], avoid = [] } = {}) {
+  const lo = { x: bounds.x + pad2, y: bounds.y + pad2 };
+  const hi = { x: bounds.x + bounds.width - pad2 - rect.w, y: bounds.y + bounds.height - pad2 - rect.h };
+  const r = { x: Math.max(Math.min(rect.x, hi.x), lo.x), y: Math.max(Math.min(rect.y, hi.y), lo.y), w: rect.w, h: rect.h };
+  for (const o of obstacles) if (overlaps(o, r)) r.y = Math.max(o.y - r.h, lo.y);
+  const step = r.y + r.h + 2 <= hi.y ? r.h + 2 : -(r.h + 2);
+  for (let i2 = 0; i2 < 3 && avoid.some((a) => overlaps(a, r)); i2++) r.y += step;
+  return r;
+}
+function compileReadout(spec) {
+  return {
+    id: spec.id || null,
+    spec,
+    parts: compileTemplate(spec.text),
+    at: spec.at ? pointGetter(spec.at) : null,
+    visible: "visible" in spec ? getter(spec.visible) : null,
+    highlight: false,
+    last: ""
+  };
+}
+
+// lib/scene2d/layers.js
+var FULL_TURN = Math.PI * 2;
+var HEAD_PX = 10;
+var EXPR_KEYS = {
+  circle: ["cx", "cy", "r"],
+  ellipse: ["cx", "cy", "rx", "ry", "rotation"],
+  ray: ["angle", "length"],
+  arc: ["cx", "cy", "r", "from", "to"],
+  bars: ["y"]
+};
+var POINT_KEYS = { line: ["from", "to"], segment: ["from", "to"], arrow: ["from", "to"], ray: ["from"], text: ["at"] };
+function compileLayer(spec) {
+  const g = {};
+  for (const k of EXPR_KEYS[spec.kind] || []) if (k in spec) g[k] = getter(spec[k]);
+  for (const k of POINT_KEYS[spec.kind] || []) g[k] = pointGetter(spec[k]);
+  if (spec.points) g.points = spec.points.map(pointGetter);
+  if (spec.rect) g.rect = spec.rect.map(getter);
+  if (spec.rows) g.rows = spec.rows.map((r) => ({ from: getter(r.from), to: getter(r.to), token: r.token, label: r.label }));
+  if (spec.kind === "text") g.parts = compileTemplate(spec.text);
+  return {
+    id: spec.id,
+    kind: spec.kind,
+    spec,
+    g,
+    visible: "visible" in spec ? getter(spec.visible) : null,
+    highlight: !!spec.highlight,
+    // prose refs toggle this at runtime
+    alpha: 1,
+    // state show/hide fades ease this
+    override: null,
+    // state visible.show (1) / visible.hide (0)
+    forceHide: false,
+    // drag preview layers while not dragging
+    previewOf: null,
+    wasHidden: false,
+    image: null
+  };
+}
+function isShown(L, scope) {
+  if (L.forceHide || L.alpha <= 0 || L.override === 0) return false;
+  if (L.override === 1) return true;
+  const shown = L.visible ? L.visible(scope) !== 0 : true;
+  L.wasHidden = !shown;
+  return shown;
+}
+var px = (m, [wx, wy]) => [m.x(wx), m.y(wy)];
+var angleOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]);
+var shorten = (a, b, d) => {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return [b[0] - (b[0] - a[0]) / L * d, b[1] - (b[1] - a[1]) / L * d];
+};
+function geometryOf(L, scope, m, makePath = () => new Path2D()) {
+  const s = L.spec, g = L.g, path6 = makePath(), heads = [];
+  const head = (s.head || HEAD_PX) * (L.highlight ? 1.3 : 1);
+  const wantStart = s.arrow === "start" || s.arrow === "both";
+  const wantEnd = s.arrow === "end" || s.arrow === "both" || s.kind === "arrow";
+  let anchor, dir = null;
+  const lineLike = (a0, b0) => {
+    let a = a0, b = b0;
+    if (wantEnd) {
+      heads.push({ at: b0, angle: angleOf(a0, b0), len: head });
+      b = shorten(a0, b0, head * 0.85);
+    }
+    if (wantStart) {
+      heads.push({ at: a0, angle: angleOf(b0, a0), len: head });
+      a = shorten(b0, a0, head * 0.85);
+    }
+    path6.moveTo(a[0], a[1]);
+    path6.lineTo(b[0], b[1]);
+    anchor = b0;
+    dir = angleOf(a0, b0);
+  };
+  switch (L.kind) {
+    case "circle": {
+      const c = px(m, [g.cx(scope), g.cy(scope)]), r = m.len(g.r(scope));
+      path6.arc(c[0], c[1], Math.max(r, 0), 0, FULL_TURN);
+      anchor = c;
+      L.lastRadius = r;
+      break;
+    }
+    case "ellipse": {
+      const c = px(m, [g.cx(scope), g.cy(scope)]);
+      path6.ellipse(c[0], c[1], Math.max(m.len(g.rx(scope)), 0), Math.max(m.len(g.ry(scope)), 0), g.rotation ? -g.rotation(scope) : 0, 0, FULL_TURN);
+      anchor = c;
+      L.lastRadius = m.len(g.ry(scope));
+      break;
+    }
+    case "line": {
+      const a = px(m, g.from(scope)), b = px(m, g.to(scope));
+      const ang = angleOf(a, b), far = (m.rect.width + m.rect.height) * 2;
+      path6.moveTo(a[0] - Math.cos(ang) * far, a[1] - Math.sin(ang) * far);
+      path6.lineTo(b[0] + Math.cos(ang) * far, b[1] + Math.sin(ang) * far);
+      anchor = b;
+      dir = ang;
+      break;
+    }
+    case "segment":
+    case "arrow":
+      lineLike(px(m, g.from(scope)), px(m, g.to(scope)));
+      break;
+    case "ray": {
+      const from = g.from(scope), ang = g.angle(scope), len = g.length(scope);
+      lineLike(px(m, from), px(m, [from[0] + Math.cos(ang) * len, from[1] + Math.sin(ang) * len]));
+      break;
+    }
+    case "arc": {
+      const c = px(m, [g.cx(scope), g.cy(scope)]), r = Math.max(m.len(g.r(scope)), 0);
+      const from = g.from(scope), to = g.to(scope);
+      if (to - from >= FULL_TURN) path6.arc(c[0], c[1], r, 0, FULL_TURN);
+      else if (to !== from) path6.arc(c[0], c[1], r, -from, -to, true);
+      const end = [c[0] + r * Math.cos(to), c[1] - r * Math.sin(to)];
+      const start = [c[0] + r * Math.cos(from), c[1] - r * Math.sin(from)];
+      if (wantEnd) heads.push({ at: end, angle: Math.atan2(-Math.cos(to), -Math.sin(to)), len: head });
+      if (wantStart) heads.push({ at: start, angle: Math.atan2(Math.cos(from), Math.sin(from)), len: head });
+      anchor = end;
+      dir = to + Math.PI / 2;
+      break;
+    }
+    case "polygon":
+    case "path": {
+      const pts = g.points.map((p) => px(m, p(scope)));
+      pts.forEach((p, i2) => i2 ? path6.lineTo(p[0], p[1]) : path6.moveTo(p[0], p[1]));
+      if (L.kind === "polygon") path6.closePath();
+      else {
+        if (wantEnd) heads.push({ at: pts.at(-1), angle: angleOf(pts.at(-2), pts.at(-1)), len: head });
+        if (wantStart) heads.push({ at: pts[0], angle: angleOf(pts[1], pts[0]), len: head });
+      }
+      anchor = pts[0];
+      break;
+    }
+    case "text":
+      anchor = px(m, g.at(scope));
+      break;
+    case "bars": {
+      const y = g.y(scope), h = s.height;
+      g.rows.forEach((row, i2) => {
+        const a = px(m, [row.from(scope), y - i2 * h + h]), b = px(m, [row.to(scope), y - i2 * h]);
+        path6.rect(Math.min(a[0], b[0]), a[1], Math.abs(b[0] - a[0]), b[1] - a[1]);
+      });
+      anchor = px(m, [g.rows[0].from(scope), y + h]);
+      break;
+    }
+    case "image": {
+      const [x, y, w, h] = g.rect.map((f2) => f2(scope));
+      const tl = px(m, [x, y + h]);
+      path6.rect(tl[0], tl[1], m.len(w), m.len(h));
+      anchor = tl;
+      break;
+    }
+    default:
+      anchor = [m.rect.x, m.rect.y];
+  }
+  return { path: path6, anchor, heads, dir };
+}
+
+// lib/scene2d/plot.js
+var PAD = { left: 48, right: 14, top: 12, bottom: 34 };
+function niceTicks(min, max, n2 = 5) {
+  const raw = (max - min) / Math.max(n2, 1);
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const norm2 = raw / mag;
+  const step = (norm2 < 1.5 ? 1 : norm2 < 3 ? 2 : norm2 < 7 ? 5 : 10) * mag;
+  const ticks = [];
+  for (let v = Math.ceil(min / step - 1e-9) * step; v <= max + step * 1e-9; v += step) ticks.push(Number(v.toFixed(10)));
+  return { step, ticks };
+}
+function tickLabel(v, step) {
+  const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9));
+  return v.toFixed(decimals).replace("-", MINUS);
+}
+function logTicks(min, max) {
+  const ticks = [];
+  for (let e = Math.floor(Math.log10(min)); e <= Math.ceil(Math.log10(max)); e++) {
+    const v = 10 ** e;
+    if (v >= min && v <= max) ticks.push(v);
+  }
+  return { step: 1, ticks, log: true };
+}
+function compilePlot(shows) {
+  return {
+    kind: "plot",
+    x: shows.x,
+    y: shows.y,
+    series: shows.series.map((s) => ({ ...s, ast: compile(s.y).ast })),
+    marker: shows.marker ? { x: getter(shows.marker.x), token: shows.marker.token } : null,
+    guides: (shows.guides || []).map((g) => ({ ...g, at: getter(g.x ?? g.y), vertical: "x" in g }))
+  };
+}
+function axisMap(box, P) {
+  const inner2 = { x: box.x + PAD.left, y: box.y + PAD.top, w: box.width - PAD.left - PAD.right, h: box.height - PAD.top - PAD.bottom };
+  const yl = P.y.log ? Math.log10 : (v) => v;
+  const y0 = yl(P.y.min), y1 = yl(P.y.max);
+  return {
+    inner: inner2,
+    px: (x) => inner2.x + (x - P.x.min) / (P.x.max - P.x.min) * inner2.w,
+    py: (y) => inner2.y + inner2.h - (yl(y) - y0) / (y1 - y0) * inner2.h
+  };
+}
+var superscript = (n2) => String(n2).replace(/-/g, "\u207B").replace(/\d/g, (d) => "\u2070\xB9\xB2\xB3\u2074\u2075\u2076\u2077\u2078\u2079"[d]);
+function compileTimeline(shows) {
+  return {
+    kind: "timeline",
+    x: shows.x,
+    bars: shows.bars.map((b) => ({ ...b, from: getter(b.from), to: getter(b.to) })),
+    marker: shows.marker ? { x: getter(shows.marker.x), token: shows.marker.token } : null
+  };
+}
+
+// lib/scene2d/models/kepler.js
+function solveKepler(M, e) {
+  let E = e < 0.8 ? M : Math.PI;
+  for (let i2 = 0; i2 < 30; i2++) {
+    const d = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    E -= d;
+    if (Math.abs(d) < 1e-12) break;
+  }
+  return E;
+}
+function kepler({ a, e, M }) {
+  const ecc = Math.min(Math.max(e, 0), 0.999999);
+  const E = solveKepler(M, ecc);
+  const nu = 2 * Math.atan2(Math.sqrt(1 + ecc) * Math.sin(E / 2), Math.sqrt(1 - ecc) * Math.cos(E / 2));
+  const r = a * (1 - ecc * Math.cos(E));
+  return { x: r * Math.cos(nu), y: r * Math.sin(nu), r, nu, E };
+}
+
+// lib/scene2d/models/twobody.js
+function twobody({ m1, m2, r0, v0, t }) {
+  const mu = m1 + m2;
+  const energy = v0 * v0 / 2 - mu / r0;
+  const rel2 = energy < 0 ? boundOrbit(mu, r0, v0, t) : leapfrog(mu, r0, v0, t);
+  const f1 = -m2 / mu, f2 = m1 / mu;
+  return {
+    x1: rel2.x * f1,
+    y1: rel2.y * f1,
+    x2: rel2.x * f2,
+    y2: rel2.y * f2,
+    vx1: rel2.vx * f1,
+    vy1: rel2.vy * f1,
+    vx2: rel2.vx * f2,
+    vy2: rel2.vy * f2
+  };
+}
+function boundOrbit(mu, r0, v0, t) {
+  const h = r0 * v0;
+  const a = -mu / (2 * (v0 * v0 / 2 - mu / r0));
+  const e = Math.sqrt(Math.max(0, 1 - h * h / (mu * a)));
+  const atPeri = Math.abs(r0 - a * (1 - e)) <= Math.abs(r0 - a * (1 + e));
+  const n2 = Math.sqrt(mu / (a * a * a));
+  const M = (atPeri ? 0 : Math.PI) + n2 * t;
+  const E = solveKepler((M % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI), e);
+  const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+  const r = a * (1 - e * Math.cos(E));
+  const p = a * (1 - e * e);
+  const vr = Math.sqrt(mu / p) * e * Math.sin(nu), vt = Math.sqrt(mu / p) * (1 + e * Math.cos(nu));
+  const rot = atPeri ? 0 : Math.PI;
+  const ang = nu - rot;
+  const c = Math.cos(ang), s = Math.sin(ang);
+  return { x: r * c, y: r * s, vx: vr * c - vt * s, vy: vr * s + vt * c };
+}
+function leapfrog(mu, r0, v0, t) {
+  const steps = Math.min(4e3, Math.max(1, Math.ceil(Math.abs(t) * 200)));
+  const dt = t / steps;
+  let x = r0, y = 0, vx = 0, vy = v0;
+  const acc = (px2, py) => {
+    const d = Math.hypot(px2, py) || 1e-9;
+    const k = -mu / (d * d * d);
+    return [k * px2, k * py];
+  };
+  let [ax, ay] = acc(x, y);
+  for (let i2 = 0; i2 < steps; i2++) {
+    vx += ax * dt / 2;
+    vy += ay * dt / 2;
+    x += vx * dt;
+    y += vy * dt;
+    [ax, ay] = acc(x, y);
+    vx += ax * dt / 2;
+    vy += ay * dt / 2;
+  }
+  return { x, y, vx, vy };
+}
+
+// lib/scene2d/models/cam.js
+var TAU2 = 2 * Math.PI;
+function cam({ theta, lift, span }) {
+  const th = theta - TAU2 * Math.floor((theta + Math.PI) / TAU2);
+  const half = span / 2;
+  if (Math.abs(th) >= half || span <= 0) return { lift: 0, velocity: 0 };
+  const phase = Math.PI * th / half;
+  return { lift: lift * (1 + Math.cos(phase)) / 2, velocity: -lift * Math.PI * Math.sin(phase) / (2 * half) };
+}
+
+// lib/scene2d/models/lunar.js
+var RAD = Math.PI / 180;
+var TAU3 = 2 * Math.PI;
+var norm = (x) => x - TAU3 * Math.floor(x / TAU3);
+function lunar({ t }) {
+  const L0 = (218.316 + 13.176396 * t) * RAD;
+  const l = (134.963 + 13.064993 * t) * RAD;
+  const F = (93.272 + 13.22935 * t) * RAD;
+  const g = (357.528 + 0.9856003 * t) * RAD;
+  const q = (280.46 + 0.9856474 * t) * RAD;
+  const sun_lon = norm(q + (1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * RAD);
+  const D2 = L0 - sun_lon;
+  const lon = norm(L0 + (6.289 * Math.sin(l) - 1.274 * Math.sin(l - 2 * D2) + 0.658 * Math.sin(2 * D2) - 0.214 * Math.sin(2 * l)) * RAD);
+  const lat = (5.128 * Math.sin(F) + 0.281 * Math.sin(l + F) - 0.278 * Math.sin(l - F)) * RAD;
+  const dist = 385001 - 20905 * Math.cos(l) - 3699 * Math.cos(2 * D2 - l) - 2956 * Math.cos(2 * D2);
+  const phase = norm(lon - sun_lon) / TAU3;
+  return { lon, lat, dist, phase, sun_lon };
+}
+
+// lib/scene2d/models/index.js
+var MODEL_FUNCTIONS = Object.freeze({ kepler, twobody, cam, lunar });
+function applyModel(model, paramGetters, scope) {
+  const params = {};
+  for (const [k, g] of Object.entries(paramGetters)) params[k] = g(scope);
+  const outputs = MODEL_FUNCTIONS[model.name](params);
+  for (const [k, v] of Object.entries(outputs)) scope.set(`${model.name}.${k}`, v);
+}
+
+// lib/poster-svg.js
+var POSTER_VERSION = 1;
+var POSTER_WIDTH = 704;
+var CORNER_STRIP_PX = 60;
+var TAU4 = Math.PI * 2;
+var FONT = '"Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif';
+var FALLBACK = { "--bg": "light-dark(#faf8f5, #151412)", "--fg": "light-dark(#1d1c1a, #e8e4dc)", "--x-panel": "light-dark(#f2f0ed, #1c1b19)" };
+var n = (v) => {
+  const r = Math.round(v * 10) / 10;
+  return Number.isFinite(r) ? String(r === 0 ? 0 : r) : "0";
+};
+var esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+var measure2 = (text2, size) => String(text2).length * size * 0.5;
+var leftOf = (x, w, align) => align === "left" ? x : align === "right" ? x - w : x - w / 2;
+var SvgPath = class {
+  constructor() {
+    this.d = "";
+  }
+  moveTo(x, y) {
+    this.d += `M${n(x)} ${n(y)}`;
+  }
+  lineTo(x, y) {
+    this.d += `L${n(x)} ${n(y)}`;
+  }
+  closePath() {
+    this.d += "Z";
+  }
+  rect(x, y, w, h) {
+    this.d += `M${n(x)} ${n(y)}h${n(w)}v${n(h)}h${n(-w)}Z`;
+  }
+  addPath(p) {
+    this.d += p.d;
+  }
+  arc(cx, cy, r, a0, a1, ccw = false) {
+    this.ellipse(cx, cy, r, r, 0, a0, a1, ccw);
+  }
+  // Canvas semantics: a sweep of a full turn or more is the whole ellipse;
+  // otherwise the sweep is taken modulo one turn in the requested direction.
+  ellipse(cx, cy, rx, ry, rot, a0, a1, ccw = false) {
+    const cr = Math.cos(rot), sr = Math.sin(rot);
+    const at = (t) => [cx + rx * Math.cos(t) * cr - ry * Math.sin(t) * sr, cy + rx * Math.cos(t) * sr + ry * Math.sin(t) * cr];
+    let sweep = ccw ? a0 - a1 : a1 - a0;
+    const full = sweep >= TAU4 - 1e-3;
+    if (!full) sweep = (sweep % TAU4 + TAU4) % TAU4;
+    const [sx, sy] = at(a0);
+    this.d += `${this.d ? "L" : "M"}${n(sx)} ${n(sy)}`;
+    const deg = n(rot * 180 / Math.PI), dir = ccw ? 0 : 1;
+    if (full) {
+      const [mx, my] = at(a0 + (ccw ? -Math.PI : Math.PI));
+      this.d += `A${n(rx)} ${n(ry)} ${deg} 1 ${dir} ${n(mx)} ${n(my)}A${n(rx)} ${n(ry)} ${deg} 1 ${dir} ${n(sx)} ${n(sy)}`;
+      return;
+    }
+    if (sweep < 1e-6) return;
+    const [ex, ey] = at(ccw ? a0 - sweep : a0 + sweep);
+    this.d += `A${n(rx)} ${n(ry)} ${deg} ${sweep > Math.PI ? 1 : 0} ${dir} ${n(ex)} ${n(ey)}`;
+  }
+};
+var mk = () => new SvgPath();
+function compilePanel(shows) {
+  const readouts = (shows.readouts || []).map(compileReadout);
+  if (shows.type === "plot") return { kind: "plot", P: compilePlot(shows), readouts, layers: [] };
+  if (shows.type === "timeline") return { kind: "timeline", T: compileTimeline(shows), readouts, layers: [] };
+  const layers = shows.layers.map(compileLayer);
+  return { kind: "scene2d", view: shows.view, layers, byId: new Map(layers.map((L) => [L.id, L])), readouts };
+}
+var Emitter = class {
+  constructor(id, tokens) {
+    this.id = `${id}-poster`;
+    this.tokens = tokens instanceof Map ? tokens : new Map(Object.entries(tokens || {}));
+    this.parts = [];
+    this.defs = [];
+    this.used = /* @__PURE__ */ new Set();
+    this.clips = 0;
+  }
+  // ---- color classes: s-<token> strokes, f-<token> fills; fg/bg/panel likewise
+  cls(kind, tok) {
+    const c = kind === "h" ? "h" : `${kind}-${tok || "fg"}`;
+    this.used.add(c);
+    return c;
+  }
+  fallback(tok) {
+    if (tok === "fg" || tok === "bg") return this.tokens.get(`--${tok}`) || FALLBACK[`--${tok}`];
+    if (tok === "panel") return this.tokens.get("--x-panel") || FALLBACK["--x-panel"];
+    return this.tokens.get(tok) || null;
+  }
+  varOf(tok) {
+    const prop = tok === "fg" || tok === "bg" ? `--${tok}` : tok === "panel" ? "--x-panel" : `--c-${tok}`;
+    const fb = this.fallback(tok);
+    return fb ? `var(${prop}, ${fb})` : `var(${prop})`;
+  }
+  style() {
+    const id = `#${this.id}`;
+    const rules = [`${id}:root{color-scheme:light dark}`, `${id}{font:13px ${FONT.replace(/"/g, "'")}}`];
+    for (const c of [...this.used].sort()) {
+      const [kind, ...rest] = c.split("-"), tok = rest.join("-");
+      if (c === "h") rules.push(`${id} .h{paint-order:stroke;stroke:${this.varOf("bg")};stroke-width:3;stroke-linejoin:round}`);
+      else rules.push(`${id} .${c}{${kind === "s" ? "stroke" : "fill"}:${this.varOf(tok)}}`);
+    }
+    return `<style>${rules.join("\n")}</style>`;
+  }
+  clip(d, evenodd = false) {
+    const cid = `${this.id}-c${this.clips++}`;
+    this.defs.push(`<clipPath id="${cid}"><path d="${d}"${evenodd ? ' clip-rule="evenodd"' : ""}/></clipPath>`);
+    return cid;
+  }
+  rectPath(b) {
+    return `M${n(b.x)} ${n(b.y)}h${n(b.width)}v${n(b.height)}h${n(-b.width)}Z`;
+  }
+  // ---- primitives
+  path(d, { stroke, fill, width = 1.5, dash, opacity, fillOpacity, strokeOpacity } = {}) {
+    if (!d) return;
+    const cls = [stroke ? this.cls("s", stroke) : "", fill ? this.cls("f", fill) : ""].filter(Boolean).join(" ");
+    let a = cls ? ` class="${cls}"` : "";
+    if (stroke) a += ` stroke-width="${n(width)}"`;
+    if (dash && dash.length) a += ` stroke-dasharray="${dash.map(n).join(" ")}"`;
+    if (opacity !== void 0) a += ` opacity="${n(opacity)}"`;
+    if (fillOpacity !== void 0) a += ` fill-opacity="${fillOpacity}"`;
+    if (strokeOpacity !== void 0) a += ` stroke-opacity="${strokeOpacity}"`;
+    this.parts.push(`<path d="${d}"${a}/>`);
+  }
+  text(str, x, y, { size = 13, align = "left", color = "fg", halo = true, bold = false, italic: italic2 = false, middle = false, opacity, transform } = {}) {
+    const s = String(str);
+    if (!s) return;
+    const cls = [this.cls("f", color), halo ? this.cls("h") : ""].filter(Boolean).join(" ");
+    let a = ` class="${cls}"`;
+    if (size !== 13) a += ` font-size="${n(size)}"`;
+    if (align !== "left") a += ` text-anchor="${align === "center" ? "middle" : "end"}"`;
+    if (bold) a += ' font-weight="600"';
+    if (italic2) a += ' font-style="italic"';
+    if (middle) a += ' dominant-baseline="central"';
+    if (opacity !== void 0) a += ` opacity="${opacity}"`;
+    if (transform) a += ` transform="${transform}"`;
+    this.parts.push(`<text x="${n(x)}" y="${n(y)}"${a}>${esc(s)}</text>`);
+  }
+  circle(cx, cy, r, { fill, stroke, width } = {}) {
+    const cls = [stroke ? this.cls("s", stroke) : "", fill ? this.cls("f", fill) : ""].filter(Boolean).join(" ");
+    this.parts.push(`<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r)}" class="${cls}"${stroke ? ` stroke-width="${n(width || 1.5)}"` : ""}/>`);
+  }
+  heads(heads, color) {
+    for (const h of heads) {
+      const hw = h.len * 0.42, bx = h.at[0] - Math.cos(h.angle) * h.len, by = h.at[1] - Math.sin(h.angle) * h.len;
+      const nx = -Math.sin(h.angle) * hw, ny = Math.cos(h.angle) * hw;
+      this.path(`M${n(h.at[0])} ${n(h.at[1])}L${n(bx + nx)} ${n(by + ny)}L${n(bx - nx)} ${n(by - ny)}Z`, { fill: color });
+    }
+  }
+  // ---- the scene: panels, layers, readouts, drag handles (mirrors lib/scene2d/scene2d.js)
+  scene(compiled, scope, W, H) {
+    const shows = compiled.spec.shows, controls = compiled.spec.manipulates.controls;
+    if (shows.model) {
+      const params = {};
+      for (const [k, v] of Object.entries(shows.model.params)) params[k] = getter(v);
+      applyModel(shows.model, params, scope);
+    }
+    const main3 = compilePanel(shows);
+    const splits = (shows.split || []).map((p) => ({ at: p.at, panel: compilePanel(p.shows) }));
+    const previews = new Set(controls.flatMap((c) => c.preview || []));
+    for (const p of [main3, ...splits.map((s) => s.panel)]) for (const L of p.layers) if (previews.has(L.id)) L.forceHide = true;
+    const hasCorner = controls.some((c) => c.kind === "play" || c.kind === "time" && c.mode === "speed" || c.kind === "toggle" && (c.position || "corner") === "corner");
+    const box = { x: 0, y: 0, width: W, height: H };
+    const drawBox = hasCorner ? { ...box, height: Math.max(H - CORNER_STRIP_PX, H * 0.6) } : box;
+    const boxes = splitBoxes(drawBox, splits);
+    this.parts.push(`<rect width="${W}" height="${H}" rx="8" class="${this.cls("f", "panel")}"/>`);
+    const mainMap = this.panel(main3, boxes.main, scope, false);
+    splits.forEach((s, i2) => this.panel(s.panel, boxes.panels[i2], scope, boxes.panels[i2].inset));
+    if (mainMap) {
+      for (const c of controls) {
+        if (c.kind !== "drag" || c.constrain.startsWith("surface:")) continue;
+        const x = mainMap.x(scope.get(`${c.name}.x`)), y = mainMap.y(scope.get(`${c.name}.y`));
+        this.circle(x, y, 7, { fill: c.token, stroke: "bg", width: 2 });
+      }
+    }
+  }
+  panel(panel, pbox, scope, inset) {
+    const open2 = this.parts.length;
+    this.parts.push("");
+    if (inset) {
+      this.parts.push(`<rect x="${n(pbox.x)}" y="${n(pbox.y)}" width="${n(pbox.width)}" height="${n(pbox.height)}" class="${this.cls("f", "bg")}"/>`);
+      this.path(this.rectPath({ x: pbox.x + 0.5, y: pbox.y + 0.5, width: pbox.width - 1, height: pbox.height - 1 }), { stroke: "fg", width: 1, strokeOpacity: ".1" });
+    }
+    let m = null;
+    if (panel.kind === "scene2d") m = this.paintScene(panel, pbox, scope);
+    else if (panel.kind === "plot") this.plot(pbox, panel.P, scope);
+    else this.timeline(pbox, panel.T, scope);
+    this.parts[open2] = `<g clip-path="url(#${this.clip(this.rectPath(pbox))})">`;
+    this.parts.push("</g>");
+    return m;
+  }
+  paintScene(panel, pbox, scope) {
+    const m = worldToPx(panel.view, pbox);
+    const env = { m, view: panel.view, box: pbox, placed: [], obstacles: [] };
+    const anchors = /* @__PURE__ */ new Map();
+    const pathOf = (id) => geometryOf(panel.byId.get(id), scope, m, mk).path;
+    for (const L of panel.layers) {
+      if (isShown(L, scope)) anchors.set(L.id, this.layer(L, scope, env, pathOf).anchor);
+      else if (L.kind !== "region") anchors.set(L.id, geometryOf(L, scope, m, mk).anchor);
+    }
+    for (const R of panel.readouts) this.readout(R, scope, env, anchors);
+    return m;
+  }
+  layer(L, scope, env, pathOf) {
+    const s = L.spec, m = env.m;
+    const stroke = s.stroke || null, fill = s.fill || null, color = stroke || fill || "fg";
+    let geo;
+    if (L.kind === "region") {
+      geo = { anchor: [m.rect.x, m.rect.y], heads: [], dir: null };
+      this.region(L, fill, pathOf, env.box);
+    } else {
+      geo = geometryOf(L, scope, m, mk);
+      const width = (s.width ?? 1.5) * (L.highlight ? 2 : 1);
+      if (L.kind === "text") {
+        this.text(renderTemplate(L.g.parts, scope, {}), geo.anchor[0], geo.anchor[1], { size: s.size || 14, align: s.align || "center", color, bold: L.highlight });
+      } else if (L.kind === "image") {
+        this.path(geo.path.d, { stroke: stroke || "fg", width: stroke ? width : 1, dash: stroke ? s.dash : [4, 4], strokeOpacity: stroke ? void 0 : ".35" });
+      } else if (L.kind === "bars") {
+        this.bars(L, scope, m);
+      } else {
+        if (L.highlight) this.path(geo.path.d, { stroke: color, fill: fill && !stroke ? fill : void 0, width: (s.width ?? 1.5) * 2 + 8, opacity: 0.28 });
+        this.path(geo.path.d, { stroke, fill, width, dash: s.dash });
+        if (geo.heads.length) this.heads(geo.heads, color);
+      }
+    }
+    if (s.label) this.layerLabel(L, geo, env, color);
+    return geo;
+  }
+  bars(L, scope, m) {
+    const y0 = L.g.y(scope), h = L.spec.height;
+    L.g.rows.forEach((row, i2) => {
+      const a = [m.x(row.from(scope)), m.y(y0 - i2 * h + h)], b = [m.x(row.to(scope)), m.y(y0 - i2 * h)];
+      this.path(this.rectPath({ x: Math.min(a[0], b[0]), y: a[1], width: Math.abs(b[0] - a[0]), height: b[1] - a[1] }), { fill: row.token });
+      this.text(row.label, Math.min(a[0], b[0]) - 6, (a[1] + b[1]) / 2 + 4, { size: 12, align: "right" });
+    });
+  }
+  // Regions combine other layers' shapes: union fills each; intersect and
+  // subtract nest clip paths the way the canvas nests ctx.clip().
+  region(L, fill, pathOf, box) {
+    const [first, ...rest] = L.spec.of, op2 = L.spec.op;
+    if (op2 === "union") {
+      for (const id of L.spec.of) this.path(pathOf(id).d, { fill });
+      return;
+    }
+    const clips = [this.clip(pathOf(first).d)];
+    const outer = this.rectPath({ x: box.x - 10, y: box.y - 10, width: box.width + 20, height: box.height + 20 });
+    for (const id of rest) clips.push(op2 === "intersect" ? this.clip(pathOf(id).d) : this.clip(outer + pathOf(id).d, true));
+    for (const c of clips) this.parts.push(`<g clip-path="url(#${c})">`);
+    this.path(this.rectPath(box), { fill });
+    for (const c of clips) this.parts.push("</g>");
+  }
+  // lib/scene2d/layers.js drawLayerLabel, with estimated text widths
+  layerLabel(L, geo, env, color) {
+    const s = L.spec, b = env.box, size = 12, w = measure2(s.label, size);
+    let [x, y] = geo.anchor, align = "left";
+    if (L.kind === "circle" || L.kind === "ellipse") {
+      y += (L.lastRadius || 0) + 13;
+      align = "center";
+    } else if (geo.dir !== null) {
+      const c = Math.cos(geo.dir), sn = Math.sin(geo.dir);
+      x += c * 10;
+      y += sn * 10 - 4;
+      align = Math.abs(c) < 0.3 ? "center" : c > 0 ? "left" : "right";
+      const left = leftOf(x, w, align);
+      if (left < b.x + 4 || left + w > b.x + b.width - 4) {
+        [x, y] = geo.anchor;
+        align = c >= 0 ? "right" : "left";
+        x += c >= 0 ? -6 : 6;
+        y += Math.abs(sn) < 0.3 ? 16 : -8;
+      }
+    } else {
+      x += 8;
+      y -= 8;
+    }
+    const r = fitBox({ x: leftOf(x, w, align), y: y - size, w, h: size + 2 }, b, { obstacles: env.obstacles, avoid: env.placed });
+    env.placed.push(r);
+    this.text(s.label, r.x, r.y + size, { size, color, italic: true });
+  }
+  // lib/scene2d/label.js drawReadout
+  readout(R, scope, env, anchors) {
+    if (R.visible && R.visible(scope) === 0) return;
+    const [dx, dy] = R.spec.offset || [0, 0];
+    const p = R.at ? [env.m.x(R.at(scope)[0]), env.m.y(R.at(scope)[1])] : anchors.get(R.spec.anchor);
+    if (!p) return;
+    const text2 = renderTemplate(R.parts, scope, {});
+    const size = 13, x = p[0] + dx, y = p[1] + dy, w = measure2(text2, size);
+    const align = R.at ? R.at(scope)[0] < (env.view.x[0] + env.view.x[1]) / 2 ? "left" : "right" : dx < 0 ? "right" : "left";
+    const r = fitBox({ x: align === "left" ? x : x - w, y: y - size / 2 - 1, w, h: size + 2 }, env.box, { obstacles: env.obstacles });
+    this.text(text2, r.x, r.y + r.h / 2, { size, color: R.spec.token, bold: R.highlight, middle: true });
+  }
+  // ---- plot panels (lib/scene2d/plot.js drawPlot)
+  plot(box, P, scope) {
+    const A = axisMap(box, P), inner2 = A.inner;
+    const xt = niceTicks(P.x.min, P.x.max, Math.max(2, Math.round(inner2.w / 70)));
+    const yt = P.y.log ? logTicks(P.y.min, P.y.max) : niceTicks(P.y.min, P.y.max, Math.max(2, Math.round(inner2.h / 40)));
+    const grid = xt.ticks.map((v) => `M${n(A.px(v))} ${n(inner2.y)}v${n(inner2.h)}`).join("") + yt.ticks.map((v) => `M${n(inner2.x)} ${n(A.py(v))}h${n(inner2.w)}`).join("");
+    this.path(grid, { stroke: "fg", width: 1, strokeOpacity: ".1" });
+    this.path(`M${n(inner2.x)} ${n(inner2.y)}v${n(inner2.h)}h${n(inner2.w)}`, { stroke: "fg", width: 1, strokeOpacity: ".45" });
+    for (const v of xt.ticks) this.text(tickLabel(v, xt.step), A.px(v), inner2.y + inner2.h + 14, { size: 11, align: "center", halo: false, opacity: ".65" });
+    for (const v of yt.ticks) this.text(yt.log ? `10${superscript(Math.round(Math.log10(v)))}` : tickLabel(v, yt.step), inner2.x - 6, A.py(v) + 4, { size: 11, align: "right", halo: false, opacity: ".65" });
+    const unit = (ax) => ax.unit ? ` (${ax.unit})` : "";
+    this.text(P.x.label + unit(P.x), inner2.x + inner2.w / 2, box.y + box.height - 6, { size: 12, align: "center", halo: false });
+    this.text(P.y.label + unit(P.y), 0, 0, { size: 12, align: "center", halo: false, transform: `translate(${n(box.x + 12)} ${n(inner2.y + inner2.h / 2)}) rotate(-90)` });
+    for (const g of P.guides) {
+      const v = g.at(scope);
+      const d = g.vertical ? `M${n(A.px(v))} ${n(inner2.y)}v${n(inner2.h)}` : `M${n(inner2.x)} ${n(A.py(v))}h${n(inner2.w)}`;
+      this.path(d, { stroke: g.token, width: 1.25, dash: g.dash || [4, 4] });
+      if (g.label) {
+        if (g.vertical) this.text(g.label, A.px(v) + 4, inner2.y + 12, { size: 11, color: g.token });
+        else this.text(g.label, inner2.x + inner2.w - 4, A.py(v) - 4, { size: 11, align: "right", color: g.token });
+      }
+    }
+    const clipId = this.clip(this.rectPath({ x: inner2.x, y: inner2.y - 1, width: inner2.w, height: inner2.h + 2 }));
+    this.parts.push(`<g clip-path="url(#${clipId})">`);
+    const derived = new Map(scope);
+    for (const s of P.series) {
+      const count = s.samples || 200;
+      let d = "", pen = false;
+      for (let i2 = 0; i2 <= count; i2++) {
+        const x = P.x.min + (P.x.max - P.x.min) * i2 / count;
+        derived.set(P.x.var, x);
+        let y;
+        try {
+          y = evaluate(s.ast, derived, s.y);
+        } catch {
+          pen = false;
+          continue;
+        }
+        if (!Number.isFinite(y) || P.y.log && y <= 0) {
+          pen = false;
+          continue;
+        }
+        d += `${pen ? "L" : "M"}${n(A.px(x))} ${n(A.py(y))}`;
+        pen = true;
+      }
+      this.path(d, { stroke: s.token, width: 2, dash: s.dash });
+    }
+    this.parts.push("</g>");
+    if (P.marker) {
+      const x = P.marker.x(scope);
+      if (x >= P.x.min && x <= P.x.max) {
+        const X = A.px(x);
+        this.path(`M${n(X)} ${n(inner2.y)}v${n(inner2.h)}`, { stroke: P.marker.token, width: 1, dash: [3, 3] });
+        for (const s of P.series) {
+          derived.set(P.x.var, x);
+          let y;
+          try {
+            y = evaluate(s.ast, derived, s.y);
+          } catch {
+            continue;
+          }
+          if (!Number.isFinite(y) || y < P.y.min || y > P.y.max) continue;
+          this.circle(X, A.py(y), 4.5, { fill: s.token, stroke: "bg", width: 1.5 });
+        }
+      }
+    }
+  }
+  // ---- timeline panels (lib/scene2d/plot.js drawTimeline)
+  timeline(box, T2, scope) {
+    const labelW = Math.max(...T2.bars.map((b) => measure2(b.label, 12))) + 16;
+    const inner2 = { x: box.x + labelW, y: box.y + 10, w: box.width - labelW - 14, h: box.height - 10 - 32 };
+    const px2 = (v) => inner2.x + (v - T2.x.min) / (T2.x.max - T2.x.min) * inner2.w;
+    const rowH = inner2.h / T2.bars.length;
+    const xt = niceTicks(T2.x.min, T2.x.max, Math.max(2, Math.round(inner2.w / 70)));
+    this.path(xt.ticks.map((v) => `M${n(px2(v))} ${n(inner2.y)}v${n(inner2.h)}`).join(""), { stroke: "fg", width: 1, strokeOpacity: ".1" });
+    for (const v of xt.ticks) this.text(tickLabel(v, xt.step), px2(v), inner2.y + inner2.h + 14, { size: 11, align: "center", halo: false, opacity: ".65" });
+    this.text(T2.x.label + (T2.x.unit ? ` (${T2.x.unit})` : ""), inner2.x + inner2.w / 2, box.y + box.height - 6, { size: 12, align: "center", halo: false });
+    T2.bars.forEach((b, i2) => {
+      const y = inner2.y + i2 * rowH + rowH * 0.25, h = rowH * 0.5;
+      const from = b.from(scope), to = b.to(scope);
+      const a = px2(Math.max(T2.x.min, Math.min(from, to))), c = px2(Math.min(T2.x.max, Math.max(from, to)));
+      this.path(this.rectPath({ x: a, y, width: Math.max(c - a, 1), height: h }), { fill: b.token });
+      this.text(b.label, inner2.x - 8, y + h / 2 + 4, { size: 12, align: "right", halo: false });
+    });
+    if (T2.marker) this.path(`M${n(px2(T2.marker.x(scope)))} ${n(inner2.y)}v${n(inner2.h)}`, { stroke: T2.marker.token, width: 1.5, dash: [3, 3] });
+  }
+  // ---- scene3d: the reserved box with the caption, until the WebGL chunk draws
+  scene3d(W, H, caption) {
+    this.parts.push(`<rect width="${W}" height="${H}" rx="8" class="${this.cls("f", "panel")}"/>`);
+    this.path(this.rectPath({ x: 0.5, y: 0.5, width: W - 1, height: H - 1 }), { stroke: "fg", width: 1, strokeOpacity: ".15" });
+    const words = String(caption || "").trim().split(/\s+/).filter(Boolean), lines = [];
+    const perLine = Math.max(20, Math.floor((W - 64) / (13 * 0.5)));
+    let cur = "";
+    for (const w of words) {
+      if (cur && cur.length + 1 + w.length > perLine) {
+        lines.push(cur);
+        cur = w;
+      } else cur = cur ? `${cur} ${w}` : w;
+    }
+    if (cur) lines.push(cur);
+    const y0 = H / 2 - (lines.length - 1) * 18 / 2;
+    lines.forEach((l, i2) => this.text(l, W / 2, y0 + i2 * 18, { align: "center", halo: false, middle: true }));
+  }
+  svg(W, H, hash) {
+    const attrs = [`class="x-poster"`, `id="${this.id}"`, 'xmlns="http://www.w3.org/2000/svg"', `viewBox="0 0 ${W} ${H}"`, `width="${W}"`, `height="${H}"`, 'aria-hidden="true"'];
+    if (hash) attrs.push(`data-poster="${hash}"`);
+    const defs = this.defs.length ? `<defs>${this.defs.join("")}</defs>` : "";
+    return `<svg ${attrs.join(" ")}>${this.style()}${defs}<g fill="none" stroke-linecap="round" stroke-linejoin="round">${this.parts.join("")}</g></svg>`;
+  }
+};
+function posterSize(aspect) {
+  const m = /^(\d+):(\d+)$/.exec(aspect || "");
+  const [aw, ah] = m ? [Number(m[1]), Number(m[2])] : [3, 2];
+  return { width: POSTER_WIDTH, height: Math.round(POSTER_WIDTH * ah / aw) };
+}
+function posterSvg(specOrCompiled, scopeOrState = null, { aspect = "3:2", tokens = null, id = "fig", caption = "", hash = "" } = {}) {
+  const compiled = specOrCompiled && specOrCompiled.defaults instanceof Map ? specOrCompiled : validateSpec(specOrCompiled, { figureId: id });
+  const scope = scopeOrState instanceof Map ? new Map(scopeOrState) : scopeForState(compiled, scopeOrState);
+  const { width: W, height: H } = posterSize(aspect);
+  const out = new Emitter(id, tokens);
+  if (compiled.type === "scene3d") out.scene3d(W, H, caption);
+  else out.scene(compiled, scope, W, H);
+  return out.svg(W, H, hash);
+}
+
+// tools/src/poster.mjs
+var INLINE_LIMIT = 8 * 1024;
+var CAVEAT_SENTENCES = { not_to_scale: "Not to scale." };
+var figureEls = (root) => elements(root, (n2) => n2.tagName === "figure" && hasClass(n2, "x-fig"));
+var posterChild = (fig) => elementChildren(fig).find((n2) => (n2.tagName === "svg" || n2.tagName === "img") && hasClass(n2, "x-poster"));
+var captionChild = (fig) => elementChildren(fig).find((n2) => n2.tagName === "figcaption");
+var posterPath = (figId) => `assets/poster-${figId}.svg`;
+function posterTokens(palette) {
+  const t = /* @__PURE__ */ new Map();
+  for (const [k, v] of palette.tokens) t.set(k, v.value);
+  if (palette.bg) t.set("--bg", palette.bg.value);
+  if (palette.fg) t.set("--fg", palette.fg.value);
+  return t;
+}
+function posterHash(spec, aspect, tokens, caption = "") {
+  return import_node_crypto.default.createHash("sha1").update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], caption])).digest("hex");
+}
+function plan(fig, compiled, tokens) {
+  const id = attr(fig, "id"), aspect = attr(fig, "data-aspect") || "3:2";
+  const cap = captionChild(fig);
+  const caption = compiled.type === "scene3d" && cap ? textOf(cap).trim() : "";
+  return { id, aspect, caption, hash: posterHash(compiled.spec, aspect, tokens, caption), existing: posterChild(fig) };
+}
+function checkPosters(doc, file, figures, palette, problems) {
+  const tokens = posterTokens(palette);
+  for (const fig of figureEls(doc)) {
+    const id = attr(fig, "id"), compiled = figures.get(id);
+    if (!compiled) continue;
+    const p = plan(fig, compiled, tokens);
+    if (!p.existing) {
+      problems.warn(file, line(fig), id, "no poster; run: explainers build");
+      continue;
+    }
+    if (attr(p.existing, "data-poster") !== p.hash) {
+      problems.warn(file, line(p.existing), id, "poster is stale; run: explainers build");
+      continue;
+    }
+    if (p.existing.tagName === "img") {
+      const src = attr(p.existing, "src") || "";
+      if (!import_node_fs3.default.existsSync(import_node_path3.default.resolve(import_node_path3.default.dirname(file), src))) problems.warn(file, line(p.existing), id, `poster file ${src} not found; run: explainers build`);
+    }
+  }
+}
+function buildPosters(doc, html, file, figures, palette) {
+  const tokens = posterTokens(palette);
+  const edits = [], external = [];
+  let count = 0;
+  for (const fig of figureEls(doc)) {
+    const id = attr(fig, "id"), compiled = figures.get(id);
+    if (!compiled) continue;
+    const p = plan(fig, compiled, tokens);
+    const rel2 = posterPath(id), abs = import_node_path3.default.resolve(import_node_path3.default.dirname(file), rel2);
+    const current = p.existing && attr(p.existing, "data-poster") === p.hash && (p.existing.tagName !== "img" || import_node_fs3.default.existsSync(abs));
+    if (current) {
+      if (p.existing.tagName === "img") external.push(id);
+      continue;
+    }
+    const svg = posterSvg(compiled, null, { aspect: p.aspect, tokens, id, caption: p.caption, hash: p.hash });
+    let markup;
+    if (Buffer.byteLength(svg) > INLINE_LIMIT) {
+      import_node_fs3.default.mkdirSync(import_node_path3.default.dirname(abs), { recursive: true });
+      if (!import_node_fs3.default.existsSync(abs) || import_node_fs3.default.readFileSync(abs, "utf8") !== svg) import_node_fs3.default.writeFileSync(abs, svg);
+      const { width, height } = posterSize(p.aspect);
+      markup = `<img class="x-poster" src="${rel2}" alt="" width="${width}" height="${height}" aria-hidden="true" data-poster="${p.hash}">`;
+      external.push(id);
+    } else {
+      markup = svg;
+      if (import_node_fs3.default.existsSync(abs)) import_node_fs3.default.unlinkSync(abs);
+    }
+    if (p.existing) edits.push({ start: p.existing.sourceCodeLocation.startOffset, end: p.existing.sourceCodeLocation.endOffset, text: markup });
+    else {
+      const at = fig.sourceCodeLocation.startTag.endOffset;
+      edits.push({ start: at, end: at, text: `
+${markup}` });
+    }
+    count++;
+  }
+  return { html: splice(html, edits), count, external };
+}
+function buildCaptions(doc, html, figures) {
+  const edits = [];
+  let count = 0;
+  for (const fig of figureEls(doc)) {
+    const compiled = figures.get(attr(fig, "id"));
+    if (!compiled) continue;
+    const caveats = compiled.spec.shows.caveats || {};
+    const cap = captionChild(fig);
+    const text2 = cap ? textOf(cap) : "";
+    const missing = Object.entries(CAVEAT_SENTENCES).filter(([k, s]) => caveats[k] && !new RegExp(s.replace(/\.$/, "").replace(/\s+/g, "\\s+"), "i").test(text2)).map(([, s]) => s);
+    if (!missing.length) continue;
+    if (cap && innerRange(cap)) {
+      const range = innerRange(cap), inner2 = html.slice(range.start, range.end);
+      const spoken = text2.trimEnd();
+      const glue = spoken === "" ? "" : /[.!?…]["')\]]?$/.test(spoken) ? " " : ". ";
+      const at = range.start + inner2.trimEnd().length;
+      edits.push({ start: at, end: at, text: glue + missing.join(" ") });
+    } else if (fig.sourceCodeLocation.endTag) {
+      const at = fig.sourceCodeLocation.endTag.startOffset;
+      edits.push({ start: at, end: at, text: `<figcaption>${missing.join(" ")}</figcaption>
+` });
+    } else continue;
+    count++;
+  }
+  return { html: splice(html, edits), count };
+}
+
+// tools/src/article.mjs
 var ALLOWED_HOSTS = /* @__PURE__ */ new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 var FIG_ID_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
 var ASPECT_RE = /^[1-9]\d*:[1-9]\d*$/;
 function loadArticle(file) {
-  const html = import_node_fs2.default.readFileSync(file, "utf8");
+  const html = import_node_fs4.default.readFileSync(file, "utf8");
   return { file, html, doc: parseHtml(html) };
 }
-var figureElements = (doc) => elements(doc, (n) => n.tagName === "figure" && hasClass(n, "x-fig"));
-var jsonScripts = (fig) => elementChildren(fig).filter((n) => n.tagName === "script" && attr(n, "type") === "application/json");
+var figureElements = (doc) => elements(doc, (n2) => n2.tagName === "figure" && hasClass(n2, "x-fig"));
+var jsonScripts = (fig) => elementChildren(fig).filter((n2) => n2.tagName === "script" && attr(n2, "type") === "application/json");
 function compileFigures({ file, doc }, palette, problems) {
   const figures = /* @__PURE__ */ new Map();
   for (const fig of figureElements(doc)) {
@@ -24046,7 +25155,7 @@ var validFigures = (figures) => new Map([...figures].filter(([, c]) => c));
 function checkStructure({ file, doc }, problems) {
   if (byTag(doc, "main").length !== 1) problems.error(file, 0, "HTML_MAIN_MISSING", null, "the article needs exactly one <main>");
   const seen = /* @__PURE__ */ new Map();
-  for (const el of elements(doc, (n) => hasAttr(n, "id"))) {
+  for (const el of elements(doc, (n2) => hasAttr(n2, "id"))) {
     const id = attr(el, "id");
     if (seen.has(id)) problems.error(file, line(el), "HTML_DUP_ID", null, `id "${id}" already used at line ${seen.get(id)}`);
     else seen.set(id, line(el));
@@ -24066,7 +25175,7 @@ function checkStructure({ file, doc }, problems) {
   if (!css) problems.error(file, 0, "HTML_INCLUDE_MISSING", null, 'missing <link rel="stylesheet" href="../../dist/explainers.v1.css">');
 }
 function checkUrls({ file, doc }, problems) {
-  for (const el of elements(doc, (n) => hasAttr(n, "src") || hasAttr(n, "href"))) {
+  for (const el of elements(doc, (n2) => hasAttr(n2, "src") || hasAttr(n2, "href"))) {
     const url = attr(el, "src") ?? attr(el, "href");
     if (isRelativeUrl(url) || url.startsWith("data:")) continue;
     if (el.tagName === "a" && (attr(el, "rel") || "").split(/\s+/).includes("external")) continue;
@@ -24075,7 +25184,7 @@ function checkUrls({ file, doc }, problems) {
   }
 }
 function checkRefs({ file, doc }, figures, problems) {
-  for (const el of elements(doc, (n) => hasAttr(n, "data-fig"))) {
+  for (const el of elements(doc, (n2) => hasAttr(n2, "data-fig"))) {
     const figId = attr(el, "data-fig"), ref = attr(el, "data-ref");
     const fig = figures.get(figId);
     if (fig === null) continue;
@@ -24085,7 +25194,7 @@ function checkRefs({ file, doc }, figures, problems) {
     }
     if (!ref || !fig.refIds.includes(ref)) problems.error(file, line(el), "REF_ID_UNKNOWN", figId, `data-ref="${ref}" is not a layer, object, control or readout of ${figId} (${fig.refIds.join(", ")})`);
   }
-  for (const a of elements(doc, (n) => n.tagName === "a" && hasAttr(n, "data-state"))) {
+  for (const a of elements(doc, (n2) => n2.tagName === "a" && hasAttr(n2, "data-state"))) {
     const href = attr(a, "href") || "", state = attr(a, "data-state");
     const figId = href.startsWith("#") ? href.slice(1) : null;
     if (!figId || !FIG_ID_RE.test(figId)) {
@@ -24101,16 +25210,57 @@ function checkRefs({ file, doc }, figures, problems) {
     if (!fig.states.includes(state)) problems.error(file, line(a), "REF_STATE_UNKNOWN", figId, `state "${state}" is not declared by ${figId} (${fig.states.join(", ") || "no states"})`);
   }
 }
+function checkRefWarnings({ file, doc }, figures, problems) {
+  const spans = elements(doc, (n2) => hasAttr(n2, "data-fig") && hasAttr(n2, "data-ref"));
+  const referenced = new Set(spans.map((s) => `${attr(s, "data-fig")} ${attr(s, "data-ref")}`));
+  const figLine = new Map(figureElements(doc).map((f2) => [attr(f2, "id"), line(f2)]));
+  for (const [figId, fig] of figures) {
+    if (!fig) continue;
+    for (const id of fig.spec.notice.point_at || []) {
+      if (!referenced.has(`${figId} ${id}`)) problems.warn(file, figLine.get(figId), figId, `point_at "${id}" is not referenced by any <span data-fig="${figId}" data-ref="${id}"> in the article`);
+    }
+  }
+  const everDrawn = /* @__PURE__ */ new Map();
+  for (const span of spans) {
+    const figId = attr(span, "data-fig"), ref = attr(span, "data-ref"), fig = figures.get(figId);
+    if (!fig || !fig.refIds.includes(ref)) continue;
+    if (!everDrawn.has(figId)) everDrawn.set(figId, unionOfVisible(fig));
+    if (!everDrawn.get(figId).has(ref)) problems.warn(file, line(span), figId, `data-ref="${ref}" is hidden at the defaults and in every state of ${figId}; it would never highlight`);
+  }
+}
+function unionOfVisible(fig) {
+  const out = /* @__PURE__ */ new Set();
+  const add = (scope, stateVisible) => {
+    try {
+      for (const id of visibleIds(fig, scope, stateVisible)) out.add(id);
+    } catch {
+    }
+  };
+  add(scopeForState(fig, null), null);
+  for (const st of fig.spec.notice.states) add(scopeForState(fig, st.name), st.visible || null);
+  return out;
+}
+function checkDfnSections({ file, doc }, problems) {
+  for (const dfn of byTag(doc, "dfn")) {
+    const section2 = closest(dfn, (n2) => n2.tagName === "section");
+    if (!section2 || figureElements(section2).length) continue;
+    problems.warn(file, line(dfn), null, `<dfn id="${attr(dfn, "id")}"> is a first use in <section id="${attr(section2, "id") || ""}">, which has no <figure class="x-fig">`);
+  }
+}
 function validateArticle(article, { repoRoot, budget, problems }) {
   const palette = extractPalette(article.doc);
   checkPalette(palette, article.file, problems);
   checkStructure(article, problems);
+  checkIntegrity(article.doc, article.file, repoRoot, problems);
   const figures = compileFigures(article, palette.names, problems);
   checkRefs(article, figures, problems);
+  checkRefWarnings(article, figures, problems);
   checkUrls(article, problems);
   checkGlossary(article.doc, article.file, problems);
+  checkDfnSections(article, problems);
   checkTex(article.doc, article.html, article.file, new Set(palette.names), problems);
   const valid = validFigures(figures);
+  checkPosters(article.doc, article.file, valid, palette, problems);
   for (const fig of valid.values()) checkFigureStates(article.file, fig, problems);
   const report = budget !== void 0 ? checkBudget(article.file, article.html, article.doc, repoRoot, budget, problems) : null;
   return { figures: valid, palette, report };
@@ -24145,7 +25295,7 @@ function checkFigureStates(file, fig, problems) {
   return lines;
 }
 
-// src/cli.mjs
+// tools/src/cli.mjs
 var VERSIONS = typeof define_EXPLAINERS_VERSIONS_default !== "undefined" ? define_EXPLAINERS_VERSIONS_default : { cli: "unbundled" };
 var USAGE = `explainers \u2014 validator and builder for explainer articles
 
@@ -24163,16 +25313,19 @@ validate  figure specs (schema, expressions, ranges, states), page structure,
           glossary contract, KaTeX parse and staleness; --budget adds the byte budget.
 states    enumerate notice.states per figure and evaluate every expression at
           the defaults, at each state, and with each played control at min/default/max.
-build     render every .x-tex with KaTeX (htmlAndMathml) in place, keeping the
-          source in data-tex; idempotent.
+build     in place, idempotent: render every .x-tex with KaTeX (htmlAndMathml),
+          keeping the source in data-tex; put each figure's first frame in front
+          of its JSON block as <svg class="x-poster"> (or assets/poster-<fig>.svg
+          above 8 KiB); append the caveat sentence to the figcaption; resolve
+          integrity="{{integrity:dist/...}}" from dist/integrity.json.
 budget    gzip bytes of HTML + runtime + CSS + KaTeX CSS against --budget (default ${DEFAULT_BUDGET}).
 
 Every failure prints  file:line: CODE figure-id: message  and exits 1.`;
 function findRepoRoot(start) {
   let dir = start;
   for (let i2 = 0; i2 < 6; i2++) {
-    if (import_node_fs3.default.existsSync(import_node_path2.default.join(dir, "lib", "spec.js")) && import_node_fs3.default.existsSync(import_node_path2.default.join(dir, "tools"))) return dir;
-    dir = import_node_path2.default.dirname(dir);
+    if (import_node_fs5.default.existsSync(import_node_path4.default.join(dir, "lib", "spec.js")) && import_node_fs5.default.existsSync(import_node_path4.default.join(dir, "tools"))) return dir;
+    dir = import_node_path4.default.dirname(dir);
   }
   return process.cwd();
 }
@@ -24213,15 +25366,29 @@ function cmdStates(files, problems, out) {
     }
   }
 }
-function cmdBuild(files, problems, out) {
+function cmdBuild(files, repoRoot, problems, out) {
   for (const file of files) {
     const article = loadArticle(file);
-    const palette = new Set(extractPalette(article.doc).names);
+    const palette = extractPalette(article.doc);
     const before = problems.errors.length;
-    const { html, count } = buildTex(article.doc, article.html, file, palette, problems);
+    const tex = buildTex(article.doc, article.html, file, new Set(palette.names), problems);
     if (problems.errors.length > before) continue;
-    if (html !== article.html) import_node_fs3.default.writeFileSync(file, html);
-    out.write(`${file}: ${count} formula(s) rendered${html === article.html ? " (unchanged)" : ""}
+    let html = tex.html, doc = parseHtml(html);
+    const figures = compileFigures({ file, doc }, palette.names, problems);
+    if (problems.errors.length > before) continue;
+    const valid = new Map([...figures].filter(([, c]) => c));
+    const posters = buildPosters(doc, html, file, valid, palette);
+    html = posters.html;
+    doc = parseHtml(html);
+    const captions = buildCaptions(doc, html, valid);
+    html = captions.html;
+    doc = parseHtml(html);
+    const integrity = buildIntegrity(doc, html, file, repoRoot, problems);
+    html = integrity.html;
+    if (problems.errors.length > before) continue;
+    if (html !== article.html) import_node_fs5.default.writeFileSync(file, html);
+    const ext = posters.external.length ? ` (${posters.external.length} external: ${posters.external.join(", ")})` : "";
+    out.write(`${file}: ${tex.count} formula(s) rendered, ${posters.count} poster(s) written${ext}, ${captions.count} caption(s) amended, ${integrity.count} integrity attribute(s) set${html === article.html ? " (unchanged)" : ""}
 `);
   }
 }
@@ -24274,7 +25441,7 @@ ${USAGE}
 `);
     return 2;
   }
-  for (const f2 of args.files) if (!import_node_fs3.default.existsSync(f2)) {
+  for (const f2 of args.files) if (!import_node_fs5.default.existsSync(f2)) {
     stderr.write(`${f2}: no such file
 `);
     return 2;
@@ -24291,7 +25458,7 @@ ${USAGE}
         cmdStates(args.files, problems, stdout);
         break;
       case "build":
-        cmdBuild(args.files, problems, stdout);
+        cmdBuild(args.files, repoRoot, problems, stdout);
         break;
       case "budget":
         cmdBudget(args.files, budget ?? parseBudget(DEFAULT_BUDGET), repoRoot, problems, stdout);
@@ -24311,7 +25478,7 @@ ${USAGE}
 }
 var invokedDirectly = typeof require !== "undefined" ? require.main === module : /cli\.mjs$/.test(process.argv[1] || "");
 if (invokedDirectly) {
-  process.exitCode = main2(process.argv.slice(2), { here: import_node_path2.default.dirname(import_node_path2.default.resolve(process.argv[1])) });
+  process.exitCode = main2(process.argv.slice(2), { here: import_node_path4.default.dirname(import_node_path4.default.resolve(process.argv[1])) });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

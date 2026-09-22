@@ -55,7 +55,12 @@ cite { font-style: italic; }
 .x-canvas-box > canvas { display: block; width: 100%; height: 100%; }
 .x-canvas-box > canvas.x-can-drag { cursor: grab; }
 .x-canvas-box > canvas.x-dragging { cursor: grabbing; }
+/* The build's first frame. Before the runtime boots it is the reserved box
+   (same aspect, so no shift); at boot the runtime moves it over the canvas,
+   and the first draw hides it. */
 .x-poster { display: block; width: 100%; height: auto; }
+.x-fig:has(> .x-poster):not([data-booted])::before { display: none; }
+.x-canvas-box > .x-poster { position: absolute; inset: 0; width: 100%; height: 100%; }
 .x-fig[data-mounted] .x-poster { display: none; }
 .x-fig figcaption { margin-top: 0.75rem; font: 0.9rem/1.5 var(--x-sans); color: var(--x-muted); text-align: center; }
 .x-fig-error { font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color: light-dark(#a1120f, #ff8a80); background: light-dark(#fff1f0, #3a1412); padding: 0.6rem 0.8rem; border-radius: 6px; white-space: pre-wrap; }

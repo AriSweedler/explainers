@@ -690,6 +690,8 @@ articles/moon/index.html:212: SPEC_UNKNOWN_IDENT fig-months: shows.layers[6].cx:
 | `TEX_BANNED` | \color or \textcolor used; only \tok{token}{...} colors symbols |
 | `TEX_RENDER_ERROR` | KaTeX output contains its error color (#cc0000): an untrusted or rejected command |
 | `TEX_STALE` | an .x-tex element has data-tex but its rendered content does not match a fresh render |
+| `INTEGRITY_MISSING` | the runtime <script> or the stylesheet <link> has no integrity attribute (run: explainers build) |
+| `INTEGRITY_STALE` | an integrity attribute does not match dist/integrity.json (run: explainers build) |
 | `BUDGET_OVER` | gzip bytes of HTML + runtime + CSS + KaTeX CSS exceed --budget |
 <!-- /generated:errors -->
 
@@ -725,6 +727,8 @@ Runtime behavior (phase 2): the `<dd>` text is the only source; one shared `<div
 What `validate` checks outside the specs:
 
 - exactly one `<main>` (`HTML_MAIN_MISSING`); the runtime `<script defer src=".../dist/explainers-runtime.v1.js">` and `<link rel="stylesheet" href=".../dist/explainers.v1.css">` are present (`HTML_INCLUDE_MISSING`); no other `<script>` than those and the figure JSON blocks (`HTML_SCRIPT_FORBIDDEN`).
+- integrity: both includes carry `integrity="sha384-..."` equal to their entry in `dist/integrity.json` (`INTEGRITY_MISSING` when the attribute is absent, `INTEGRITY_STALE` when it differs). The template ships the literal placeholders `integrity="{{integrity:dist/explainers-runtime.v1.js}}"` and `integrity="{{integrity:dist/explainers.v1.css}}"`; an article that still carries them is unbuilt and gets a warning ("run: explainers build"), like a formula without `data-tex`. Same-origin SRI needs no `crossorigin` attribute. `node tools/build-runtime.mjs` rewrites `dist/integrity.json` whenever the runtime or the stylesheet changes, and every article then needs `build` again.
+- posters: every interactive figure has a current first frame as its first child, `<svg class="x-poster" id="<fig>-poster" data-poster="<sha1>">` inline or `<img class="x-poster" src="assets/poster-<fig>.svg" width height data-poster>` when the SVG exceeds 8 KiB (warnings: "no poster", "poster is stale", "poster file ... not found"; `build` fixes all three). The hash covers the emitter version and width, the spec, `data-aspect`, the palette values and, for scene3d, the caption text.
 - every `src`/`href` is relative or a fragment (`URL_ABSOLUTE`), except `fonts.googleapis.com`, `fonts.gstatic.com`, `data:` URIs and `<a rel="external">`. Articles live at `articles/<slug>/index.html` and reach the runtime with `../../dist/...`, so the same file works at `<user>.github.io/explainers/`, behind the `explainers.sweedler.com` redirect, and from disk. (`404.html` is the one exception: GitHub Pages serves it at any depth.)
 - palette: 1..6 `--c-<name>` tokens in an inline `<style>` (`PALETTE_MISSING`, `PALETTE_TOO_MANY`), each `light-dark(#l, #d)` with >= 3:1 contrast against `--bg` (`PALETTE_CONTRAST`; skipped with a warning when values are not hex `light-dark()`).
 - figures: `id="fig-<slug>"` (`FIG_ID_MISSING`), `data-aspect="W:H"` (`FIG_ASPECT_BAD`), one JSON block (`FIG_SCRIPT_COUNT`, `SPEC_JSON`); `data-static` figures (pre-rendered images in the same wrapper) need only the id.
@@ -732,6 +736,7 @@ What `validate` checks outside the specs:
 - math: every `.x-tex` parses under `throwOnError` (`TEX_PARSE`), uses only palette names in `\tok{}`/`\htmlClass{}` (`TEX_CLASS_UNKNOWN`), never `\color`/`\textcolor` (`TEX_BANNED`), never renders KaTeX's red error text (`TEX_RENDER_ERROR`), and built output matches `data-tex` (`TEX_STALE`). Unbuilt formulas are a warning.
 - states: every expression is finite at the defaults, at every state, and with each played control at min/default/max (`SPEC_NOT_FINITE`).
 - `--budget`: gzip of HTML + runtime + CSS + KaTeX CSS (`BUDGET_OVER`).
+- warnings (exit 0, `file:line: warning figure-id: message`): a `notice.point_at` id that no `<span data-fig data-ref>` on the page references; a `<span data-ref>` whose layer or readout is drawn neither at the defaults nor in any declared state (`visibleIds` from `lib/core/state.js`, the runtime's own rule; it would never highlight); a `<dfn>` first use inside a `<section>` that contains no `<figure class="x-fig">`; contrast not checkable; a formula not built; an unresolved integrity placeholder; a missing or stale poster.
 
 ## Authoring example
 
@@ -803,9 +808,11 @@ node tools/explainers.cjs budget   <html...> [--budget 170k]
 node tools/explainers.cjs vocab | errors | --version | --help
 ```
 
-Exit codes: 0 clean, 1 at least one error (all errors are printed, not just the first), 2 usage. Warnings print in the same shape with `warning` in place of the code and do not fail. `build` rewrites in place and is idempotent: the LaTeX source is kept in `data-tex`; a second run produces identical bytes. KaTeX configuration: `output: 'htmlAndMathml'`, `throwOnError: true`, `strict: code => code === 'htmlExtension' ? 'ignore' : 'error'`, `trust: ctx => ctx.command === '\\htmlClass' && palette.has(ctx.class)`, `macros: { '\\tok': '\\htmlClass{#1}{#2}' }`; `\tok{token}{x}` renders as `<span class="enclosing token">`, which `dist/explainers.v1.css` colors with `var(--c-token)`.
+Exit codes: 0 clean, 1 at least one error (all errors are printed, not just the first), 2 usage. Warnings print in the same shape with `warning` in place of the code and do not fail. `build` rewrites in place and is idempotent (a second run produces identical bytes), in four passes that each re-parse the previous pass's output: (1) math, keeping the LaTeX source in `data-tex`; (2) posters: `lib/poster-svg.js` draws each figure's default state at 704 px wide (the 44rem reading column, the canvas width at desktop) and the result goes in front of the JSON block as `<svg class="x-poster" id="<fig>-poster" aria-hidden="true" data-poster="<sha1>">`, or, above 8 KiB of markup, to `articles/<slug>/assets/poster-<fig>.svg` referenced as `<img class="x-poster" src="assets/poster-<fig>.svg" alt="" width height aria-hidden="true" data-poster>` (a poster that shrinks back below the limit is inlined again and the file removed); an existing poster is kept when its hash matches and replaced when it does not; (3) the caveat sentence: `shows.caveats.not_to_scale` appends "Not to scale." to the `<figcaption>` (after a period if the caption lacks one; a figure without a figcaption gets one) unless the caption already says it; `simplified` and `exaggeration` are the author's to word; (4) `integrity=` on the runtime `<script>` and the stylesheet `<link>` from `dist/integrity.json`, whether the attribute is the template placeholder, stale or absent. KaTeX configuration: `output: 'htmlAndMathml'`, `throwOnError: true`, `strict: code => code === 'htmlExtension' ? 'ignore' : 'error'`, `trust: ctx => ctx.command === '\\htmlClass' && palette.has(ctx.class)`, `macros: { '\\tok': '\\htmlClass{#1}{#2}' }`; `\tok{token}{x}` renders as `<span class="enclosing token">`, which `dist/explainers.v1.css` colors with `var(--c-token)`.
 
-Budget units: `170k` = 170 000 bytes (k/kb = 1000, kib = 1024, m = 10^6). Counted: article HTML (inline posters included), `explainers-runtime.v1.js`, `explainers.v1.css`, `katex.min.css`. Not counted: fonts, the lazy 3D chunk, external images.
+Budget units: `170k` = 170 000 bytes (k/kb = 1000, kib = 1024, m = 10^6). Counted: article HTML (inline posters included), `explainers-runtime.v1.js`, `explainers.v1.css`, `katex.min.css`. Not counted: fonts, the lazy 3D chunk, external images (external posters included).
+
+Poster SVG: `<style>` scoped by the SVG's own id; classes `s-<token>` / `f-<token>` are `stroke` / `fill: var(--c-<token>, <palette value>)`, `s-fg`/`f-fg`/`f-bg`/`f-panel` likewise over `--fg`/`--bg`/`--x-panel`, `.h` is the text halo (`paint-order: stroke` in `--bg`); no `currentColor`, no literal colors outside the `var()` fallbacks, so an inline poster follows the page's scheme and an external one falls back to the article palette. `#<fig>-poster:root { color-scheme: light dark }` applies only when the SVG is its own document. Geometry is the runtime's: `compileLayer` + `geometryOf` (recorded through a `Path2D`-shaped writer, `SvgPath`), `worldToPx`, `splitBoxes`, `fitBox`, `niceTicks`; text widths are estimated (0.5 em per glyph) since Node has no `measureText`; the corner-button strip (60 px) is reserved when the figure has Play or a corner toggle, as the runtime does after measuring. Drawn: every layer kind (`image` as a dashed placeholder rectangle), labels, readouts, drag handles, split panels (insets framed), plot axes / gridlines / ticks / guides / series / marker, timeline bars; a scene3d poster is the framed box with the figcaption text.
 
 ## Phase 2 contract
 
@@ -823,7 +830,19 @@ Phase 2 shipped the 2D runtime, the stylesheet, and PoC 1. The rest of this sect
 
 **Added after delivery** (2026-09-22): slider geometry and ticks. A native range moves the knob so its edge touches the input's ends, so the knob center stops half a knob (20 px) short; the runtime now draws the visible track itself (`div.x-track`, a sibling of the input inset by half the knob on both sides, `--x-pct` measured along it), so the knob center lands exactly on the track ends and the fill is flush with the knob center; the wrapper is one knob wider than the 380/600 px track. A discrete control (a `values` list, or `(max - min) / step <= 40`; a speed-mode time control's `rates`) gets one `i.x-tick` per stop (2 x 8 px, `--c-muted`, behind the track) where the knob center lands; a continuous control gets none (`lib/controls/slider.js` `stepFractions` / `evenFractions`).
 
-**Deferred to phase 3**: `dist/explainers-3d.v1.js` and `lib/scene3d/*` (three.js; the placeholder above stands in), the drag `surface:<id>` constraint and `geolocate`; `lib/poster-svg.js` and the `<svg class="x-poster">` emission in `build`, and the caveat sentence appended to `<figcaption>`; `dist/integrity.json` and the `integrity=` checks; the `validate` warnings for a `point_at` layer never referenced, a referenced layer hidden in every state, and a `dfn` in a section without a figure; the test files this section names (`states`, `glossary`, `poster`, `budget`, Playwright): `test/runtime.test.mjs` covers the goto transition under a fake clock, deep links and the runtime/CSS budgets in Node, and the DOM behavior was verified by headless Chrome screenshots (`preview/`, not committed).
+**Deferred to phase 3**: `dist/explainers-3d.v1.js` and `lib/scene3d/*` (three.js; the placeholder above stands in), the drag `surface:<id>` constraint and `geolocate`; the test files this section names (`states`, `glossary`, `budget`, Playwright): `test/runtime.test.mjs` covers the goto transition under a fake clock, deep links and the runtime/CSS budgets in Node, and the DOM behavior was verified by headless Chrome screenshots (`preview/`, not committed). Posters, the caveat sentence, integrity and the three validator warnings landed in phase 3A (below).
+
+### Phase 3 status
+
+**Phase 3A delivered** (2026-09-22): SVG posters, subresource integrity and the three validator warnings; the contract for each is in "Page contract" and "CLI" above.
+
+1. **Posters.** `lib/poster-svg.js` exports `posterSvg(spec | compiled, scopeOrState, { aspect, tokens, id, caption, hash })`, `posterSize(aspect)`, `SvgPath`, `POSTER_WIDTH` (704) and `POSTER_VERSION` (bump it to re-emit every poster). `build` inserts the poster as the figure's first child, before the JSON block (the phase-2 sketch had it after). The runtime (`lib/site/figure.js`) moves `:scope > .x-poster` into `.x-canvas-box` right after the canvas at boot, so the poster is the reserved box before boot (`.x-fig:has(> .x-poster):not([data-booted])::before` is suppressed), overlays the canvas until the first draw, and `.x-fig[data-mounted] .x-poster { display: none }` hides it; `dispose()` puts it back. Same aspect at every step, so the layout never shifts. Measured on the two articles: moon 1 poster (2.4 KB, inline); hebrew-calendar 14 posters, 4 external (`fig-julian-calendar` 8.9 KB, `fig-gregorian-calendar` 13.1 KB, `fig-leap-month` 9.1 KB, `fig-hebrew-calendar` 12.8 KB), the rest 3.0 to 7.5 KB inline; critical path 48.7 -> 49.8 KB (moon) and 77.4 -> 87.9 KB (hebrew-calendar) gzipped.
+2. **Integrity.** `tools/integrity.mjs` (`computeIntegrity`, `writeIntegrity`) writes `dist/integrity.json` = `{ "dist/explainers-runtime.v1.js": "sha384-...", "dist/explainers.v1.css": "sha384-..." }` from `tools/build-runtime.mjs` (and `--check` refuses a stale one); `test/runtime.test.mjs` fails when it is stale. `tools/src/integrity.mjs` fills (`build`) and compares (`validate`). Only these two files are listed: the lazy 3D chunk is a dynamic `import()`, which SRI attributes cannot cover.
+3. **Warnings.** `tools/src/article.mjs` `checkRefWarnings` and `checkDfnSections`; `tools/src/poster.mjs` `checkPosters`; fixtures in `test/fixtures/warn/` (generated by `test/fixtures/make-fail.mjs`, header `<!-- explainers-test: warning="..." command=validate -->`), which `test/cli.test.mjs` runs expecting exit 0 and the warning line.
+4. **Tests added**: `test/poster.test.mjs` (fig-months at the defaults: well-formed, 20 elements, six texts, token `var()` rules with fallbacks; at a state and with the toggle off; `SvgPath` arc semantics; plot, timeline, scene3d and region posters; `posterSize`), the build test (poster placement, hash, caption not repeated, integrity resolved and refreshed, idempotence, clean validate), a caveat / externalization test (append once; `<img>` + `assets/poster-<fig>.svg` above 8 KiB; restore a missing file; inline again and remove the file when the spec shrinks), the warning-fixture loop, and the `dist/integrity.json` currency test.
+5. **Deviations from the phase-2 sketch**: the poster hash covers more than "spec + aspect" (emitter version and width, palette values, scene3d caption) because each of those changes the bytes; the `<img>` variant carries `width`/`height`/`aria-hidden`/`data-poster` too, so it reserves its box and is checked like the inline one; an unresolved integrity placeholder is a warning rather than `INTEGRITY_MISSING` so unbuilt fixtures and freshly assembled articles validate (the codes fire for absent and wrong attributes); `simplified` and `exaggeration` do not append a sentence.
+
+**Still deferred**: `dist/explainers-3d.v1.js` and `lib/scene3d/*` (a sibling task), `surface:<id>` drags and `geolocate`, the Playwright suite.
 
 **Deviations from the contract, and why**:
 
@@ -858,7 +877,7 @@ Phase 2 shipped the 2D runtime, the stylesheet, and PoC 1. The rest of this sect
 | `lib/scene2d/models/{kepler,twobody,cam,lunar}.js` | `compute(params) -> outputs` | numerics for `MODELS`; output names exactly as declared in `lib/spec.js` |
 | `lib/scene3d/*.js` (lazy chunk) | `mountScene3d(fig, compiled, THREE)` | tree-shaken three.js 0.185.0 adapter: globe, materials, arcball with momentum, cut planes with stencil caps, DOM labels, dispose, WebGL2 check -> poster + notice |
 | `lib/site/term.js`, `glossary.js`, `presets.js`, `deeplink.js` | | tooltip popover, details-open-before-scroll, `data-state` links, `#fig-x=state` |
-| `lib/poster-svg.js` | `posterSvg(compiled, scope, palette) -> string` | first frame as inline SVG for `build` (Node) |
+| `lib/poster-svg.js` | `posterSvg(spec \| compiled, scopeOrState, { aspect, tokens, id, caption, hash }) -> string`, `posterSize(aspect)`, `SvgPath` | first frame as SVG for `build` (Node); same geometry code as the canvas, colors as `var(--c-<token>, fallback)` in a scoped `<style>` |
 
 ### Boot sequence
 
@@ -893,10 +912,11 @@ Animation: there is no implicit clock variable. The only animated quantities are
 
 ```html
 <figure class="x-fig" id="fig-x" data-aspect="3:2" data-mounted>
+  <!-- <svg class="x-poster" id="fig-x-poster" data-poster="…"> is the first child as built (or <img class="x-poster" src="assets/poster-fig-x.svg">); boot moves it into the canvas box -->
   <script type="application/json">…</script>                 <!-- untouched -->
-  <svg class="x-poster">…</svg>                               <!-- build-inserted; hidden once the canvas draws -->
   <div class="x-canvas-box">
     <canvas></canvas>                                         <!-- touch-action:none; DPR 1|2 -->
+    <svg class="x-poster" …>…</svg>                           <!-- over the canvas until the first draw; display:none at data-mounted -->
     <button class="x-play" aria-pressed="false">Play</button> <button class="x-restart">Restart</button>   <!-- bottom-left -->
     <button class="x-toggle" id="fig-x_tg0" aria-pressed="true">show Sun direction</button>                <!-- bottom-right -->
     <div class="x-readouts" aria-live="polite">…</div>        <!-- text mirror of canvas readouts -->
@@ -940,11 +960,11 @@ World units from `view`; y up. `stroke`/`fill` tokens resolve to CSS colors; `wi
 
 ### CLI additions in phase 2
 
-`build` also inserts `<svg class="x-poster">` from `lib/poster-svg.js` (inline if < 8 KB else `<img src="assets/<fig>.svg">`) and appends the caveat sentence to `<figcaption>` when `shows.caveats` is set and the caption lacks it. `validate` also checks `integrity=` attributes against `dist/integrity.json`, warns when a `point_at` layer is never referenced by `data-ref`, when a referenced layer is hidden in every state, and when a `dfn` sits in a section without a figure. No vocabulary changes without a version bump.
+`build` also inserts `<svg class="x-poster">` from `lib/poster-svg.js` (inline up to 8 KiB, else `<img src="assets/poster-<fig>.svg">`) and appends the caveat sentence to `<figcaption>` when `shows.caveats.not_to_scale` is set and the caption lacks it. `validate` also checks `integrity=` attributes against `dist/integrity.json`, warns when a `point_at` layer is never referenced by `data-ref`, when a referenced layer is hidden in every state, and when a `dfn` sits in a section without a figure. Delivered in phase 3A; see "Phase 3 status". No vocabulary changes without a version bump.
 
 ### Tests phase 2 must add
 
-`test/states.test.mjs` (goto under a fake clock reaches each state exactly), `test/glossary.test.mjs` (details opens before scroll), `test/poster.test.mjs` (poster SVG for fig-months at t=0 parses and names every visible layer), `test/budget.test.mjs` (runtime <= 40 KB gz; fig-months page <= 60 KB gz critical path), `test/browser/poc-1.spec.mjs` (Playwright: touch drag does not scroll, CLS 0, no 3D fetch before first paint).
+`test/states.test.mjs` (goto under a fake clock reaches each state exactly), `test/glossary.test.mjs` (details opens before scroll), `test/poster.test.mjs` (poster SVG for fig-months at t=0 parses and draws every visible layer; delivered in phase 3A), `test/budget.test.mjs` (runtime <= 40 KB gz; fig-months page <= 60 KB gz critical path), `test/browser/poc-1.spec.mjs` (Playwright: touch drag does not scroll, CLS 0, no 3D fetch before first paint).
 
 ## Decisions where the design was silent
 
@@ -967,6 +987,6 @@ World units from `view`; y up. `stroke`/`fill` tokens resolve to CSS colors; `wi
 17. **Contrast** (>= 3:1 both schemes) is checked when tokens and `--bg` are `light-dark(#hex, #hex)`; otherwise a warning.
 18. **Tooling dependencies** live in `tools/package.json`; the root `package.json` only runs `node --test`. `tools/explainers.cjs --version` prints the versions actually bundled; `build-cli.mjs` warns when they differ from the pins.
 19. **Pass fixtures stay unbuilt** (no `data-tex`), so they do not pin one KaTeX version's HTML; the CLI test builds a temp copy and checks idempotence.
-20. **`integrity=` and `dist/integrity.json`** wait for phase 2 (dist is a stub); the template omits the attribute until then.
+20. **`integrity=` and `dist/integrity.json`** landed in phase 3A: the template carries literal `{{integrity:dist/<file>}}` placeholders (an external assembler copies the head with a plain string replace and never learns the hashes), `build` resolves and refreshes them, `validate` compares. An unresolved placeholder is a warning (unbuilt), an absent attribute `INTEGRITY_MISSING`, a wrong one `INTEGRITY_STALE`; pass fixtures stay unbuilt and therefore warn, like their formulas.
 21. **`404.html`** uses the Pages project path (`/explainers/`), the one page that cannot be relative.
 22. **Fail fixtures are generated** (`test/fixtures/make-fail.mjs`) from `minimal.html` and committed with a self-describing header; the CLI test asserts every catalogue code has one.
