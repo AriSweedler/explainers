@@ -1,4 +1,5 @@
 {
-  "dist/explainers-runtime.v1.js": "sha384-te8tcrrOqj2Sqg8a9ZVP96439m0v4qKfTdUhfCLYcchaz4j4XUxxfSSTRqCKfrhQ",
-  "dist/explainers.v1.css": "sha384-26VCLVL2/KHbeMoQsA5iLxithToGDt6qfRU4EO1+MWKTmk0a0LWUClpLjInfKs+s"
+  "dist/explainers-runtime.v1.js": "sha384-uNL+z70NuvyUFwhzwJo204Cj7X3WsjfQ4Xf/wJc2uAGQ0YyNxXGw7Vip+fPLC+Ga",
+  "dist/explainers.v1.css": "sha384-hXrJPM+6JTW5P4Znh6y/+XBP2lPYXfq3Ji3a5JjqYdi4yBmOHWYZnxYT1e7skYa7",
+  "dist/explainers-3d.v1.js": "sha384-EE4BASuTk5hOnzjVpX/QDfI3wmJpjI1hSoDmac/zJ75H+txR4T87XMyOadSU8DjZ"
 }

@@ -124,11 +124,22 @@ cite { font-style: italic; }
 .x-caption { margin: 0.6rem 0 0; font: 0.95rem/1.5 var(--x-serif); }
 .x-caption:empty { display: none; }
 
-/* scene3d placeholder (phase 3 brings WebGL) */
-.x-3d-fallback { position: absolute; inset: 0; display: grid; place-content: center; gap: 0.5rem; padding: 1rem; text-align: center; }
+/* scene3d: the WebGL canvas fills the box; a 2D overlay canvas (split panels, readouts, edge arrows)
+   and the DOM labels sit over it and let pointers through; the corner buttons stay on top of both */
+.x-canvas-box > canvas.x-can-turn { cursor: grab; }
+.x-canvas-box > canvas.x-can-turn.x-dragging { cursor: grabbing; }
+.x-3d-overlay, .x-3d-labels { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.x-3d-labels { overflow: hidden; }
+.x-3d-label { position: absolute; left: 0; top: 0; font: 13px/1.2 var(--x-sans); white-space: nowrap; color: var(--fg); text-shadow: 0 0 2px var(--bg), 0 0 2px var(--bg), 0 0 4px var(--bg), 0 1px 3px var(--bg); will-change: transform; }
+.x-3d-label.x-hl { font-weight: 600; }
+.x-corner { z-index: 2; }
+.x-canvas-box > .x-poster { z-index: 1; }
+.x-fig[data-fallback] .x-poster { display: block; }
+/* without WebGL2 (or when the chunk fails): the poster stays as the first frame and the notice sits over it */
+.x-3d-fallback { position: absolute; inset: 0; display: grid; place-content: end center; gap: 0.5rem; padding: 1rem; text-align: center; z-index: 2; pointer-events: none; }
 .x-3d-poster { max-width: 100%; max-height: 60%; margin: 0 auto; }
-.x-3d-caption { margin: 0; }
-.x-3d-notice { margin: 0; font-size: 0.85rem; color: var(--x-muted); }
+.x-3d-notice { margin: 0; padding: 0.35rem 0.8rem; border-radius: 999px; font: 0.85rem/1.4 var(--x-sans); color: var(--x-muted); background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid var(--x-rule); }
+.x-geolocate::before { content: "◎"; color: var(--token); margin-right: 0.45em; }
 
 /* ------------------------------------------------------- prose hooks */
 

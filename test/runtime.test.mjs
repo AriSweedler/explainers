@@ -26,8 +26,8 @@ import { cam } from '../lib/scene2d/models/cam.js';
 import { lunar } from '../lib/scene2d/models/lunar.js';
 import { MODEL_FUNCTIONS } from '../lib/scene2d/models/index.js';
 import { MODELS } from '../lib/spec.js';
-import { bundle, gzipSize, OUTFILE, ORDER } from '../tools/build-runtime.mjs';
-import { computeIntegrity, INTEGRITY_FILE, INTEGRITY_FILES } from '../tools/integrity.mjs';
+import { bundle, gzipSize, OUTFILE, ORDER, LAZY_IMPORTER, transformModule } from '../tools/build-runtime.mjs';
+import { computeIntegrity, INTEGRITY_FILE, INTEGRITY_FILES, INTEGRITY_INCLUDES, CHUNK_FILE } from '../tools/integrity.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -167,6 +167,10 @@ test('state: stateTargets and activeState round-trip every named state', () => {
   assert.throws(() => stateTargets(c, 'nope'));
   const withDrag = { spec: { notice: { states: [{ name: 'a', caption: '', drag: { p: [1, 2] } }] } } };
   assert.deepEqual(stateTargets(withDrag, 'a').targets, { 'p.x': 1, 'p.y': 2 });
+  const surface = { controls: [{ name: 'p', kind: 'drag', constrain: 'surface:ball' }], spec: { notice: { states: [{ name: 'a', caption: '', drag: { p: [51.5, -0.1] }, camera: { azimuth: 1 } }] } } };
+  const st = stateTargets(surface, 'a');
+  assert.deepEqual(st.targets, { 'p.lat': 51.5, 'p.lon': -0.1 }, 'a surface drag is [lat, lon]');
+  assert.deepEqual(st.camera, { azimuth: 1 }, 'the camera pose is returned apart, not as a control target');
 });
 
 // -------------------------------------------------------------- deep links
@@ -314,23 +318,37 @@ test('the concatenation build is valid JS, current in dist/, and under 40 KB gzi
   fs.rmSync(tmp, { recursive: true, force: true });
   for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState', ':scope > .x-poster']) assert.ok(out.includes(needle), needle);
   assert.doesNotMatch(out, /^\s*(import|export)\b/m);
+  // the one dynamic import() loads the 3D chunk from lib/site/scene3d.js; every other module stays free of it
+  const sections = out.split(/^\/\/ ---- (?=lib\/)/m).slice(1);
+  const withImport = sections.filter((sec) => /\bimport\s*\(/.test(sec)).map((sec) => sec.slice(0, sec.indexOf('\n')));
+  assert.deepEqual(withImport, [LAZY_IMPORTER]);
   assert.equal(fs.readFileSync(path.join(root, OUTFILE), 'utf8'), out, `${OUTFILE} is stale; run: node tools/build-runtime.mjs`);
   assert.ok(gzipSize(out) <= 40 * 1000, `runtime is ${gzipSize(out)} bytes gzipped`);
   for (const rel of ORDER) assert.ok(fs.existsSync(path.join(root, rel)), rel);
 });
 
+test('transformModule refuses a dynamic import() anywhere but the scene3d loader', () => {
+  const src = "export function f() { return import('./x.js'); }\n";
+  assert.throws(() => transformModule(src, 'lib/site/figure.js'), /dynamic import\(\) is not allowed/);
+  assert.doesNotThrow(() => transformModule(src, LAZY_IMPORTER));
+  assert.equal(LAZY_IMPORTER, 'lib/site/scene3d.js');
+  assert.ok(ORDER.includes(LAZY_IMPORTER) && ORDER.includes('lib/scene3d/surface.js'));
+});
+
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
   const css = fs.readFileSync(path.join(root, 'dist/explainers.v1.css'), 'utf8');
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
-  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
 });
 
-test('dist/integrity.json holds a current sha384 for the runtime and the stylesheet; the template carries the placeholders', () => {
+test('dist/integrity.json holds a current sha384 for the runtime, the stylesheet and the 3D chunk; the template carries the two include placeholders', () => {
   const table = JSON.parse(fs.readFileSync(path.join(root, INTEGRITY_FILE), 'utf8'));
   assert.deepEqual(Object.keys(table), INTEGRITY_FILES);
+  assert.deepEqual(INTEGRITY_FILES, [...INTEGRITY_INCLUDES, CHUNK_FILE]);
   for (const v of Object.values(table)) assert.match(v, /^sha384-[A-Za-z0-9+/]{64}$/);
-  assert.deepEqual(table, computeIntegrity(root), `${INTEGRITY_FILE} is stale; run: node tools/build-runtime.mjs`);
+  assert.deepEqual(table, computeIntegrity(root), `${INTEGRITY_FILE} is stale; run: node tools/build-runtime.mjs && node tools/build-3d.mjs`);
   const template = fs.readFileSync(path.join(root, 'template/article.html'), 'utf8');
-  for (const rel of INTEGRITY_FILES) assert.ok(template.includes(`integrity="{{integrity:${rel}}}"`), rel);
+  for (const rel of INTEGRITY_INCLUDES) assert.ok(template.includes(`integrity="{{integrity:${rel}}}"`), rel);
+  assert.doesNotMatch(template, new RegExp(CHUNK_FILE.replace(/[.\/]/g, '\\$&')), 'the chunk is a dynamic import(), never a <script> include');
   assert.doesNotMatch(template, /crossorigin="anonymous"/, 'same-origin SRI needs no crossorigin');
 });

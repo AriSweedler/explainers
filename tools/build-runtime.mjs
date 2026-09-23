@@ -27,6 +27,7 @@ export const ORDER = [
   'lib/core/drag.js',
   'lib/core/state.js',
   'lib/core/deeplink.js',
+  'lib/scene3d/surface.js',
   'lib/scene2d/getters.js',
   'lib/scene2d/models/kepler.js',
   'lib/scene2d/models/twobody.js',
@@ -52,6 +53,8 @@ export const ORDER = [
   'lib/site/hooks.js',
   'lib/site/boot.js',
 ];
+
+export const LAZY_IMPORTER = 'lib/site/scene3d.js';
 
 const IMPORT_RE = /^import\s+(?:[\s\S]*?\s+from\s+)?['"][^'"]+['"];?[ \t]*\r?\n/gm;
 const EXPORT_DECL_RE = /^export\s+(?=(?:async\s+)?function\b|class\b|const\b|let\b|var\b)/gm;
@@ -102,7 +105,9 @@ export function transformModule(src, rel) {
   out = out.replace(EXPORT_DECL_RE, '');
   const leftover = /^\s*(import|export)\b/m.exec(out);
   if (leftover) throw new Error(`${rel}: unhandled ${leftover[1]} statement`);
-  if (/\bimport\s*\(/.test(out)) throw new Error(`${rel}: dynamic import() is not allowed in the runtime bundle`);
+  // The one dynamic import() of the runtime loads the lazy 3D chunk; the
+  // bundle stays dependency-free everywhere else.
+  if (rel !== LAZY_IMPORTER && /\bimport\s*\(/.test(out)) throw new Error(`${rel}: dynamic import() is not allowed in the runtime bundle (only ${LAZY_IMPORTER} loads the 3D chunk)`);
   return out;
 }
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Scene3d</title>
+<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="{{integrity:dist/explainers.v1.css}}">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js" integrity="{{integrity:dist/explainers-runtime.v1.js}}"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#ffffff, #111111);
+    --fg: light-dark(#111111, #eeeeee);
+    --c-ink: light-dark(#1f4e9c, #8ab4f8);
+    --c-mark: light-dark(#b3324a, #ee6c86);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>Scene3d</h1>
+<section id="one">
+<h2><a class="x-anchor" href="#one">One</a></h2>
+<p>A <span data-fig="fig-ball" data-ref="ball">blue ball</span> with a <span data-fig="fig-ball" data-ref="pin">pin</span> you can drag over its surface, and a <span data-fig="fig-ball" data-ref="pole">red arrow</span> along its <dfn id="t-axis"><a href="#g-axis">axis</a></dfn>, the line it spins around.</p>
+<figure class="x-fig" id="fig-ball" data-aspect="3:2">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene3d",
+    "camera": { "mode": "orbit", "distance": 4, "azimuth": 0.5, "polar": 1.1, "minPolar": 0.3, "maxPolar": 1.5 },
+    "light": { "direction": [1, 0.6, "cos(spin)"], "ambient": 0.3 },
+    "objects": [
+      { "id": "ball", "kind": "sphere", "radius": 1, "material": "lambert", "color": "ink", "rotation": [0, "spin", 0], "label": "ball" },
+      { "id": "rim", "kind": "ring", "radius": 1.4, "color": "mark", "width": 2 },
+      { "id": "pole", "kind": "arrow", "from": [0, -1.5, 0], "to": [0, 1.5, 0], "color": "mark", "head": 0.3 },
+      { "id": "tag", "kind": "label", "text": "spin {deg(spin):deg}", "anchor": "ball", "offset": [0, -70] }
+    ],
+    "readouts": [{ "id": "where", "at": [0.03, 0.95], "text": "{pin.lat:.1f}°, {pin.lon:.1f}°", "token": "mark" }],
+    "fallback": { "poster": "assets/poster-fig-ball.svg", "notice": "Your browser has no WebGL2; this is a still frame." }
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "spin", "label": "spin", "min": 0, "max": 6.283, "default": 0, "token": "ink", "format": "{deg(spin):deg}" },
+      { "kind": "drag", "name": "pin", "default": [37.7, -122.4], "constrain": "surface:ball", "token": "mark", "geolocate": true }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["ball", "pole"],
+    "states": [
+      { "name": "top", "spin": 0, "camera": { "azimuth": 0.5, "polar": 0.3, "distance": 4 }, "drag": { "pin": [90, 0] }, "caption": "Looking down the axis; the pin at the pole." },
+      { "name": "side", "spin": 1.5708, "camera": { "azimuth": 1.5708, "polar": 1.5 }, "caption": "From the side, a quarter turn in." }
+    ]
+  }
+}
+</script>
+<figcaption>Drag the picture to turn it; drag the pin over the ball.</figcaption>
+</figure>
+<p>Look <a href="#fig-ball" data-state="top">down the axis</a> or <a href="#fig-ball" data-state="side">from the side</a>; the <a class="term" href="#g-axis">axis</a> stays put while the ball turns.</p>
+</section>
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    <div class="row" id="g-axis">
+      <dt>axis <a class="x-back" href="#t-axis" aria-label="back to first use">↩</a></dt>
+      <dd>The line a spinning body turns around.</dd>
+    </div>
+  </dl>
+</details>
+</main>
+</body>
+</html>

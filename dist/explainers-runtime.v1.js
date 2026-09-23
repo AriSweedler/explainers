@@ -599,7 +599,7 @@ visible: f(obj({ show: f(arr('ref:layer'), 'layer ids to show'), hide: f(arr('re
 };
 SCHEMA.notice = {
 steps: f(en('buttons', 'segmented', 'none'), 'prev/next stepper, radio row, or nothing (states stay addressable)', REQ),
-point_at: f(arr('id'), 'layer ids the surrounding prose references with data-ref (checked: SPEC_POINT_AT_MISSING)'),
+point_at: f(arr('id'), 'layer or 3D object ids the surrounding prose references with data-ref (checked: SPEC_POINT_AT_MISSING)'),
 states: f(arr('state'), 'ordered named states; other keys are <control name>: value', REQ),
 };
 SCHEMA.figure = {
@@ -988,7 +988,7 @@ if (Math.abs(got - c.value) > c.tol) ctx.fail('SPEC_EXPECT_MISMATCH', path, `val
 }
 const notice = spec.notice;
 if (notice.steps !== 'none' && notice.states.length === 0) ctx.fail('SPEC_RANGE', 'notice.states', `steps "${notice.steps}" needs at least one state`);
-for (const id of notice.point_at || []) if (!cat.layers.has(id)) ctx.fail('SPEC_POINT_AT_MISSING', 'notice.point_at', `no layer with id "${id}"`);
+for (const id of notice.point_at || []) if (!cat.layers.has(id) && !cat.objects.has(id)) ctx.fail('SPEC_POINT_AT_MISSING', 'notice.point_at', `no layer or object with id "${id}"`);
 const seen = new Set();
 notice.states.forEach((st, i) => {
 const path = `notice.states[${i}]`;
@@ -1424,8 +1424,10 @@ if (['name', 'caption', 'camera', 'drag', 'visible'].includes(k)) continue;
 targets[k] = typeof v === 'boolean' ? (v ? 1 : 0) : v;
 }
 for (const [k, [a, b]] of Object.entries(st.drag || {})) {
-targets[`${k}.x`] = a;
-targets[`${k}.y`] = b;
+const c = compiled.controls ? compiled.controls.find((x) => x.name === k) : null;
+const surface = !!(c && c.constrain && c.constrain.startsWith('surface:')); // a surface drag is [lat, lon]
+targets[`${k}.${surface ? 'lat' : 'x'}`] = a;
+targets[`${k}.${surface ? 'lon' : 'y'}`] = b;
 }
 return { targets, visible: st.visible || null, camera: st.camera || null, caption: st.caption };
 }
@@ -1483,6 +1485,39 @@ if (!hash) return null;
 if (hash.startsWith('#g-') && hash.length > 3) return { kind: 'row', slug: hash.slice(3), id: hash.slice(1) };
 if (hash.startsWith('#t-') && hash.length > 3) return { kind: 'first', slug: hash.slice(3), id: hash.slice(1) };
 return null;
+}
+
+// ---- lib/scene3d/surface.js
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+function clampLatLon([lat, lon]) {
+const la = Math.min(Math.max(Number(lat) || 0, -90), 90);
+let lo = Number(lon) || 0;
+lo = ((((lo + 180) % 360) + 360) % 360) - 180; // (-180, 180]
+if (lo === -180) lo = 180;
+return [la, lo];
+}
+function latLonToPoint(lat, lon, r = 1) {
+const la = lat * D2R, lo = lon * D2R, c = Math.cos(la);
+return [r * c * Math.cos(lo), r * Math.sin(la), -r * c * Math.sin(lo)];
+}
+function pointToLatLon([x, y, z]) {
+const r = Math.hypot(x, y, z) || 1;
+return clampLatLon([Math.asin(Math.min(Math.max(y / r, -1), 1)) * R2D, Math.atan2(-z, x) * R2D]);
+}
+function rayToSphere(origin, dir, center, r) {
+const oc = [origin[0] - center[0], origin[1] - center[1], origin[2] - center[2]];
+const b = oc[0] * dir[0] + oc[1] * dir[1] + oc[2] * dir[2];
+const c = oc[0] * oc[0] + oc[1] * oc[1] + oc[2] * oc[2] - r * r;
+const disc = b * b - c;
+if (disc >= 0) {
+const s = Math.sqrt(disc);
+const t = -b - s >= 0 ? -b - s : -b + s; // the near face, or the far one from inside
+if (t >= 0) return { hit: true, point: [origin[0] + dir[0] * t, origin[1] + dir[1] * t, origin[2] + dir[2] * t] };
+}
+const t = Math.max(-b, 0); // closest approach
+const q = [oc[0] + dir[0] * t, oc[1] + dir[1] * t, oc[2] + dir[2] * t];
+const l = Math.hypot(q[0], q[1], q[2]) || 1;
+return { hit: false, point: [center[0] + (q[0] / l) * r, center[1] + (q[1] / l) * r, center[2] + (q[2] / l) * r] };
 }
 
 // ---- lib/scene2d/getters.js
@@ -2289,12 +2324,22 @@ input.setAttribute('aria-valuetext', out.textContent);
 
 // ---- lib/controls/drag.js
 function mountDragPoint(fig, control) {
+const surface = control.constrain.startsWith('surface:');
 const btn = h('button', { class: 'x-drag-proxy', id: `${fig.id}_drag_${control.name}`, type: 'button', role: 'slider', 'aria-label': `${control.name} (arrow keys move it)` }, control.name);
 btn.addEventListener('keydown', (e) => {
+let step, d;
+if (surface) {
+step = e.shiftKey ? 10 : 2;
+d = { ArrowLeft: [0, -step], ArrowRight: [0, step], ArrowUp: [step, 0], ArrowDown: [-step, 0] }[e.key];
+if (!d) return;
+e.preventDefault();
+fig.set(control.name, [fig.get(`${control.name}.lat`) + d[0], fig.get(`${control.name}.lon`) + d[1]], 'user');
+return;
+}
 const view = fig.view;
 if (!view) return;
-const step = (e.shiftKey ? 0.1 : 0.02) * Math.max(view.x[1] - view.x[0], view.y[1] - view.y[0]);
-const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+step = (e.shiftKey ? 0.1 : 0.02) * Math.max(view.x[1] - view.x[0], view.y[1] - view.y[0]);
+d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
 if (!d) return;
 e.preventDefault();
 fig.set(control.name, [fig.get(`${control.name}.x`) + d[0], fig.get(`${control.name}.y`) + d[1]], 'user');
@@ -2302,10 +2347,30 @@ fig.set(control.name, [fig.get(`${control.name}.x`) + d[0], fig.get(`${control.n
 return {
 el: btn, name: control.name,
 sync(scope) {
+if (surface) {
+const lat = scope.get(`${control.name}.lat`), lon = scope.get(`${control.name}.lon`);
+btn.setAttribute('aria-valuetext', `${Math.abs(lat).toFixed(1)}° ${lat < 0 ? 'S' : 'N'}, ${Math.abs(lon).toFixed(1)}° ${lon < 0 ? 'W' : 'E'}`);
+return;
+}
 const x = scope.get(`${control.name}.x`), y = scope.get(`${control.name}.y`);
 btn.setAttribute('aria-valuetext', `${x.toFixed(2)}, ${y.toFixed(2)}`);
 },
 };
+}
+function mountGeolocate(fig, control, nav = typeof navigator !== 'undefined' ? navigator : null) {
+if (!nav || !nav.geolocation || typeof nav.geolocation.getCurrentPosition !== 'function') return null;
+const btn = h('button', { class: 'x-geolocate', id: `${fig.id}_geo_${control.name}`, type: 'button' }, 'Use my location');
+btn.style.setProperty('--token', `var(--c-${control.token})`);
+btn.addEventListener('click', () => {
+btn.disabled = true;
+const done = () => { btn.disabled = false; };
+nav.geolocation.getCurrentPosition(
+(pos) => { fig.set(control.name, [pos.coords.latitude, pos.coords.longitude], 'user'); done(); },
+done,
+{ maximumAge: 600000, timeout: 10000 },
+);
+});
+return { el: btn, name: null, corner: true, sync() {} };
 }
 
 // ---- lib/controls/toggle.js
@@ -2402,11 +2467,31 @@ return { el: wrap, sync };
 }
 
 // ---- lib/site/scene3d.js
-function mountScene3dPlaceholder(box, shows, captionText) {
+const CHUNK_NAME = 'explainers-3d.v1.js';
+const RUNTIME_SRC = typeof document !== 'undefined' && document.currentScript && document.currentScript.src ? document.currentScript.src : '';
+function chunkUrl(runtimeSrc = RUNTIME_SRC, base = typeof document !== 'undefined' ? document.baseURI : 'http://localhost/') {
+return new URL(CHUNK_NAME, runtimeSrc || base).href;
+}
+let chunkPromise = null;
+function loadScene3d() {
+if (!chunkPromise) chunkPromise = Promise.resolve(chunkUrl()).then((url) => import(/* the lazy 3D chunk, same origin */ url));
+return chunkPromise;
+}
+function hasWebGL2(win = window) {
+try {
+if (!win.WebGL2RenderingContext) return false;
+const c = win.document.createElement('canvas');
+return !!c.getContext('webgl2');
+} catch { return false; }
+}
+function mountScene3dFallback(box, shows, { hasPoster = false, reason = '' } = {}) {
 const wrap = h('div', { class: 'x-3d-fallback' });
-if (shows.fallback && shows.fallback.poster) wrap.append(h('img', { class: 'x-3d-poster', src: shows.fallback.poster, alt: shows.fallback.notice || '' }));
-if (captionText) wrap.append(h('p', { class: 'x-3d-caption' }, captionText.trim()));
-wrap.append(h('p', { class: 'x-3d-notice' }, '3D figure (WebGL) not yet available in this build.'));
+if (!hasPoster && shows.fallback && shows.fallback.poster) {
+const img = h('img', { class: 'x-3d-poster', src: shows.fallback.poster, alt: '' });
+img.addEventListener('error', () => img.remove());
+wrap.append(img);
+}
+wrap.append(h('p', { class: 'x-3d-notice', title: reason || null }, (shows.fallback && shows.fallback.notice) || 'This 3D figure needs WebGL2.'));
 box.append(wrap);
 return wrap;
 }
@@ -2414,11 +2499,13 @@ return wrap;
 // ---- lib/site/figure.js
 const MIRROR_DELAY_MS = 300;
 const CORNER_PAD_PX = 8; // gap between the corner buttons and anything drawn
+const isSurface = (c) => c.kind === 'drag' && c.constrain.startsWith('surface:');
 function createFigure(el, compiled, env) {
 const spec = compiled.spec;
 const controls = spec.manipulates.controls;
 const scope = new Map(compiled.defaults);
 const fig = { id: el.id, el, compiled, scope, fmt: env.fmt, playing: false, activeState: null, visible: false, mounted: false, visibleIds: new Set() };
+const is3d = compiled.type === 'scene3d';
 const figcaption = el.querySelector(':scope > figcaption');
 const insert = (node) => (figcaption ? el.insertBefore(node, figcaption) : el.append(node));
 const box = h('div', { class: 'x-canvas-box' });
@@ -2448,6 +2535,10 @@ default: break;
 if (!m) continue;
 mounted.push(m);
 if (m.corner) cornerRight.append(m.el); else insert(m.el);
+if (c.kind === 'drag' && c.geolocate && isSurface(c)) {
+const geo = mountGeolocate(fig, c);
+if (geo) { mounted.push(geo); cornerRight.append(geo.el); }
+}
 }
 const playSpec = controls.find((c) => c.kind === 'play') || null;
 const speedTimes = controls.filter((c) => c.kind === 'time' && c.mode === 'speed');
@@ -2456,14 +2547,49 @@ if (playUi) box.append(playUi.el);
 const stepper = spec.notice.steps !== 'none' && spec.notice.states.length ? mountStepper(fig, spec.notice) : null;
 if (stepper) insert(stepper.el);
 let scene = null;
-if (compiled.type === 'scene3d') mountScene3dPlaceholder(box, spec.shows, figcaption ? figcaption.textContent : '');
-else {
-scene = createScene2d(canvas, spec.shows, { tokens: env.tokens, dpr: env.dpr, font: env.font, fmt: env.fmt, drags, baseUrl: document.baseURI, requestDraw: () => requestDraw() });
+let detachDrag = null;
+let pendingCamera = null;   // a state's camera pose asked for before the chunk was ready
+let sceneRequested = false;
+function attachScene(s) {
+scene = s;
+fig.view = scene.view || null;
+if (drags.length) {
+canvas.style.touchAction = 'none';
+detachDrag = attachDrag(canvas, {
+hit: (p) => scene.hitDrag(p, env.coarse),
+onStart(name) { fig.set(`${name}.dragging`, 1, 'user'); canvas.classList.add('x-dragging'); },
+onMove(name, p) { const v = scene.dragValue ? scene.dragValue(name, p) : scene.toWorld(p); if (v) fig.set(name, v, 'user'); },
+onEnd(name) { fig.set(`${name}.dragging`, 0, 'user'); canvas.classList.remove('x-dragging'); },
+onHover(over) { canvas.classList.toggle('x-can-drag', over); },
+});
+for (const d of drags) for (const id of d.control.preview || []) { const L = scene.layers.get(id); if (L) L.previewOf = d.name; }
+}
+for (const L of scene.layers.values()) if (L.previewOf) L.forceHide = true;
+if (pendingCamera && scene.setCamera) { scene.setCamera(pendingCamera); pendingCamera = null; }
+}
+if (!is3d) {
+attachScene(createScene2d(canvas, spec.shows, { tokens: env.tokens, dpr: env.dpr, font: env.font, fmt: env.fmt, drags, baseUrl: document.baseURI, requestDraw: () => requestDraw() }));
 }
 fig.view = scene ? scene.view : null;
+function requestScene3d() {
+if (sceneRequested) return;
+sceneRequested = true;
+const fallback = (reason) => { mountScene3dFallback(box, spec.shows, { hasPoster: !!poster, reason }); el.dataset.fallback = ''; };
+if (!hasWebGL2(window)) { fallback('no WebGL2'); return; }
+loadScene3d().then((mod) => {
+if (disposed) return;
+const s = mod.mountScene3d(canvas, compiled, {
+tokens: env.tokens, dpr: env.dpr, font: env.font, fmt: env.fmt, drags, reduced: env.reduced, coarse: env.coarse,
+baseUrl: document.baseURI, box, requestDraw: () => requestDraw(),
+lib: { createScene2d, splitBoxes, worldToPx, fitCanvas, getter, compileTemplate, renderTemplate, compileReadout, drawReadout, applyModel },
+});
+attachScene(s);
+if (fig.visible) { layout(); fig.draw(); markMounted(); }
+}).catch((e) => { if (!disposed) fallback(e && e.message ? e.message : String(e)); });
+}
 let running = null;       // the active transition
 let unsubscribe = null;   // clock subscription
-let dirty = false, drawQueued = false, mirrorTimer = null;
+let dirty = false, drawQueued = false, mirrorTimer = null, disposed = false;
 const fades = new Map();  // layer id -> { from, to } during a goto
 let stateVisible = null;  // the last goto's visible.show/hide; like the layer overrides, it outlives the state
 function syncControls() {
@@ -2490,11 +2616,18 @@ const dot = key.indexOf('.');
 const c = controlOf(compiled, dot > 0 ? key.slice(0, dot) : key);
 let v = value;
 if (c && c.kind === 'drag' && dot < 0) {
+if (isSurface(c)) {
+const [lat, lon] = clampLatLon(value);
+scope.set(`${key}.lat`, lat);
+scope.set(`${key}.lon`, lon);
+v = [lat, lon];
+} else {
 const start = [scope.get(`${key}.x`), scope.get(`${key}.y`)];
 const [x, y] = constrainPoint(c.constrain, value, { view: fig.view || { x: [-1, 1], y: [-1, 1] }, start });
 scope.set(`${key}.x`, x);
 scope.set(`${key}.y`, y);
 v = [x, y];
+}
 } else {
 if (c && dot < 0) v = coerce(c, value);
 scope.set(key, v);
@@ -2519,7 +2652,7 @@ return v;
 };
 fig.get = (name) => scope.get(name);
 fig.goto = (stateName, { ease = true } = {}) => {
-const { targets, visible } = stateTargets(compiled, stateName);
+const { targets, visible, camera } = stateTargets(compiled, stateName);
 fig.pause();
 if (running) running.cancel();
 const from = {}, discrete = new Set();
@@ -2527,6 +2660,10 @@ for (const k of Object.keys(targets)) {
 from[k] = scope.get(k);
 const c = controlOf(compiled, k);
 if (c && isDiscrete(c)) discrete.add(k);
+}
+if (camera) {
+if (scene && scene.cameraTargets) { const ct = scene.cameraTargets(camera); Object.assign(from, ct.from); Object.assign(targets, ct.to); }
+else pendingCamera = camera;
 }
 fades.clear();
 stateVisible = visible;
@@ -2543,7 +2680,12 @@ running = transition({
 from, to: targets, discrete,
 reduced: env.reduced || !ease || env.pausedAll(),
 onStep(out, k) {
-for (const [key, v] of Object.entries(out)) assign(key, v, 'state');
+let pose = null;
+for (const [key, v] of Object.entries(out)) {
+if (key.startsWith('@camera.')) { if (!pose) pose = {}; pose[key.slice(8)] = v; continue; }
+assign(key, v, 'state');
+}
+if (pose && scene && scene.setCamera) scene.setCamera(pose);
 for (const [id, f] of fades) scene.layers.get(id).alpha = f.from + (f.to - f.from) * k;
 syncControls();
 dirty = true;
@@ -2639,21 +2781,23 @@ scene.draw(scope);
 clearTimeout(mirrorTimer);
 mirrorTimer = setTimeout(() => { readoutsEl.textContent = scene.readoutText(); }, MIRROR_DELAY_MS);
 };
-fig.retheme = () => { requestDraw(); };
-fig.setVisible = (flag) => {
-if (flag === fig.visible) return;
-fig.visible = flag;
-if (flag) {
-layout();
-if (!fig.mounted) {
+fig.retheme = () => { if (scene && scene.retheme) scene.retheme(); requestDraw(); };
+function markMounted() {
+if (fig.mounted) return;
 fig.mounted = true;
 el.dataset.mounted = '';
 emit(el, 'x-fig:mount', { id: fig.id });
 if (playSpec && playSpec.autoplay && !env.reduced) fig.play();
 }
-fig.draw();
+fig.setVisible = (flag) => {
+if (flag === fig.visible) return;
+fig.visible = flag;
+if (flag) {
+layout();
+if (is3d && !scene) requestScene3d();
+if (scene) { fig.draw(); markMounted(); }
 } else {
-canvas.width = canvas.height = 0; // release the backing store off screen
+if (!is3d) canvas.width = canvas.height = 0; // release the backing store off screen
 boxPx = null;
 }
 updateTicking();
@@ -2664,19 +2808,6 @@ ro = new ResizeObserver(() => { if (fig.visible) { layout(); fig.draw(); } });
 ro.observe(box);
 for (const g of box.querySelectorAll(':scope > .x-corner')) ro.observe(g);
 }
-let detachDrag = null;
-if (drags.length && scene) {
-canvas.style.touchAction = 'none';
-detachDrag = attachDrag(canvas, {
-hit: (p) => scene.hitDrag(p, env.coarse),
-onStart(name) { fig.set(`${name}.dragging`, 1, 'user'); canvas.classList.add('x-dragging'); },
-onMove(name, p) { fig.set(name, scene.toWorld(p), 'user'); },
-onEnd(name) { fig.set(`${name}.dragging`, 0, 'user'); canvas.classList.remove('x-dragging'); },
-onHover(over) { canvas.classList.toggle('x-can-drag', over); },
-});
-for (const d of drags) for (const id of d.control.preview || []) { const L = scene.layers.get(id); if (L) L.previewOf = d.name; }
-}
-if (scene) for (const L of scene.layers.values()) if (L.previewOf) L.forceHide = true;
 fig.refInfo = (refId) => {
 const L = scene && scene.layers.get(refId);
 if (L) return { token: L.spec.stroke || L.spec.fill || null, dashed: !!L.spec.dash };
@@ -2684,6 +2815,10 @@ const c = controlOf(compiled, refId);
 if (c) return { token: c.token || null, dashed: false };
 const R = scene && scene.readouts.find((r) => r.id === refId);
 if (R) return { token: R.spec.token, dashed: false };
+if (is3d) {
+const o = spec.shows.objects.find((x) => x.id === refId);
+if (o) return { token: o.color || null, dashed: false };
+}
 return { token: null, dashed: false };
 };
 fig.highlight = (refId, on) => {
@@ -2691,19 +2826,23 @@ const L = scene && scene.layers.get(refId);
 if (L) { L.highlight = on; requestDraw(); return; }
 const R = scene && scene.readouts.find((r) => r.id === refId);
 if (R) { R.highlight = on; requestDraw(); return; }
+if (scene && scene.highlightObject && scene.highlightObject(refId, on)) { requestDraw(); return; }
 const m = mounted.find((x) => x.name === refId);
 if (m) m.el.classList.toggle('x-hl', on);
 };
 fig.dispose = () => {
+disposed = true;
 if (unsubscribe) unsubscribe();
 unsubscribe = null;
 if (ro) ro.disconnect();
 if (detachDrag) detachDrag();
+if (scene && scene.dispose) scene.dispose();
 clearTimeout(mirrorTimer);
 if (poster) el.prepend(poster);
 for (const node of el.querySelectorAll(':scope > .x-canvas-box, :scope > .x-ctl, :scope > .x-stepper, :scope > .x-drag-proxy')) node.remove();
 delete el.dataset.mounted;
 delete el.dataset.booted;
+delete el.dataset.fallback;
 };
 fig.activeState = activeState(compiled, scope);
 syncControls();

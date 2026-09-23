@@ -10,6 +10,9 @@ import { checkTex } from './tex.mjs';
 import { checkBudget } from './budget.mjs';
 import { checkIntegrity } from './integrity.mjs';
 import { checkPosters } from './poster.mjs';
+import path from 'node:path';
+
+const CHUNK_NAME = 'explainers-3d.v1.js';
 
 const ALLOWED_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
 const FIG_ID_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
@@ -144,6 +147,18 @@ function checkDfnSections({ file, doc }, problems) {
   }
 }
 
+// Warning: a scene3d figure needs the lazy chunk next to the runtime include
+// (a dynamic import(), so no integrity attribute names it; this is the deploy check).
+function checkChunk({ file, doc }, figures, repoRoot, problems) {
+  if (![...figures.values()].some((c) => c && c.type === 'scene3d')) return;
+  const runtime = byTag(doc, 'script').map((s) => attr(s, 'src')).find((src) => src && /(^|\/)dist\/explainers-runtime\.v\d+\.js$/.test(src));
+  if (!runtime) return;
+  const dir = path.dirname(runtime);
+  const local = path.resolve(path.dirname(file), dir, CHUNK_NAME);
+  const fromRoot = path.join(repoRoot, 'dist', CHUNK_NAME); // fixtures outside articles/ measure the repo's dist/
+  if (!fs.existsSync(local) && !fs.existsSync(fromRoot)) problems.warn(file, 0, null, `scene3d figure(s) but the lazy chunk ${path.posix.join(dir, CHUNK_NAME)} is not found beside the runtime; run: node tools/build-3d.mjs`);
+}
+
 export function validateArticle(article, { repoRoot, budget, problems }) {
   const palette = extractPalette(article.doc);
   checkPalette(palette, article.file, problems);
@@ -157,6 +172,7 @@ export function validateArticle(article, { repoRoot, budget, problems }) {
   checkDfnSections(article, problems);
   checkTex(article.doc, article.html, article.file, new Set(palette.names), problems);
   const valid = validFigures(figures);
+  checkChunk(article, valid, repoRoot, problems);
   checkPosters(article.doc, article.file, valid, palette, problems);
   for (const fig of valid.values()) checkFigureStates(article.file, fig, problems);
   const report = budget !== undefined ? checkBudget(article.file, article.html, article.doc, repoRoot, budget, problems) : null;

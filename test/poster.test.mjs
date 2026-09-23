@@ -128,16 +128,40 @@ test('timeline posters draw one bar per row with its label and the marker', () =
   assert.match(svg, /stroke-dasharray="3 3"/, 'the marker line');
 });
 
-test('scene3d posters are a framed box with the caption; regions nest clip paths', () => {
+test('scene3d posters project the first frame: sphere, ring split around it, disc, arrow, labels, surface handle; regions nest clip paths', () => {
+  // phase 3B: the poster was a framed box with the caption; it is now the projected scene
   const c3 = minimal({
-    type: 'scene3d', camera: { mode: 'orbit', distance: 3, azimuth: 0, polar: 1 }, light: { direction: [1, 1, 1], ambient: 0.3 },
-    objects: [{ id: 'ball', kind: 'sphere', radius: 1, material: 'lambert' }], fallback: { poster: 'assets/ball.png', notice: 'needs WebGL2' },
-  });
-  const svg3 = posterSvg(c3, null, { aspect: '16:9', id: 'fig-t', caption: 'A lit sphere you can orbit. Not to scale.' });
+    type: 'scene3d', camera: { mode: 'orbit', distance: 6, azimuth: 0.4, polar: 1.1 }, light: { direction: [1, 1, 1], ambient: 0.3 },
+    objects: [
+      { id: 'ball', kind: 'sphere', radius: 1, material: 'lambert', color: 'ink', label: 'ball' },
+      { id: 'rim', kind: 'ring', radius: 2, color: 'mark' },
+      { id: 'plate', kind: 'disc', radius: 2.5, color: 'ink', opacity: 0.2 },
+      { id: 'up', kind: 'arrow', from: [0, 0, 0], to: [0, 2, 0], color: 'mark', head: 0.3 },
+      { id: 'tag', kind: 'label', text: 'k = {k:.1f}', position: [0, -2, 0] },
+    ],
+    readouts: [{ at: [0.03, 0.95], text: '{k:.1f}', token: 'mark' }],
+    fallback: { poster: 'assets/ball.svg', notice: 'needs WebGL2' },
+  }, [{ kind: 'slider', name: 'k', label: 'k', min: 0, max: 2, default: 1, token: 'ink' }, { kind: 'drag', name: 'pin', default: [0, 0], constrain: 'surface:ball', token: 'mark' }]);
+  const svg3 = posterSvg(c3, null, { aspect: '16:9', id: 'fig-t', tokens: { ink: '#00f', mark: '#f00' }, caption: 'ignored now' });
   wellFormed(svg3);
   assert.match(svg3, /viewBox="0 0 704 396"/);
-  assert.match(svg3, /<text [^>]*text-anchor="middle"[^>]*>A lit sphere you can orbit\. Not to scale\.<\/text>/);
-  assert.doesNotMatch(svg3, /clipPath/);
+  assert.doesNotMatch(svg3, /ignored now/, 'the caption is no longer drawn into the poster');
+  assert.match(svg3, /<path d="M[^"]*A[^"]*" class="f-ink"\/>/, 'the sphere is a filled circle in its token');
+  const runs = [...svg3.matchAll(/<path d="(M[^"]*)" class="s-mark" stroke-width="1.5"\/>/g)].map((m) => m[1]);
+  assert.equal(runs.length, 2, 'the ring is split into the run behind the sphere and the run in front');
+  const ends = runs.map((d) => { const pts = d.split(/[ML]/).filter(Boolean); return [pts[0], pts[pts.length - 1]]; });
+  assert.equal(ends[0][1], ends[1][0], 'the runs share their boundary points');
+  assert.equal(ends[1][1], ends[0][0]);
+  assert.match(svg3, /fill-opacity="0.2"/, 'the disc keeps its opacity');
+  assert.match(svg3, /Z" class="f-mark"\/>/, 'the arrow head');
+  assert.match(svg3, />ball<\/text>/);
+  assert.match(svg3, />k = 1\.0<\/text>/, 'label templates render');
+  assert.match(svg3, />1\.0<\/text>/, 'the readout at a fraction of the box');
+  assert.match(svg3, /<circle [^>]*class="s-bg f-mark"/, 'the surface drag handle on the near side');
+  assert.equal((svg3.match(/<clipPath /g) || []).length, 1, 'the view box clip');
+  assert.doesNotMatch(svg3, /NaN|undefined/);
+  const behind = posterSvg(c3, new Map([...scopeForState(c3, null), ['pin.lon', 180]]), { aspect: '16:9', id: 'fig-t', tokens: { ink: '#00f', mark: '#f00' } });
+  assert.doesNotMatch(behind, /<circle /, 'a handle on the far side is hidden by the sphere');
   const c2 = minimal({
     type: 'scene2d', view: { x: [-2, 2], y: [-2, 2] },
     layers: [

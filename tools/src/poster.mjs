@@ -32,16 +32,22 @@ export function posterTokens(palette) {
 }
 
 // Everything the poster is a function of: emitter version and width, spec,
-// aspect, palette values (the var() fallbacks) and, for scene3d, the caption.
-export function posterHash(spec, aspect, tokens, caption = '') {
-  return crypto.createHash('sha1').update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], caption])).digest('hex');
+// aspect and the palette values (the var() fallbacks). The tuple keeps the
+// shape of phase 3A (a trailing caption slot, now always empty since a
+// scene3d poster is drawn from the spec, not the caption) so every 2D poster
+// hash is unchanged.
+export function posterHash(spec, aspect, tokens) {
+  return crypto.createHash('sha1').update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], ''])).digest('hex');
 }
+
+// A scene3d figure whose fallback.poster names the build's own external path
+// gets that file written too, so the WebGL2 fallback image is the same first
+// frame (and stays current with it).
+const wantsFallbackFile = (compiled, id) => compiled.type === 'scene3d' && compiled.spec.shows.fallback.poster === posterPath(id);
 
 function plan(fig, compiled, tokens) {
   const id = attr(fig, 'id'), aspect = attr(fig, 'data-aspect') || '3:2';
-  const cap = captionChild(fig);
-  const caption = compiled.type === 'scene3d' && cap ? textOf(cap).trim() : '';
-  return { id, aspect, caption, hash: posterHash(compiled.spec, aspect, tokens, caption), existing: posterChild(fig) };
+  return { id, aspect, hash: posterHash(compiled.spec, aspect, tokens), existing: posterChild(fig), fallbackFile: wantsFallbackFile(compiled, id) };
 }
 
 // validate mode: every figure has a current poster (warnings; build fixes them).
@@ -56,6 +62,10 @@ export function checkPosters(doc, file, figures, palette, problems) {
     if (p.existing.tagName === 'img') {
       const src = attr(p.existing, 'src') || '';
       if (!fs.existsSync(path.resolve(path.dirname(file), src))) problems.warn(file, line(p.existing), id, `poster file ${src} not found; run: explainers build`);
+    } else if (p.fallbackFile) {
+      const rel = posterPath(id), abs = path.resolve(path.dirname(file), rel);
+      if (!fs.existsSync(abs)) problems.warn(file, line(fig), id, `fallback poster ${rel} not found; run: explainers build`);
+      else if (fs.readFileSync(abs, 'utf8') !== posterSvg(compiled, null, { aspect: p.aspect, tokens, id, hash: p.hash })) problems.warn(file, line(fig), id, `fallback poster ${rel} is stale; run: explainers build`);
     }
   }
 }
@@ -71,19 +81,24 @@ export function buildPosters(doc, html, file, figures, palette) {
     if (!compiled) continue;
     const p = plan(fig, compiled, tokens);
     const rel = posterPath(id), abs = path.resolve(path.dirname(file), rel);
+    const svg = posterSvg(compiled, null, { aspect: p.aspect, tokens, id, hash: p.hash });
+    const writeFile = () => { fs.mkdirSync(path.dirname(abs), { recursive: true }); if (!fs.existsSync(abs) || fs.readFileSync(abs, 'utf8') !== svg) fs.writeFileSync(abs, svg); };
     const current = p.existing && attr(p.existing, 'data-poster') === p.hash && (p.existing.tagName !== 'img' || fs.existsSync(abs));
-    if (current) { if (p.existing.tagName === 'img') external.push(id); continue; }
-    const svg = posterSvg(compiled, null, { aspect: p.aspect, tokens, id, caption: p.caption, hash: p.hash });
+    if (current) {
+      if (p.existing.tagName === 'img') external.push(id);
+      else if (p.fallbackFile) writeFile(); // the inline poster is current; the fallback file follows it
+      continue;
+    }
     let markup;
     if (Buffer.byteLength(svg) > INLINE_LIMIT) {
-      fs.mkdirSync(path.dirname(abs), { recursive: true });
-      if (!fs.existsSync(abs) || fs.readFileSync(abs, 'utf8') !== svg) fs.writeFileSync(abs, svg);
+      writeFile();
       const { width, height } = posterSize(p.aspect);
       markup = `<img class="x-poster" src="${rel}" alt="" width="${width}" height="${height}" aria-hidden="true" data-poster="${p.hash}">`;
       external.push(id);
     } else {
       markup = svg;
-      if (fs.existsSync(abs)) fs.unlinkSync(abs); // an earlier build externalized this figure
+      if (p.fallbackFile) writeFile();
+      else if (fs.existsSync(abs)) fs.unlinkSync(abs); // an earlier build externalized this figure
     }
     if (p.existing) edits.push({ start: p.existing.sourceCodeLocation.startOffset, end: p.existing.sourceCodeLocation.endOffset, text: markup });
     else { const at = fig.sourceCodeLocation.startTag.endOffset; edits.push({ start: at, end: at, text: `\n${markup}` }); }

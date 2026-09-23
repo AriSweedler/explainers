@@ -5,7 +5,7 @@ one HTML file per article, one shared vendored runtime, one stylesheet, zero thi
 
 A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec with three keys, **shows** (what it draws), **manipulates** (what the reader changes) and **notice** (named states and what the prose points at). The runtime draws it; a Node CLI refuses anything outside the closed vocabulary.
 
-**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3A (done) adds SVG posters (the first frame, drawn at build time, shown before the runtime mounts and without JavaScript), `dist/integrity.json` with `integrity=` on the runtime and stylesheet includes, and three validator warnings; phase 3B adds WebGL figures (three.js). See "Phase 3 status" in `DESIGN.md`.
+**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~35 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3A (done) adds SVG posters (the first frame, drawn at build time, shown before the runtime mounts and without JavaScript), `dist/integrity.json` with `integrity=` on the runtime and stylesheet includes, and three validator warnings. Phase 3B (done) adds the WebGL figures: `dist/explainers-3d.v1.js`, a lazy chunk (three.js 0.185.0 + `lib/scene3d/`, ~143 KB gzipped, off the critical path) that the runtime imports on the first approach of a `scene3d` figure, with arcball/orbit/fixed/panorama cameras, every object kind, DOM labels, surface drags with geolocation, projected posters, and the Moon article's second figure, the same orbit in three dimensions. See "Phase 3 status" in `DESIGN.md`.
 
 ## explainers.sweedler.com
 
@@ -41,8 +41,9 @@ then open http://127.0.0.1:8765/articles/hebrew-calendar/ (or `PORT=9000 npm run
 index.html, 404.html, .nojekyll      site root (GitHub Pages via Actions; see .github/workflows/pages.yml)
 articles/<slug>/index.html           one article = one file (+ articles/<slug>/assets/ for posters and diagrams)
 template/article.html                the head, palette, reading column and glossary every article starts from
-dist/                                explainers-runtime.v1.js, explainers.v1.css (committed build outputs)
+dist/                                explainers-runtime.v1.js, explainers.v1.css, explainers-3d.v1.js, integrity.json (committed build outputs)
 lib/core/, lib/scene2d/, lib/controls/, lib/site/   runtime source (ES modules); tools/build-runtime.mjs concatenates them into dist/
+lib/scene3d/                         the three.js adapter and its pure math; tools/build-3d.mjs bundles it with three into the lazy chunk
 assets/katex/                        vendored KaTeX CSS + woff2 fonts (relative url() in the CSS)
 lib/spec.js, lib/expr.js             the closed vocabulary and expression grammar, shared by runtime and CLI
 tools/explainers.cjs                 single committed Node 22 CLI: validate | states | build | budget
@@ -83,7 +84,7 @@ DESIGN.md                            the contract: vocabulary (generated), gramm
 ## Run the tools
 
 ```sh
-npm test                                  # node --test: expr, spec, cli, runtime, poster, docs
+npm test                                  # node --test: expr, spec, cli, runtime, poster, scene3d, docs (also checks dist/ is current)
 node tools/explainers.cjs --help          # no install needed; single committed file
 node tools/explainers.cjs vocab           # the vocabulary as markdown (what DESIGN.md embeds)
 ```
@@ -92,11 +93,12 @@ Maintainers (changing `lib/` or `tools/src/`):
 
 ```sh
 node tools/build-runtime.mjs                    # lib/ -> dist/explainers-runtime.v1.js + dist/integrity.json (no dependencies; npm test checks both are current)
+node tools/build-3d.mjs                         # lib/scene3d/ + three -> dist/explainers-3d.v1.js (esbuild from tools/node_modules; --check like build-runtime; npm test checks it)
 node tools/explainers.cjs build articles/*/index.html   # then refresh every article's integrity= attributes (and posters)
 cd tools && npm install && node build-cli.mjs   # rebundles tools/explainers.cjs, vendors assets/katex, regenerates DESIGN.md
 ```
 
-Never hand-edit `tools/explainers.cjs` or `dist/explainers-runtime.v1.js`.
+`npm run build-runtime` and `npm run build-3d` are the same two commands. Never hand-edit `tools/explainers.cjs`, `dist/explainers-runtime.v1.js` or `dist/explainers-3d.v1.js`.
 
 ## Preview locally
 
@@ -106,11 +108,13 @@ python3 -m http.server 8765 --bind 127.0.0.1
 # open http://127.0.0.1:8765/articles/<slug>/#fig-x=state  to land on a named state
 ```
 
-Opening `articles/<slug>/index.html` directly from disk also works for fragment links and the runtime include. A headless screenshot without any install:
+Opening `articles/<slug>/index.html` directly from disk also works for fragment links and the runtime include. For a headless screenshot use a headless-only binary such as Playwright's `chrome-headless-shell` (`~/Library/Caches/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-mac-arm64/chrome-headless-shell` on macOS), never the Chrome.app binary: every launch of Chrome.app registers a new app instance and steals keyboard focus. WebGL figures need the SwiftShader flags:
 
 ```sh
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --hide-scrollbars \
-  --window-size=1200,2400 --screenshot=preview/poc.png http://127.0.0.1:8765/articles/moon/index.html
+chrome-headless-shell --headless --no-sandbox --hide-scrollbars \
+  --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist \
+  --window-size=1200,2400 --virtual-time-budget=6000 \
+  --screenshot=preview/poc.png http://127.0.0.1:8765/articles/moon/index.html
 ```
 
 ## How the runtime mounts
@@ -119,7 +123,7 @@ Opening `articles/<slug>/index.html` directly from disk also works for fragment 
 
 1. reads the palette token names from the inline `<style>` and resolves them to real colors (canvas cannot parse `light-dark()`), re-resolving when the color scheme changes;
 2. for every `figure.x-fig` with a JSON block, runs the same `validateSpec` the CLI runs (a failure is printed inside the figure as `<p class="x-fig-error">`) and scaffolds the DOM the contract describes: `.x-canvas-box` (aspect from `data-aspect`) with corner Play/Restart and toggle buttons, then the controls in spec order (`<fig>_sl<i>`, `<fig>_tg<i>`, `<fig>_seg<i>`, `<fig>_drag_<name>`), then the stepper (`<fig>_steps`), before the `<figcaption>`;
-3. watches each figure with an `IntersectionObserver` (100 px margin); on first approach it sizes the canvas for DPR 1 or 2, draws, sets `data-mounted` and emits `x-fig:mount`; off screen it releases the canvas bitmap and stops ticking;
+3. watches each figure with an `IntersectionObserver` (100 px margin; 400 px for `scene3d`); on first approach it sizes the canvas for DPR 1 or 2, draws, sets `data-mounted` and emits `x-fig:mount`; off screen it releases the canvas bitmap and stops ticking. A `scene3d` figure first checks WebGL2 and imports `dist/explainers-3d.v1.js` once per page (resolved beside the runtime's own `src`); the build poster stays until the first WebGL frame, and stays for good with the spec's notice when WebGL2 is missing or the import fails;
 4. routes `#fig-x=state` (on load and `hashchange`) to `figure.goto(state, { ease: false })`, intercepts `<a data-state href="#fig-x">` clicks (600 ms smoothstep ease, `history.replaceState`), colors `<span data-fig data-ref>` from the layer's token and highlights the layer on hover, fills one shared `#x-tip` tooltip from the glossary `<dd>` on hover/focus of `a.term`, and opens `<details id="glossary">` before the browser scrolls to a `#g-*` row.
 
 `window.explainers` (`version`, `figures`, `goto(figId, state)`, `pauseAll(bool)`) is a console handle for tests, not an authoring surface. Every value change goes through `figure.set(name, value)`, so the knob, the readouts and the canvas always agree; `x-fig:set`, `x-fig:state` and `x-fig:play` bubble from the figure element.

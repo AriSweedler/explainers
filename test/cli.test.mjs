@@ -147,6 +147,39 @@ test('build appends the caveat sentence once, and externalizes posters above 8 K
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+test('scene3d: validate warns about a missing fallback poster file; build writes it as the first frame and validates clean', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-3d-'));
+  const file = path.join(tmp, 'index.html');
+  fs.copyFileSync(path.join(passDir, 'scene3d.html'), file);
+  const v0 = run(['validate', file]);
+  assert.equal(v0.code, 0, v0.err);
+  assert.match(v0.err, /warning fig-ball: no poster; run: explainers build/, 'unbuilt: no poster at all yet');
+  const b = run(['build', file]);
+  assert.equal(b.code, 0, b.err);
+  assert.match(b.out, /1 poster\(s\) written/);
+  const asset = path.join(tmp, 'assets/poster-fig-ball.svg');
+  assert.ok(fs.existsSync(asset), 'the fallback poster file is the build poster');
+  const built = fs.readFileSync(file, 'utf8');
+  assert.match(built, /<svg class="x-poster" id="fig-ball-poster"/, 'and the inline first frame is still there');
+  assert.equal(fs.readFileSync(asset, 'utf8'), /<svg class="x-poster"[\s\S]*?<\/svg>/.exec(built)[0], 'same bytes');
+  assert.match(fs.readFileSync(asset, 'utf8'), />ball<\/text>/, 'the projected scene, not a framed caption');
+  const v1 = run(['validate', file]);
+  assert.equal(v1.code, 0, v1.err);
+  assert.doesNotMatch(v1.err, /poster|warning/, 'a built scene3d article validates without warnings');
+  fs.rmSync(asset);
+  assert.match(run(['validate', file]).err, /warning fig-ball: fallback poster assets\/poster-fig-ball\.svg not found; run: explainers build/);
+  assert.equal(run(['build', file]).code, 0);
+  assert.ok(fs.existsSync(asset), 'build restores the fallback poster file while the inline poster is current');
+  fs.writeFileSync(asset, '<svg/>');
+  assert.match(run(['validate', file]).err, /fallback poster assets\/poster-fig-ball\.svg is stale; run: explainers build/);
+  assert.equal(run(['build', file]).code, 0);
+  assert.doesNotMatch(run(['validate', file]).err, /stale/);
+  const s = run(['states', file]);
+  assert.match(s.out, /fig-ball \(scene3d\): 2 state\(s\): top, side/);
+  assert.match(s.out, /top +spin=0 pin\.lat=90 pin\.lon=0/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 test('every warning fixture exits 0 and prints its warning in file:line: warning figure-id: message form', () => {
   assert.ok(warnFiles.length >= 6, 'run node test/fixtures/make-fail.mjs');
   for (const f of warnFiles) {

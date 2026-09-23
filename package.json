@@ -9,6 +9,8 @@
   "scripts": {
     "test": "node --test 'test/**/*.test.mjs' 'infra/**/*.test.mjs'",
     "build-cli": "node tools/build-cli.mjs",
+    "build-runtime": "node tools/build-runtime.mjs",
+    "build-3d": "node tools/build-3d.mjs",
     "docs": "node tools/gen-docs.mjs",
     "serve": "node tools/serve.mjs",
     "start": "node tools/serve.mjs",

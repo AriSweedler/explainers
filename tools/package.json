@@ -3,7 +3,9 @@
   "private": true,
   "description": "Dev-only toolchain for the explainers repo: bundles tools/explainers.cjs (validate | build | states | budget). Publishing an article never needs this installed.",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build-cli": "node build-cli.mjs"
   },
@@ -11,5 +13,8 @@
     "esbuild": "0.28.2",
     "katex": "0.18.7",
     "parse5": "8.0.1"
+  },
+  "dependencies": {
+    "three": "^0.185.0"
   }
 }

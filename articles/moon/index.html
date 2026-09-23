@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="sha384-26VCLVL2/KHbeMoQsA5iLxithToGDt6qfRU4EO1+MWKTmk0a0LWUClpLjInfKs+s">
+<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="sha384-hXrJPM+6JTW5P4Znh6y/+XBP2lPYXfq3Ji3a5JjqYdi4yBmOHWYZnxYT1e7skYa7">
 <link rel="stylesheet" href="../../assets/katex/katex.min.css">
-<script defer src="../../dist/explainers-runtime.v1.js" integrity="sha384-te8tcrrOqj2Sqg8a9ZVP96439m0v4qKfTdUhfCLYcchaz4j4XUxxfSSTRqCKfrhQ"></script>
+<script defer src="../../dist/explainers-runtime.v1.js" integrity="sha384-uNL+z70NuvyUFwhzwJo204Cj7X3WsjfQ4Xf/wJc2uAGQ0YyNxXGw7Vip+fPLC+Ga"></script>
 <style>
   /* The article palette: at most 6 tokens, each with a light and a dark value.
      The same token names color canvas layers, slider tracks, \tok{} symbols in
@@ -53,7 +53,7 @@
 <p>The Moon goes around Earth in about a month. Ask how long that month is, though, and you have to say what you measure it against. Let's start a clock at new Moon and watch two rulers at once. The <span data-fig="fig-months" data-ref="star-line">dotted yellow line</span> points at a distant star that never moves; the <span data-fig="fig-months" data-ref="sun-line">orange arrow</span> points at the Sun and creeps along as Earth travels its own orbit. The <span data-fig="fig-months" data-ref="moon">grey Moon</span> runs around the <span data-fig="fig-months" data-ref="orbit">dashed orbit</span>, leaving a trail behind it.</p>
 
 <figure class="x-fig" id="fig-months" data-aspect="3:2">
-<svg class="x-poster" id="fig-months-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="d2a853ba44acd9ee11c7416692792304e3b8af99"><style>#fig-months-poster:root{color-scheme:light dark}
+<svg class="x-poster" id="fig-months-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="41f9b954df3327187e7c0e963346f047725e954b"><style>#fig-months-poster:root{color-scheme:light dark}
 #fig-months-poster{font:13px 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif}
 #fig-months-poster .f-earth{fill:var(--c-earth, light-dark(#2f6fb0, #6fa8e6))}
 #fig-months-poster .f-moon{fill:var(--c-moon, light-dark(#5d5d63, #b8b8c0))}
@@ -115,6 +115,68 @@
 <p>where <span class="x-tex" data-tex="\tok{star}{Y}"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi></mrow><annotation encoding="application/x-tex">\tok{star}{Y}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="enclosing star"><span class="mord mathnormal" style="margin-right:0.2222em;">Y</span></span></span></span></span></span> is the year: how fast the Sun line itself turns. Put the numbers in and the <span class="x-tex" data-tex="\tok{sun}{T_{\mathrm{syn}}}"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">y</mi><mi mathvariant="normal">n</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\tok{sun}{T_{\mathrm{syn}}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="enclosing sun"><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathrm mtight">syn</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span></span> the figure lands on falls out: 29.53 days. Every lunar calendar counts the <a class="term" href="#g-synodic-month">synodic month</a>, and twelve of them fall eleven days short of a year, which is where the trouble starts.</p>
 </section>
 
+<section id="in-three-dimensions">
+<h2><a class="x-anchor" href="#in-three-dimensions">The Same Orbit in Three Dimensions</a></h2>
+
+<p>The flat drawing hides one thing. The Moon's <span data-fig="fig-orbit3d" data-ref="orbit">grey orbit</span> is tilted about 5° to the <dfn id="t-ecliptic"><a href="#g-ecliptic">ecliptic</a></dfn>, the plane Earth travels in around the Sun, drawn here as a <span data-fig="fig-orbit3d" data-ref="ecliptic">faint disc</span>. The <span data-fig="fig-orbit3d" data-ref="sun-line">orange arrow</span> again points at the Sun, and the same slider moves the <span data-fig="fig-orbit3d" data-ref="moon">Moon</span> along its orbit; drag the picture to turn it.</p>
+
+<figure class="x-fig" id="fig-orbit3d" data-aspect="3:2">
+<svg class="x-poster" id="fig-orbit3d-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="3993308e4ca3551fb50b2e21cdb57e0fc078a41d"><style>#fig-orbit3d-poster:root{color-scheme:light dark}
+#fig-orbit3d-poster{font:13px 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif}
+#fig-orbit3d-poster .f-earth{fill:var(--c-earth, light-dark(#2f6fb0, #6fa8e6))}
+#fig-orbit3d-poster .f-moon{fill:var(--c-moon, light-dark(#5d5d63, #b8b8c0))}
+#fig-orbit3d-poster .f-panel{fill:var(--x-panel, light-dark(#f2f0ed, #1c1b19))}
+#fig-orbit3d-poster .f-sun{fill:var(--c-sun, light-dark(#b8651a, #f2a144))}
+#fig-orbit3d-poster .h{paint-order:stroke;stroke:var(--bg, light-dark(#faf8f5, #151412));stroke-width:3;stroke-linejoin:round}
+#fig-orbit3d-poster .s-muted{stroke:var(--c-muted, light-dark(#7a756e, #8a857e))}
+#fig-orbit3d-poster .s-sun{stroke:var(--c-sun, light-dark(#b8651a, #f2a144))}</style><defs><clipPath id="fig-orbit3d-poster-c0"><path d="M0 0h704v409h-704Z"/></clipPath></defs><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect width="704" height="469" rx="8" class="f-panel"/><g clip-path="url(#fig-orbit3d-poster-c0)"><path d="M573.4 297.3L579.9 288L584.9 278.6L588.4 269.3L590.6 260.1L591.6 251.1L591.3 242.3L590 233.7L587.6 225.4L584.3 217.4L580.1 209.7L575.2 202.3L569.5 195.2L563.2 188.5L556.3 182.2L548.9 176.1L541 170.5L532.7 165.1L524.1 160.1L515.1 155.5L505.8 151.1L496.3 147.1L486.5 143.4L476.6 140L466.4 136.9L456.1 134.1L445.7 131.6L435.2 129.4L424.6 127.4L413.9 125.8L403.1 124.4L392.3 123.3L381.4 122.4L370.5 121.9L359.6 121.5L348.7 121.5L337.8 121.7L326.9 122.2L316 122.9L305.1 123.9L294.3 125.2L283.6 126.8L273 128.6L262.4 130.7L251.9 133.1L241.6 135.8L231.4 138.8L221.4 142L211.5 145.6L201.9 149.5L192.5 153.7L183.4 158.3L174.6 163.1L166.2 168.3L158.1 173.9L150.5 179.8L143.4 186L136.9 192.6L131 199.5L125.7 206.7L121.2 214.3L117.6 222.2L114.8 230.4L113.1 238.9L112.4 247.6L112.8 256.6L114.6 265.7L117.6 275L122 284.3L127.9 293.6L135.3 302.9L144.3 312L154.9 320.9L167.1 329.5L180.9 337.6L196.2 345.2L213 352.1L231.1 358.4L250.4 363.8L270.8 368.2L292.1 371.7L314 374.1L336.4 375.5L358.9 375.7L381.3 374.8L403.4 372.8L425 369.7L445.7 365.6L465.5 360.6L484.1 354.7L501.4 348L517.3 340.6L531.7 332.7L544.5 324.3L555.7 315.5L565.3 306.5Z" class="f-sun" fill-opacity="0.12"/><path d="M539.8 193.2L535.8 186.7L531.1 180.5L525.9 174.6L520.2 169.1L514 163.9L507.3 159L500.3 154.4L492.9 150.1L485.2 146.2L477.1 142.5L468.9 139.2L460.4 136.2L451.7 133.5L442.8 131.1L433.8 129L424.6 127.2L415.4 125.7L406 124.5L396.6 123.6L387.1 123L377.5 122.6L368 122.5L358.4 122.7L348.8 123.1L339.2 123.9L329.7 124.9L320.2 126.2L310.8 127.7L301.4 129.5L292.1 131.6L283 134L273.9 136.6L265 139.5L256.3 142.7L247.7 146.2L239.4 149.9L231.2 153.9L223.4 158.2L215.8 162.7L208.5 167.6L201.6 172.7L195.1 178.1L188.9 183.7L183.2 189.6L178.1 195.8L173.4 202.2L169.4 208.9L165.9 215.7" class="s-muted" stroke-width="1.5"/><path d="M389.5 204.5A37.5 37.5 0 1 1 314.5 204.5A37.5 37.5 0 1 1 389.5 204.5" class="f-earth"/><path d="M397.5 223.6L604.5 310.3" class="s-sun" stroke-width="2"/><path d="M623.3 318.2L597.3 318.2L605 299.6Z" class="f-sun"/><path d="M541.8 278.3A13.8 13.8 0 1 1 514.2 278.3A13.8 13.8 0 1 1 541.8 278.3" class="f-moon"/><path d="M165.9 215.7L163.2 222.8L161.2 230L159.9 237.5L159.6 245L160 252.7L161.5 260.4L163.9 268.1L167.3 275.8L171.8 283.5L177.4 291L184 298.3L191.9 305.4L200.8 312.2L210.8 318.6L221.9 324.5L234 330L247.1 334.8L261.1 339L275.9 342.6L291.4 345.3L307.5 347.3L324 348.5L340.8 348.8L357.7 348.3L374.6 346.9L391.3 344.7L407.7 341.6L423.6 337.8L438.9 333.3L453.5 328L467.2 322.2L480.1 315.8L491.9 309L502.6 301.7L512.2 294.1L520.7 286.3L528 278.3L534.2 270.1L539.3 261.9L543.2 253.7L546.1 245.5L547.9 237.5L548.7 229.6L548.6 221.8L547.6 214.3L545.8 207L543.1 199.9L539.8 193.2" class="s-muted" stroke-width="1.5"/><text x="352" y="256" class="f-earth h" text-anchor="middle" dominant-baseline="central">Earth</text><text x="528" y="306.1" class="f-moon h" text-anchor="middle" dominant-baseline="central">Moon</text><text x="623.3" y="332.2" class="f-sun h" text-anchor="middle" dominant-baseline="central">to the Sun</text><text x="528" y="256.3" class="f-moon h" text-anchor="middle" dominant-baseline="central">day 0.0</text><text x="159.8" y="20.5" class="f-moon h" dominant-baseline="central">0 d 0 h 0 m</text></g></g></svg>
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene3d",
+    "camera": { "mode": "arcball", "distance": 9, "azimuth": 0.7, "polar": 1.05, "momentum": true, "friction": 0.92 },
+    "light": { "direction": ["cos(tau*t/Y)", 0.25, "-sin(tau*t/Y)"], "ambient": 0.35 },
+    "constants": { "R": 3, "T_sid": 27.321661, "Y": 365.256363, "incl": 0.0898,
+                   "T_syn": { "value": 29.530589, "expect": "1/(1/T_sid - 1/Y)", "tol": 0.001 } },
+    "caveats": { "not_to_scale": true },
+    "objects": [
+      { "id": "ecliptic", "kind": "disc", "radius": 3.6, "color": "sun", "opacity": 0.12, "visible": "showEcliptic" },
+      { "id": "earth",    "kind": "sphere", "radius": 0.6, "material": "lambert", "color": "earth", "label": "Earth" },
+      { "id": "orbit",    "kind": "ring", "radius": "R", "rotation": ["incl", 0, 0], "color": "muted", "width": 1.5 },
+      { "id": "moon",     "kind": "sphere", "radius": 0.18, "material": "lambert", "color": "moon",
+        "position": ["R*cos(tau*t/T_sid)", "R*sin(tau*t/T_sid)*sin(incl)", "-R*sin(tau*t/T_sid)*cos(incl)"], "label": "Moon" },
+      { "id": "sun-line", "kind": "arrow", "from": ["0.9*cos(tau*t/Y)", 0, "-0.9*sin(tau*t/Y)"], "to": ["4.2*cos(tau*t/Y)", 0, "-4.2*sin(tau*t/Y)"], "head": 0.35, "color": "sun", "label": "to the Sun" },
+      { "id": "day",      "kind": "label", "text": "day {t:.1f}", "anchor": "moon", "offset": [0, -22] }
+    ],
+    "readouts": [
+      { "id": "elapsed3d", "at": [0.03, 0.95], "text": "{t:dhm}", "token": "moon" }
+    ],
+    "fallback": { "poster": "assets/poster-fig-orbit3d.svg", "notice": "Your browser has no WebGL2; this is the figure's first frame." }
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "t", "label": "days since new Moon", "min": 0, "max": 60, "step": 0.01, "default": 0, "width": "long", "token": "moon", "format": "{t:.2f} days" },
+      { "kind": "toggle", "name": "showEcliptic", "label": ["hide the ecliptic", "show the ecliptic"], "default": true, "token": "sun", "position": "corner" },
+      { "kind": "play", "target": "t", "rate": 4, "loop": false, "autoplay": false }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["orbit", "ecliptic", "sun-line", "moon"],
+    "states": [
+      { "name": "new-moon", "t": 0, "showEcliptic": true, "camera": { "azimuth": 0.7, "polar": 1.05, "distance": 9 }, "caption": "New Moon: the Moon sits between Earth and the Sun." },
+      { "name": "above", "t": 7.4, "showEcliptic": true, "camera": { "azimuth": 0.7, "polar": 0.05, "distance": 11 }, "caption": "From above the ecliptic pole the orbit is the circle of the first figure." },
+      { "name": "edge", "t": 7.4, "showEcliptic": true, "camera": { "azimuth": 1.0, "polar": 1.5708, "distance": 9 }, "caption": "Edge-on: the orbit leans 5.1° out of the ecliptic, so the Moon spends most of the month above or below it." }
+    ]
+  }
+}
+</script>
+<figcaption>Drag the picture to turn it; drag the slider or press play; the corner button hides the ecliptic. Not to scale.</figcaption>
+</figure>
+
+<p>Seen <a href="#fig-orbit3d" data-state="edge">edge-on</a>, the tilt appears: the Moon crosses the <a class="term" href="#g-ecliptic">ecliptic</a> only twice a month, so at most <a href="#fig-orbit3d" data-state="new-moon">new Moons</a> it passes above or below the Sun's line, and there is no eclipse. From <a href="#fig-orbit3d" data-state="above">above</a> it is the flat circle again, and the two months of the first figure are unchanged.</p>
+</section>
+
 <section id="further-watching-and-reading">
 <h2><a class="x-anchor" href="#further-watching-and-reading">Further watching and reading</a></h2>
 <ul>
@@ -138,6 +200,10 @@
     <div class="row" id="g-synodic-month">
       <dt>synodic month <a class="x-back" href="#t-synodic-month" aria-label="back to first use">↩</a></dt>
       <dd>The time between two successive new Moons: 29.530 days (29 d 12 h 44 m). Longer than the sidereal month because Earth moves along its orbit meanwhile.</dd>
+    </div>
+    <div class="row" id="g-ecliptic">
+      <dt>ecliptic <a class="x-back" href="#t-ecliptic" aria-label="back to first use">↩</a></dt>
+      <dd>The plane of Earth's orbit around the Sun. The Moon's orbit is inclined about 5.1° to it and crosses it at two points each month.</dd>
     </div>
   </dl>
 </details>
