@@ -16,7 +16,7 @@ import {
 } from '../lib/scene3d/camera.js';
 import { clampLatLon, latLonToPoint, pointToLatLon, rayToSphere } from '../lib/scene3d/surface.js';
 import { encodeMesh, parseMesh, densityUrl, MESH_MAGIC } from '../lib/scene3d/mesh.js';
-import { compileObject, evalObject, circlePoints, labelSpecs } from '../lib/scene3d/objects.js';
+import { compileObject, evalObject, circlePoints, labelSpecs, labelPosition } from '../lib/scene3d/objects.js';
 import { chunkUrl, CHUNK_NAME } from '../lib/site/scene3d.js';
 import { buildChunk, gzipSize, OUTFILE, GZIP_BUDGET, ENTRY } from '../tools/build-3d.mjs';
 import { CHUNK_FILE, INTEGRITY_FILE, computeIntegrity } from '../tools/integrity.mjs';
@@ -267,4 +267,18 @@ test('the 3D chunk is current in dist/, an ESM module with three bundled, under 
   const table = JSON.parse(fs.readFileSync(path.join(root, INTEGRITY_FILE), 'utf8'));
   assert.ok(table[CHUNK_FILE], 'the manifest lists the chunk');
   assert.equal(table[CHUNK_FILE], computeIntegrity(root)[CHUNK_FILE]);
+});
+
+test('objects: a free label (position, no anchor) evaluates through labelPosition; an anchored one has none', () => {
+  const getter = (v) => (typeof v === 'number' ? () => v : (scope) => Function('scope', `with (scope) { return ${v}; }`)(scope));
+  const labels = labelSpecs([
+    { id: 'sun', kind: 'label', text: 'sunlight', position: ['2*cos(a)', 0, '-2*sin(a)'] },
+    { id: 'ball', kind: 'sphere', radius: 1, label: 'Ball' },
+    { id: 'tag', kind: 'label', text: 'tag', anchor: 'ball', offset: [0, 22] },
+  ], getter);
+  const scope = { a: 0, cos: Math.cos, sin: Math.sin };
+  assert.deepEqual(labelPosition(labels[0], scope), [2, 0, -0]);
+  assert.equal(labelPosition(labels[1], scope), null, 'object label keys anchor to their object');
+  assert.equal(labelPosition(labels[2], scope), null, 'anchored labels have no free position');
+  assert.ok(Array.isArray(labels[0].position) && labels[0].position.every((g) => typeof g === 'function'), 'position is an array of getters');
 });

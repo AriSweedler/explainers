@@ -2491,7 +2491,9 @@ const img = h('img', { class: 'x-3d-poster', src: shows.fallback.poster, alt: ''
 img.addEventListener('error', () => img.remove());
 wrap.append(img);
 }
-wrap.append(h('p', { class: 'x-3d-notice', title: reason || null }, (shows.fallback && shows.fallback.notice) || 'This 3D figure needs WebGL2.'));
+const noGl = !reason || reason === 'no WebGL2';
+const text = noGl ? ((shows.fallback && shows.fallback.notice) || 'This 3D figure needs WebGL2.') : 'This 3D figure could not start; its first frame is shown.';
+wrap.append(h('p', { class: 'x-3d-notice', title: reason || null }, text));
 box.append(wrap);
 return wrap;
 }
