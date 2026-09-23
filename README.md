@@ -39,15 +39,18 @@ then open http://127.0.0.1:8765/articles/hebrew-calendar/ (or `PORT=9000 npm run
 
 ```
 index.html, 404.html, .nojekyll      site root (GitHub Pages via Actions; see .github/workflows/pages.yml)
-articles/<slug>/index.html           one article = one file (+ articles/<slug>/assets/ for posters and diagrams)
+articles/<slug>/index.html           one article = one file (+ articles/<slug>/assets/ for posters, diagrams and og.png, the link-preview card)
 template/article.html                the head, palette, reading column and glossary every article starts from
+template/og-card.html                the 1200 x 630 link-preview card tools/og-image.mjs renders from an article's head and hero poster
 dist/                                explainers-runtime.v1.js, explainers.v1.css, explainers-3d.v1.js, integrity.json (committed build outputs)
 lib/core/, lib/scene2d/, lib/controls/, lib/site/   runtime source (ES modules); tools/build-runtime.mjs concatenates them into dist/
 lib/scene3d/                         the three.js adapter and its pure math; tools/build-3d.mjs bundles it with three into the lazy chunk
 assets/katex/                        vendored KaTeX CSS + woff2 fonts (relative url() in the CSS)
+assets/og.png, assets/apple-touch-icon.png   the front page's link-preview card and the PNG icon Messages shows beside a link (node tools/og-image.mjs --site)
 lib/spec.js, lib/expr.js             the closed vocabulary and expression grammar, shared by runtime and CLI
 tools/explainers.cjs                 single committed Node 22 CLI: validate | states | build | budget
 tools/src/, tools/build-cli.mjs      CLI source and its bundler (maintainers only)
+tools/og-image.mjs                   renders the link-preview cards with a headless-only Chromium (see "Link previews")
 test/                                node --test suites and pass/fail fixtures
 DESIGN.md                            the contract: vocabulary (generated), grammar, error catalogue, phase-2 contract
 ```
@@ -116,6 +119,17 @@ chrome-headless-shell --headless --no-sandbox --hide-scrollbars \
   --window-size=1200,2400 --virtual-time-budget=6000 \
   --screenshot=preview/poc.png http://127.0.0.1:8765/articles/moon/index.html
 ```
+
+## Link previews
+
+iMessage, Slack, X and Discord show a card for a pasted link from the `og:*` tags in the head. Every article's `og:image` is its own `assets/og.png`, a 1200 x 630 PNG (the apps do not render SVG), drawn from `template/og-card.html`: the title, the description, the article's palette and its hero poster (the first `.x-poster`) on the site's light background. `build` cannot draw it (the card needs a browser), so re-render it whenever an article's title, description or hero figure changes; `validate` warns while the file is missing, not a PNG or the wrong size:
+
+```sh
+node tools/og-image.mjs articles/<slug>/index.html   # -> articles/<slug>/assets/og.png
+node tools/og-image.mjs --site                       # -> assets/og.png (front page card) + assets/apple-touch-icon.png (180 x 180, from favicon.svg)
+```
+
+The renderer uses Playwright's `chrome-headless-shell` (the newest under `~/Library/Caches/ms-playwright/`, or the binary named by `$EXPLAINERS_HEADLESS_SHELL`) and never Chrome.app (see above). Messages ignores the SVG favicon and shows the PNG `<link rel="apple-touch-icon">` beside the card, which is why every page links `assets/apple-touch-icon.png`; `--site` regenerates it, so run it again only when `favicon.svg` changes. Check a result with `sips -g pixelWidth -g pixelHeight articles/<slug>/assets/og.png`.
 
 ## How the runtime mounts
 

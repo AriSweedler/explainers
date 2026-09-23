@@ -87,6 +87,7 @@ const WARNINGS = [
   ['poster_missing', 'an unbuilt article: no poster yet', (h) => h, 'no poster; run: explainers build'],
   ['poster_stale', 'a poster whose data-poster hash no longer matches the spec', after('<figure class="x-fig" id="fig-dot" data-aspect="1:1">', '\n<svg class="x-poster" id="fig-dot-poster" aria-hidden="true" data-poster="0000000000000000000000000000000000000000"></svg>'), 'poster is stale; run: explainers build'],
   ['integrity_unresolved', 'an unbuilt article: the template placeholder is still in place', (h) => h, 'integrity not resolved yet on the runtime <script>; run: explainers build'],
+  ['og_image_missing', 'the head names the link-preview card but nobody rendered it', before('<title>Minimal</title>', '<meta property="og:image" content="https://example.test/minimal/assets/og.png">\n'), 'og:image assets/og.png not found; run: node tools/og-image.mjs'],
 ];
 
 fs.rmSync(outDir, { recursive: true, force: true });

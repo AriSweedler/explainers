@@ -29,7 +29,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/cli.mjs
+// tools/src/cli.mjs
 var cli_exports = {};
 __export(cli_exports, {
   main: () => main2
@@ -39,11 +39,11 @@ module.exports = __toCommonJS(cli_exports);
 // <define:__EXPLAINERS_VERSIONS__>
 var define_EXPLAINERS_VERSIONS_default = { cli: "1.0.0", katex: "0.18.7", parse5: "8.0.1", esbuild: "0.28.2" };
 
-// src/cli.mjs
-var import_node_fs5 = __toESM(require("node:fs"), 1);
-var import_node_path5 = __toESM(require("node:path"), 1);
+// tools/src/cli.mjs
+var import_node_fs6 = __toESM(require("node:fs"), 1);
+var import_node_path6 = __toESM(require("node:path"), 1);
 
-// ../lib/expr.js
+// lib/expr.js
 var ExprError = class extends Error {
   constructor(code, message, pos, src) {
     super(`${message} (at ${pos} in "${src}")`);
@@ -336,14 +336,14 @@ function describeFunctions() {
   return lines.join("\n");
 }
 
-// ../lib/spec.js
+// lib/spec.js
 var FigSpecError = class extends Error {
-  constructor(code, figureId, path7, detail) {
-    super(`${path7 || "(spec)"}: ${detail}`);
+  constructor(code, figureId, path8, detail) {
+    super(`${path8 || "(spec)"}: ${detail}`);
     this.name = "FigSpecError";
     this.code = code;
     this.figureId = figureId;
-    this.path = path7 || "(spec)";
+    this.path = path8 || "(spec)";
     this.detail = detail;
   }
 };
@@ -766,7 +766,7 @@ var WINDOW_RE = /^(\d+(\.\d+)?)([hdy])$/;
 var CONSTRAIN_RE = /^(free|x|y|view|circle:(\d+(\.\d+)?)|segment:\[\[-?\d+(\.\d+)?,-?\d+(\.\d+)?\],\[-?\d+(\.\d+)?,-?\d+(\.\d+)?\]\]|surface:[A-Za-z_][A-Za-z0-9_-]*)$/;
 var isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 var isNumber = (v) => typeof v === "number" && Number.isFinite(v);
-var join = (path7, key) => typeof key === "number" ? `${path7}[${key}]` : path7 ? `${path7}.${key}` : key;
+var join = (path8, key) => typeof key === "number" ? `${path8}[${key}]` : path8 ? `${path8}.${key}` : key;
 function windowToMs(w) {
   if (isNumber(w)) return w * 864e5;
   const m = WINDOW_RE.exec(w);
@@ -809,202 +809,202 @@ var Ctx = class {
     this.exprScope = "figure";
     this.plotVar = null;
   }
-  fail(code, path7, detail) {
-    throw new FigSpecError(code, this.figureId, path7, detail);
+  fail(code, path8, detail) {
+    throw new FigSpecError(code, this.figureId, path8, detail);
   }
 };
-function checkType(value, type, path7, ctx) {
-  if (typeof type === "string") return checkScalar(value, type, path7, ctx);
+function checkType(value, type, path8, ctx) {
+  if (typeof type === "string") return checkScalar(value, type, path8, ctx);
   if (type.enum) {
     if (!type.enum.includes(value)) {
-      const code = /(\.kind|\.type|model\.name)$/.test(path7) ? "SPEC_UNKNOWN_KIND" : "SPEC_BAD_TYPE";
-      ctx.fail(code, path7, `expected one of ${type.enum.map((v) => JSON.stringify(v)).join(" | ")}, got ${JSON.stringify(value)}`);
+      const code = /(\.kind|\.type|model\.name)$/.test(path8) ? "SPEC_UNKNOWN_KIND" : "SPEC_BAD_TYPE";
+      ctx.fail(code, path8, `expected one of ${type.enum.map((v) => JSON.stringify(v)).join(" | ")}, got ${JSON.stringify(value)}`);
     }
     return;
   }
   if (type.array) {
-    if (!Array.isArray(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected an array");
-    if (value.length < type.min) ctx.fail("SPEC_RANGE", path7, `needs at least ${type.min} element(s)`);
-    value.forEach((v, i2) => checkType(v, type.array, join(path7, i2), ctx));
+    if (!Array.isArray(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected an array");
+    if (value.length < type.min) ctx.fail("SPEC_RANGE", path8, `needs at least ${type.min} element(s)`);
+    value.forEach((v, i2) => checkType(v, type.array, join(path8, i2), ctx));
     return;
   }
-  if (type.object) return checkObject(value, type.object, path7, ctx);
+  if (type.object) return checkObject(value, type.object, path8, ctx);
   if (type.map) {
-    if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected an object");
+    if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected an object");
     for (const [k, v] of Object.entries(value)) {
-      if (!NAME_RE.test(k)) ctx.fail("SPEC_BAD_TYPE", join(path7, k), `key "${k}" is not an identifier`);
-      checkType(v, type.map, join(path7, k), ctx);
+      if (!NAME_RE.test(k)) ctx.fail("SPEC_BAD_TYPE", join(path8, k), `key "${k}" is not an identifier`);
+      checkType(v, type.map, join(path8, k), ctx);
     }
     return;
   }
-  ctx.fail("SPEC_BAD_TYPE", path7, "internal: unknown schema type");
+  ctx.fail("SPEC_BAD_TYPE", path8, "internal: unknown schema type");
 }
-function checkObject(value, fields, path7, ctx) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected an object");
+function checkObject(value, fields, path8, ctx) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected an object");
   for (const key of Object.keys(value)) {
     if (!Object.prototype.hasOwnProperty.call(fields, key)) {
-      ctx.fail("SPEC_UNKNOWN_KEY", join(path7, key), `unknown key "${key}"; allowed: ${Object.keys(fields).join(", ")}`);
+      ctx.fail("SPEC_UNKNOWN_KEY", join(path8, key), `unknown key "${key}"; allowed: ${Object.keys(fields).join(", ")}`);
     }
   }
   for (const [key, field] of Object.entries(fields)) {
     if (!(key in value)) {
-      if (field.req) ctx.fail("SPEC_MISSING_KEY", join(path7, key), `missing required key "${key}"`);
+      if (field.req) ctx.fail("SPEC_MISSING_KEY", join(path8, key), `missing required key "${key}"`);
       continue;
     }
-    checkType(value[key], field.type, join(path7, key), ctx);
+    checkType(value[key], field.type, join(path8, key), ctx);
   }
 }
-function addExpr(value, path7, ctx) {
+function addExpr(value, path8, ctx) {
   if (isNumber(value)) return;
-  if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path7, "expected a number or an expression string");
+  if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path8, "expected a number or an expression string");
   try {
     const { ast } = compile(value);
-    ctx.exprs.push({ path: path7, src: value, ast, scope: ctx.exprScope });
+    ctx.exprs.push({ path: path8, src: value, ast, scope: ctx.exprScope });
   } catch (e) {
-    if (e instanceof ExprError) ctx.fail("SPEC_BAD_EXPR", path7, e.message);
+    if (e instanceof ExprError) ctx.fail("SPEC_BAD_EXPR", path8, e.message);
     throw e;
   }
 }
-function checkPoint(value, n2, path7, ctx) {
-  if (!Array.isArray(value) || value.length !== n2) ctx.fail("SPEC_BAD_TYPE", path7, `expected [${Array(n2).fill("expr").join(", ")}]`);
-  value.forEach((v, i2) => addExpr(v, join(path7, i2), ctx));
+function checkPoint(value, n2, path8, ctx) {
+  if (!Array.isArray(value) || value.length !== n2) ctx.fail("SPEC_BAD_TYPE", path8, `expected [${Array(n2).fill("expr").join(", ")}]`);
+  value.forEach((v, i2) => addExpr(v, join(path8, i2), ctx));
 }
-function checkNumberTuple(value, n2, path7, ctx) {
+function checkNumberTuple(value, n2, path8, ctx) {
   if (!Array.isArray(value) || value.length !== n2 || !value.every(isNumber)) {
-    ctx.fail("SPEC_BAD_TYPE", path7, `expected [${Array(n2).fill("number").join(", ")}]`);
+    ctx.fail("SPEC_BAD_TYPE", path8, `expected [${Array(n2).fill("number").join(", ")}]`);
   }
 }
-function checkScalar(value, type, path7, ctx) {
+function checkScalar(value, type, path8, ctx) {
   switch (type) {
     case "number":
-      if (!isNumber(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected a finite number");
+      if (!isNumber(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected a finite number");
       return;
     case "boolean":
-      if (typeof value !== "boolean") ctx.fail("SPEC_BAD_TYPE", path7, "expected true or false");
+      if (typeof value !== "boolean") ctx.fail("SPEC_BAD_TYPE", path8, "expected true or false");
       return;
     case "string":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path7, "expected a string");
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path8, "expected a string");
       return;
     case "expr":
-      return addExpr(value, path7, ctx);
+      return addExpr(value, path8, ctx);
     case "flag":
       if (typeof value === "boolean") return;
-      return addExpr(value, path7, ctx);
+      return addExpr(value, path8, ctx);
     case "token":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path7, "expected a token name");
-      ctx.tokens.push({ path: path7, token: value });
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path8, "expected a token name");
+      ctx.tokens.push({ path: path8, token: value });
       return;
     case "id":
-      if (typeof value !== "string" || !ID_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path7, `expected an id matching ${ID_RE}`);
+      if (typeof value !== "string" || !ID_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path8, `expected an id matching ${ID_RE}`);
       return;
     case "name":
-      if (typeof value !== "string" || !NAME_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path7, `expected an identifier matching ${NAME_RE}`);
-      if (value in FUNCTIONS) ctx.fail("SPEC_DUP_ID", path7, `"${value}" is a built-in function name`);
+      if (typeof value !== "string" || !NAME_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path8, `expected an identifier matching ${NAME_RE}`);
+      if (value in FUNCTIONS) ctx.fail("SPEC_DUP_ID", path8, `"${value}" is a built-in function name`);
       return;
     case "point":
-      return checkPoint(value, 2, path7, ctx);
+      return checkPoint(value, 2, path8, ctx);
     case "point3":
-      return checkPoint(value, 3, path7, ctx);
+      return checkPoint(value, 3, path8, ctx);
     case "rect":
-      return checkPoint(value, 4, path7, ctx);
+      return checkPoint(value, 4, path8, ctx);
     case "pair":
-      return checkNumberTuple(value, 2, path7, ctx);
+      return checkNumberTuple(value, 2, path8, ctx);
     case "range":
-      checkNumberTuple(value, 2, path7, ctx);
-      if (value[0] >= value[1]) ctx.fail("SPEC_RANGE", path7, "min must be less than max");
+      checkNumberTuple(value, 2, path8, ctx);
+      if (value[0] >= value[1]) ctx.fail("SPEC_RANGE", path8, "min must be less than max");
       return;
     case "labels":
-      if (!Array.isArray(value) || value.length !== 2 || !value.every((s) => typeof s === "string")) ctx.fail("SPEC_BAD_TYPE", path7, "expected [off label, on label]");
+      if (!Array.isArray(value) || value.length !== 2 || !value.every((s) => typeof s === "string")) ctx.fail("SPEC_BAD_TYPE", path8, "expected [off label, on label]");
       return;
     case "template":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path7, "expected a template string");
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path8, "expected a template string");
       try {
-        for (const part of parseTemplate(value)) if (part.src) addExpr(part.src, path7, ctx);
+        for (const part of parseTemplate(value)) if (part.src) addExpr(part.src, path8, ctx);
       } catch (e) {
         if (e instanceof FigSpecError) throw e;
-        ctx.fail("SPEC_BAD_FORMAT", path7, e.message);
+        ctx.fail("SPEC_BAD_FORMAT", path8, e.message);
       }
       return;
     case "relpath":
-      if (typeof value !== "string" || !RELPATH_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected a relative path");
+      if (typeof value !== "string" || !RELPATH_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected a relative path");
       return;
     case "epoch":
-      if (value !== "now" && !(typeof value === "string" && ISO_RE.test(value))) ctx.fail("SPEC_BAD_TYPE", path7, "expected 'now' or an ISO 8601 instant");
+      if (value !== "now" && !(typeof value === "string" && ISO_RE.test(value))) ctx.fail("SPEC_BAD_TYPE", path8, "expected 'now' or an ISO 8601 instant");
       return;
     case "window":
-      if (!Number.isFinite(windowToMs(value)) || windowToMs(value) <= 0) ctx.fail("SPEC_BAD_TYPE", path7, "expected '24h' | '30d' | '18.61y' or a positive number of days");
+      if (!Number.isFinite(windowToMs(value)) || windowToMs(value) <= 0) ctx.fail("SPEC_BAD_TYPE", path8, "expected '24h' | '30d' | '18.61y' or a positive number of days");
       return;
     case "constrain":
-      if (typeof value !== "string" || !CONSTRAIN_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path7, `expected a constraint matching ${CONSTRAIN_RE}`);
-      if (value.startsWith("surface:")) ctx.refs.push({ path: path7, kind: "object", id: value.slice(8) });
+      if (typeof value !== "string" || !CONSTRAIN_RE.test(value)) ctx.fail("SPEC_BAD_TYPE", path8, `expected a constraint matching ${CONSTRAIN_RE}`);
+      if (value.startsWith("surface:")) ctx.refs.push({ path: path8, kind: "object", id: value.slice(8) });
       return;
     case "plane":
       if (value === "x" || value === "y" || value === "z") return;
-      return checkNumberTuple(value, 3, path7, ctx);
+      return checkNumberTuple(value, 3, path8, ctx);
     case "asset":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path7, "expected an asset name");
-      ctx.refs.push({ path: path7, kind: "asset", id: value });
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path8, "expected an asset name");
+      ctx.refs.push({ path: path8, kind: "asset", id: value });
       return;
     case "ref:layer":
     case "ref:shape":
     case "ref:object":
     case "ref:control":
-      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path7, "expected an id string");
-      ctx.refs.push({ path: path7, kind: type.slice(4), id: value });
+      if (typeof value !== "string") ctx.fail("SPEC_BAD_TYPE", path8, "expected an id string");
+      ctx.refs.push({ path: path8, kind: type.slice(4), id: value });
       return;
     case "constant":
       if (isNumber(value)) return;
-      if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected a number or {value, expect, tol}");
-      return checkObject(value, SCHEMA.constant, path7, ctx);
+      if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected a number or {value, expect, tol}");
+      return checkObject(value, SCHEMA.constant, path8, ctx);
     case "layer":
-      return checkLayer(value, path7, ctx);
+      return checkLayer(value, path8, ctx);
     case "object":
-      return checkObject3d(value, path7, ctx);
+      return checkObject3d(value, path8, ctx);
     case "control":
-      return checkControl(value, path7, ctx);
+      return checkControl(value, path8, ctx);
     case "state":
-      return checkStateShape(value, path7, ctx);
+      return checkStateShape(value, path8, ctx);
     case "shows":
-      return checkShows(value, path7, ctx, false);
+      return checkShows(value, path8, ctx, false);
     case "panelShows":
-      return checkShows(value, path7, ctx, true);
+      return checkShows(value, path8, ctx, true);
     default:
-      ctx.fail("SPEC_BAD_TYPE", path7, `internal: unknown scalar type ${type}`);
+      ctx.fail("SPEC_BAD_TYPE", path8, `internal: unknown scalar type ${type}`);
   }
 }
-function declareId(ctx, id, path7, what) {
-  if (ctx.ids.has(id)) ctx.fail("SPEC_DUP_ID", path7, `"${id}" already declared as a ${ctx.ids.get(id).what} at ${ctx.ids.get(id).path}`);
-  ctx.ids.set(id, { path: path7, what });
+function declareId(ctx, id, path8, what) {
+  if (ctx.ids.has(id)) ctx.fail("SPEC_DUP_ID", path8, `"${id}" already declared as a ${ctx.ids.get(id).what} at ${ctx.ids.get(id).path}`);
+  ctx.ids.set(id, { path: path8, what });
 }
-function discriminated(value, key, table2, common, path7, ctx, noun) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected an object");
-  if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path7, key), `missing required key "${key}"`);
+function discriminated(value, key, table2, common, path8, ctx, noun) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected an object");
+  if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path8, key), `missing required key "${key}"`);
   const kind = value[key];
   if (!Object.prototype.hasOwnProperty.call(table2, kind)) {
-    ctx.fail("SPEC_UNKNOWN_KIND", join(path7, key), `unknown ${noun} ${JSON.stringify(kind)}; one of ${Object.keys(table2).join(" | ")}`);
+    ctx.fail("SPEC_UNKNOWN_KIND", join(path8, key), `unknown ${noun} ${JSON.stringify(kind)}; one of ${Object.keys(table2).join(" | ")}`);
   }
-  checkObject(value, { ...common, ...table2[kind] }, path7, ctx);
+  checkObject(value, { ...common, ...table2[kind] }, path8, ctx);
   return kind;
 }
-function checkLayer(value, path7, ctx) {
-  const kind = discriminated(value, "kind", SCHEMA.layers, SCHEMA.layerCommon, path7, ctx, "layer kind");
-  declareId(ctx, value.id, join(path7, "id"), `${kind} layer`);
-  if (kind === "region" && !("fill" in value)) ctx.fail("SPEC_MISSING_KEY", join(path7, "fill"), "a region needs a fill token");
+function checkLayer(value, path8, ctx) {
+  const kind = discriminated(value, "kind", SCHEMA.layers, SCHEMA.layerCommon, path8, ctx, "layer kind");
+  declareId(ctx, value.id, join(path8, "id"), `${kind} layer`);
+  if (kind === "region" && !("fill" in value)) ctx.fail("SPEC_MISSING_KEY", join(path8, "fill"), "a region needs a fill token");
 }
-function checkObject3d(value, path7, ctx) {
-  const kind = discriminated(value, "kind", SCHEMA.objects, SCHEMA.objectCommon, path7, ctx, "object kind");
-  declareId(ctx, value.id, join(path7, "id"), `${kind} object`);
-  if (kind === "label") exactlyOne(value, "anchor", "position", path7, ctx);
+function checkObject3d(value, path8, ctx) {
+  const kind = discriminated(value, "kind", SCHEMA.objects, SCHEMA.objectCommon, path8, ctx, "object kind");
+  declareId(ctx, value.id, join(path8, "id"), `${kind} object`);
+  if (kind === "label") exactlyOne(value, "anchor", "position", path8, ctx);
 }
-function exactlyOne(value, a, b, path7, ctx) {
+function exactlyOne(value, a, b, path8, ctx) {
   const hasA = a in value, hasB = b in value;
-  if (hasA && hasB) ctx.fail("SPEC_CONFLICT", path7, `give exactly one of "${a}" / "${b}", not both`);
-  if (!hasA && !hasB) ctx.fail("SPEC_MISSING_KEY", path7, `give exactly one of "${a}" / "${b}"`);
+  if (hasA && hasB) ctx.fail("SPEC_CONFLICT", path8, `give exactly one of "${a}" / "${b}", not both`);
+  if (!hasA && !hasB) ctx.fail("SPEC_MISSING_KEY", path8, `give exactly one of "${a}" / "${b}"`);
 }
-function checkControl(value, path7, ctx) {
-  const kind = discriminated(value, "kind", SCHEMA.controls, SCHEMA.controlCommon, path7, ctx, "control kind");
-  if (kind !== "play") declareId(ctx, value.name, join(path7, "name"), `${kind} control`);
-  const p = (k) => join(path7, k);
+function checkControl(value, path8, ctx) {
+  const kind = discriminated(value, "kind", SCHEMA.controls, SCHEMA.controlCommon, path8, ctx, "control kind");
+  if (kind !== "play") declareId(ctx, value.name, join(path8, "name"), `${kind} control`);
+  const p = (k) => join(path8, k);
   switch (kind) {
     case "slider":
       if ("values" in value) {
@@ -1043,22 +1043,22 @@ function checkControl(value, path7, ctx) {
       break;
   }
 }
-function checkStateShape(value, path7, ctx) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected an object");
-  for (const key of ["name", "caption"]) if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path7, key), `missing required key "${key}"`);
-  for (const [key, field] of Object.entries(SCHEMA.stateFixed)) if (key in value) checkType(value[key], field.type, join(path7, key), ctx);
+function checkStateShape(value, path8, ctx) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected an object");
+  for (const key of ["name", "caption"]) if (!(key in value)) ctx.fail("SPEC_MISSING_KEY", join(path8, key), `missing required key "${key}"`);
+  for (const [key, field] of Object.entries(SCHEMA.stateFixed)) if (key in value) checkType(value[key], field.type, join(path8, key), ctx);
 }
-function checkShows(value, path7, ctx, isPanel) {
-  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path7, "expected an object");
-  if (!("type" in value)) ctx.fail("SPEC_MISSING_KEY", join(path7, "type"), 'missing required key "type"');
+function checkShows(value, path8, ctx, isPanel) {
+  if (!isPlainObject(value)) ctx.fail("SPEC_BAD_TYPE", path8, "expected an object");
+  if (!("type" in value)) ctx.fail("SPEC_MISSING_KEY", join(path8, "type"), 'missing required key "type"');
   const allowed = isPanel ? ["scene2d", "plot"] : FIGURE_TYPES;
-  if (!allowed.includes(value.type)) ctx.fail("SPEC_UNKNOWN_KIND", join(path7, "type"), `unknown figure type ${JSON.stringify(value.type)}; one of ${allowed.join(" | ")}`);
+  if (!allowed.includes(value.type)) ctx.fail("SPEC_UNKNOWN_KIND", join(path8, "type"), `unknown figure type ${JSON.stringify(value.type)}; one of ${allowed.join(" | ")}`);
   let fields = SCHEMA.shows[value.type];
   if (isPanel) {
     fields = { ...fields };
     for (const k of ["constants", "model", "caveats", "split"]) delete fields[k];
   }
-  checkObject(value, fields, path7, ctx);
+  checkObject(value, fields, path8, ctx);
 }
 function controlNames(control) {
   switch (control.kind) {
@@ -1106,17 +1106,17 @@ function controlDefaults(control) {
 function constantValue(c) {
   return isNumber(c) ? c : c.value;
 }
-function collectShows(shows, out, path7 = "shows") {
+function collectShows(shows, out, path8 = "shows") {
   for (const l of shows.layers || []) out.layers.set(l.id, l);
   for (const o of shows.objects || []) out.objects.set(o.id, o);
   const push = (list, key) => (shows[list] || []).forEach((item, i2) => {
-    if (item[key]) out.other.push({ id: item[key], path: `${path7}.${list}[${i2}].${key}` });
+    if (item[key]) out.other.push({ id: item[key], path: `${path8}.${list}[${i2}].${key}` });
   });
   push("series", "id");
   push("guides", "id");
   push("bars", "id");
   push("readouts", "id");
-  (shows.split || []).forEach((p, i2) => collectShows(p.shows, out, `${path7}.split[${i2}].shows`));
+  (shows.split || []).forEach((p, i2) => collectShows(p.shows, out, `${path8}.split[${i2}].shows`));
 }
 function plotVars(shows, out = []) {
   if (shows.type === "plot") out.push(shows.x.var);
@@ -1129,7 +1129,7 @@ function checkSemantics(spec, ctx) {
   const constants = shows.constants || {};
   const cat = { layers: /* @__PURE__ */ new Map(), objects: /* @__PURE__ */ new Map(), other: [] };
   collectShows(shows, cat);
-  for (const { id, path: path7 } of cat.other) declareId(ctx, id, path7, "series/guide/bar/readout");
+  for (const { id, path: path8 } of cat.other) declareId(ctx, id, path8, "series/guide/bar/readout");
   for (const name of Object.keys(constants)) declareId(ctx, name, `shows.constants.${name}`, "constant");
   const scope = /* @__PURE__ */ new Map();
   for (const [name, c] of Object.entries(constants)) scope.set(name, constantValue(c));
@@ -1145,13 +1145,13 @@ function checkSemantics(spec, ctx) {
   for (const [i2, r] of (shows.readouts || []).entries()) exactlyOne(r, "anchor", "at", `shows.readouts[${i2}]`, ctx);
   for (const [i2, g] of (shows.guides || []).entries()) exactlyOne(g, "x", "y", `shows.guides[${i2}]`, ctx);
   if (ctx.palette) {
-    for (const { path: path7, token } of ctx.tokens) {
-      if (!ctx.palette.has(token)) ctx.fail("SPEC_BAD_TOKEN", path7, `token "${token}" is not in the palette (${[...ctx.palette].join(", ") || "empty"})`);
+    for (const { path: path8, token } of ctx.tokens) {
+      if (!ctx.palette.has(token)) ctx.fail("SPEC_BAD_TOKEN", path8, `token "${token}" is not in the palette (${[...ctx.palette].join(", ") || "empty"})`);
     }
   }
   const controlByName = new Map(controls.filter((c) => c.kind !== "play").map((c) => [c.name, c]));
   const assets = shows.assets || {};
-  for (const { path: path7, kind, id } of ctx.refs) {
+  for (const { path: path8, kind, id } of ctx.refs) {
     let ok;
     switch (kind) {
       case "layer":
@@ -1172,7 +1172,7 @@ function checkSemantics(spec, ctx) {
       default:
         ok = false;
     }
-    if (!ok) ctx.fail("SPEC_UNKNOWN_REF", path7, `no ${kind === "shape" ? "circle/ellipse/polygon layer" : kind === "control" ? "slider/time control" : kind} with id "${id}"`);
+    if (!ok) ctx.fail("SPEC_UNKNOWN_REF", path8, `no ${kind === "shape" ? "circle/ellipse/polygon layer" : kind === "control" ? "slider/time control" : kind} with id "${id}"`);
   }
   const constScope = new Map(Object.entries(constants).map(([k, c]) => [k, constantValue(c)]));
   for (const ex of ctx.exprs) {
@@ -1188,55 +1188,55 @@ function checkSemantics(spec, ctx) {
   }
   for (const [name, c] of Object.entries(constants)) {
     if (isNumber(c)) continue;
-    const path7 = `shows.constants.${name}.expect`;
+    const path8 = `shows.constants.${name}.expect`;
     let got;
     try {
       got = evaluate(compile(c.expect).ast, constScope, c.expect);
     } catch (e) {
-      ctx.fail("SPEC_BAD_EXPR", path7, e.message);
+      ctx.fail("SPEC_BAD_EXPR", path8, e.message);
     }
-    if (Math.abs(got - c.value) > c.tol) ctx.fail("SPEC_EXPECT_MISMATCH", path7, `value ${c.value} differs from expect = ${got} by more than tol ${c.tol}`);
+    if (Math.abs(got - c.value) > c.tol) ctx.fail("SPEC_EXPECT_MISMATCH", path8, `value ${c.value} differs from expect = ${got} by more than tol ${c.tol}`);
   }
   const notice = spec.notice;
   if (notice.steps !== "none" && notice.states.length === 0) ctx.fail("SPEC_RANGE", "notice.states", `steps "${notice.steps}" needs at least one state`);
   for (const id of notice.point_at || []) if (!cat.layers.has(id) && !cat.objects.has(id)) ctx.fail("SPEC_POINT_AT_MISSING", "notice.point_at", `no layer or object with id "${id}"`);
   const seen = /* @__PURE__ */ new Set();
   notice.states.forEach((st, i2) => {
-    const path7 = `notice.states[${i2}]`;
-    if (seen.has(st.name)) ctx.fail("SPEC_DUP_ID", `${path7}.name`, `state "${st.name}" declared twice`);
+    const path8 = `notice.states[${i2}]`;
+    if (seen.has(st.name)) ctx.fail("SPEC_DUP_ID", `${path8}.name`, `state "${st.name}" declared twice`);
     seen.add(st.name);
-    if (st.camera && shows.type !== "scene3d") ctx.fail("SPEC_CONFLICT", `${path7}.camera`, "camera applies to scene3d figures only");
+    if (st.camera && shows.type !== "scene3d") ctx.fail("SPEC_CONFLICT", `${path8}.camera`, "camera applies to scene3d figures only");
     for (const [k, v] of Object.entries(st)) {
       if (k in SCHEMA.stateFixed) continue;
       const c = controlByName.get(k);
-      if (!c) ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path7}.${k}`, `"${k}" is not a control of this figure (drag positions go under "drag")`);
-      checkStateValue(c, v, `${path7}.${k}`, ctx);
+      if (!c) ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path8}.${k}`, `"${k}" is not a control of this figure (drag positions go under "drag")`);
+      checkStateValue(c, v, `${path8}.${k}`, ctx);
     }
     for (const k of Object.keys(st.drag || {})) {
       const c = controlByName.get(k);
-      if (!c || c.kind !== "drag") ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path7}.drag.${k}`, `"${k}" is not a drag control of this figure`);
+      if (!c || c.kind !== "drag") ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", `${path8}.drag.${k}`, `"${k}" is not a drag control of this figure`);
     }
   });
   return { scope, cat, controlByName };
 }
-function checkStateValue(c, v, path7, ctx) {
+function checkStateValue(c, v, path8, ctx) {
   switch (c.kind) {
     case "slider":
-      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path7, "expected a number");
-      if ("values" in c ? !c.values.includes(v) : v < c.min || v > c.max) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path7, `${v} is outside the range of slider "${c.name}"`);
+      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path8, "expected a number");
+      if ("values" in c ? !c.values.includes(v) : v < c.min || v > c.max) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path8, `${v} is outside the range of slider "${c.name}"`);
       return;
     case "time":
-      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path7, "expected a number");
-      if (c.mode === "scrub" ? v < 0 || v > windowToMs(c.window) : !c.rates.includes(v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path7, `${v} is outside the window/rates of time control "${c.name}"`);
+      if (!isNumber(v)) ctx.fail("SPEC_BAD_TYPE", path8, "expected a number");
+      if (c.mode === "scrub" ? v < 0 || v > windowToMs(c.window) : !c.rates.includes(v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path8, `${v} is outside the window/rates of time control "${c.name}"`);
       return;
     case "toggle":
-      if (typeof v !== "boolean") ctx.fail("SPEC_BAD_TYPE", path7, "expected true or false");
+      if (typeof v !== "boolean") ctx.fail("SPEC_BAD_TYPE", path8, "expected true or false");
       return;
     case "segmented":
-      if (!c.options.some((o) => o.value === v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path7, `${JSON.stringify(v)} is not an option of "${c.name}"`);
+      if (!c.options.some((o) => o.value === v)) ctx.fail("SPEC_STATE_OUT_OF_RANGE", path8, `${JSON.stringify(v)} is not an option of "${c.name}"`);
       return;
     case "drag":
-      ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", path7, `drag positions go under "drag": {"${c.name}": [x, y]}`);
+      ctx.fail("SPEC_STATE_UNKNOWN_CONTROL", path8, `drag positions go under "drag": {"${c.name}": [x, y]}`);
       return;
     default:
       return;
@@ -1413,7 +1413,7 @@ function modelsTable() {
   return rows.join("\n");
 }
 
-// src/report.mjs
+// tools/src/report.mjs
 function format({ file, line: line2, code, figureId, message }) {
   return `${file}:${line2 || 0}: ${code} ${figureId || "-"}: ${message}`;
 }
@@ -1438,10 +1438,10 @@ var Problems = class {
   }
 };
 
-// src/article.mjs
-var import_node_fs4 = __toESM(require("node:fs"), 1);
+// tools/src/article.mjs
+var import_node_fs5 = __toESM(require("node:fs"), 1);
 
-// ../lib/scene2d/getters.js
+// lib/scene2d/getters.js
 function getter(v) {
   if (typeof v === "number") return () => v;
   if (typeof v === "boolean") return () => v ? 1 : 0;
@@ -1453,7 +1453,7 @@ function pointGetter(p) {
   return (scope) => [gx(scope), gy(scope)];
 }
 
-// ../lib/core/state.js
+// lib/core/state.js
 var visibilityRules = /* @__PURE__ */ new WeakMap();
 function rulesFor(compiled) {
   let rules = visibilityRules.get(compiled);
@@ -1484,7 +1484,7 @@ function visibleIds(compiled, scope, stateVisible = null) {
   return out;
 }
 
-// node_modules/parse5/dist/common/unicode.js
+// tools/node_modules/parse5/dist/common/unicode.js
 var UNDEFINED_CODE_POINTS = /* @__PURE__ */ new Set([
   65534,
   65535,
@@ -1575,7 +1575,7 @@ function isUndefinedCodePoint(cp) {
   return cp >= 64976 && cp <= 65007 || UNDEFINED_CODE_POINTS.has(cp);
 }
 
-// node_modules/parse5/dist/common/error-codes.js
+// tools/node_modules/parse5/dist/common/error-codes.js
 var ERR;
 (function(ERR2) {
   ERR2["controlCharacterInInputStream"] = "control-character-in-input-stream";
@@ -1640,7 +1640,7 @@ var ERR;
   ERR2["eofInElementThatCanContainOnlyText"] = "eof-in-element-that-can-contain-only-text";
 })(ERR || (ERR = {}));
 
-// node_modules/parse5/dist/tokenizer/preprocessor.js
+// tools/node_modules/parse5/dist/tokenizer/preprocessor.js
 var DEFAULT_BUFFER_WATERLINE = 1 << 16;
 var Preprocessor = class {
   constructor(handler2) {
@@ -1809,7 +1809,7 @@ var Preprocessor = class {
   }
 };
 
-// node_modules/parse5/dist/common/token.js
+// tools/node_modules/parse5/dist/common/token.js
 var TokenType;
 (function(TokenType2) {
   TokenType2[TokenType2["CHARACTER"] = 0] = "CHARACTER";
@@ -1831,7 +1831,7 @@ function getTokenAttr(token, attrName) {
   return null;
 }
 
-// node_modules/entities/dist/decode-codepoint.js
+// tools/node_modules/entities/dist/decode-codepoint.js
 var c1 = [
   8364,
   0,
@@ -1882,7 +1882,7 @@ function replaceCodePointXML(codePoint) {
   return isInvalidCodePoint(codePoint) ? 65533 : codePoint;
 }
 
-// node_modules/entities/dist/internal/decode-shared.js
+// tools/node_modules/entities/dist/internal/decode-shared.js
 var BASE91_INVERSE = /* @__PURE__ */ (() => {
   const table2 = new Uint8Array(127);
   let code = 0;
@@ -1987,10 +1987,10 @@ function decodeTrieDict(input, resultLength, atomCount, dict1AtomCount, ngramCou
   return out;
 }
 
-// node_modules/entities/dist/generated/decode-data-html.js
+// tools/node_modules/entities/dist/generated/decode-data-html.js
 var htmlDecodeTree = /* @__PURE__ */ decodeTrieDict("!}.&u%}'&}*'~!6*)%&,~!J~!J~%L~y<~!R,~~%Lu~~#GD~~#|)1#%}^%}2%+#.##%##%}&%##%'#%##&%#%#'%#&#%#&#'#%%#&#%##%#)%''%&%#%#'%#%%#%%}%%%#%#&(23#%%#&-%0%('1#(##%#'##+%'*.:1}#%#6-+(%'%%#%%%}#L'2351&('%}&/N'(0(/*-%(%%}#'+&T%7.2}#&%&#%#36/5##%&%%#&#%%#))2%%##%&&'0~!#*+&'%1~!%).'3q?&%'1~!.##%6(~!+%%%(Gw'rT~!E#<nA%#jZ~!H%(~!42##~!*31&~!G%U~#)5~#`3~!J~!Z~%]~%Y~%C~!q~!u~#kz~%#~!6'~!D~!U~!?~#T~!c%~!G#'~%7|~!G~!J~!G&~#pb~(Df}#%}*&}#%##%##%##&#-}&'#'&%#.++}%mI,#,@&(}*%}*'%&##&#%##%}&0}#.},U},%}+%}&%}#%##&}B%(}(%}+%)})%##%#&}&%##%&}<%}>%#%&}*%}(%}9%}/%})%}*%}*%}?&}&%}3%}&*#%})%#%#)}#&#-#+*%E%%'%'#%}#*V##&##I}#&&##%&%#&&Qf%%))w/0+&%#(#.%-''''++++7}>%4'',##1,#%#&%##&#'##&#*#9)%&%}#*}%,#+P(%A&%#'&##wSD',9E00#y#@}(+}&%&>~!#~!X}#*}(&&}(&}(,%}%&#+&}#&}I%#%}%)#(},'%#*}4%%#%}(''}#/##(##),%-##%%)#&}(.}&%#&}%%}*&#%},&&}&%}#%*'#%})%}D&}&%}-&}6&#&}-,%}#%})-(~+`~,=?~I9'9%~!,#%})%})%}@%}?%}(~!?~#<~#pP~#BG~#=1#%K+~#?#~%;)~#A~#mF1~#A'~'X%'~#lR~#N~'N~#r~#m#-~#i'?%#'%~#B%##%,%#~#_%#0%~#]732~,w~2+#:&#%&'0%&>%}#>##F+)#%&&#(+_}4&}-%}(&}@&}O7Fdf0@+/v4}&WU##&/0#&'('B#%}.%}'+#%}#%%&#&%#%##+#&#)#6#'#.},%}c%},%#%##%&#&%#&~#>'*-.%##%##%}#%%}%'~#)D1}#%*&~#_%%'(~#S2%'.}#~#=##*'*-%}&'%'##&&~'E%.#&~#M4}%%##&'%#~#O1##%&#'+~#<B%##%%'%+~#;#@%}#&%#&&%#(~#H1}'%'##&&~#?A}&'~#D#%32}'&&&&~#[}'(#%}'~#;C})&}%%#%~#=&%,3}%'(#%%~#^'#&&)#%'~#Y%-~#d-%'~#^%%&#&&&}#~#b~2t*&'~&(~&@~0%~e~3}%*''0})&}+~!9##-}#%-hD*)1fC#%/&/fB#40~!+#)*4~!+~!K'&:~!/*7~!.#~!H~!L':~%x&~!H#~!*~%1~!I#~!+A~#p'~!F~~#-#~,,(~.Z~!V~%;'B'mq-W~!N~%I%#&&#&}#%},%%}'%}+X#%}#&}(%}'%}<%}#%}%%'}'%}:~![)9@~%>~#UA%-%##&~!C%~!-.9:~!1~!-^2/:a~!y,D*J#-5)/4~%23,~#G~!L1~!0X3`~!2+~!!0-~&E~!W~!o,>Y&]~%cZx_&~#O*9#A#'#+I'%#)~!0B*-5A+-((F&*M#)(-7-5+'-3a5Vi~!Y~!?+[)%3),ERHm~!+:D,VG.+)?fB%%*(%)'(#&80%1'8`K8?`+'Z#&O&'H5#*9)A%%5&3))0%39+.*7#()&&*=4@**L)<'_&*+..;(#*+)./&0#3)%')-8(4ixD(&.}%,('aI:,)%,k2231T)I'#/-W7,/'Q#.'Y24+h')37</31&83##&0#),H(?'&?/1##%#&&#%''-%&&&#(&''&#.-'%#%%(,')*'&#&#'##%(%(#%('#&##%%%%('%#%#%%#%#&%##h>w+v<ayvyvcg.uuhKr}g/v|g>u9i[~>g5uI~=RvdwEg;v/g;uk!!TTSx]@RT!U!#!@VBRUU!'UTe-d0c`e&gSdicedFcrdTaqb.kYcAohdYd@a3e+d}dMdtd.aJ#bqcK`dle/e.e'dwdPdodddjbEb}ogd^ofdpduc6j?l%d{drdqc)d7bacOdQ%T#Y)X.sR[yH>6Vyv3[xwLu>vo'!*.[yBacahoj>6Rew3[xqdZa#!a&#^(X-[yG>6Vyu3[xvg3sEr|g.u/Ri9db0T#^(Xa)!-[y;>6Vylg4wKs{JwNZt3@3r=c4Z([xlg;wKt!cpq's@v7A'*a(a+!-a#[y<3Dt?3Dt'>6Vym3[xmg9rxsNJwLZt4~?r?db1T#`-!(Xa,!0[yS>6Vz%NuQs.g4wKtnJwNZtS@3r>c4Z([y%g;wKtrdga8!a(!#&T*Y-Xa#!a0<or[yc3Dtq>6Vz43[y3JwNZtf@3s!Ju}!%Dti:pm3c_%X#tjB5pkd6q!r]u?voC'*-a.a2!0a&a+[yI3DtI3Ds~3DtH>6Vyw3[xx;:s#~<5pKJwNZtE@3r~d`a)!a2T#a.(!+U.X1[yT3Dt`3Dtv>6Vz&3[y&g9rxwzcxstPu.<rAJwLZtT~?r@dZa%!a.&^*Za(/Reu[ya>6Vz23[y1g3sEr}wkg{NuQRg{ci(U#5@b`~,cg#U(2WnH5wugcRh7dX#T(Y,a'Ta!!a,[yZ<]mj>6Vz,3[y+Pv#5ReZKu+=,%!H}7ABwkaS?Rh:BcW(X#<]mrj:ubv/ARekdg%!(!a.*Ta(Y.X1!#sP>Rl*Dt6[y>>6Vyo3Wf*jOvuumvuRgRJuq*!:9<B@bX~3jVv&v@s@5Re[d/rQt{uAvo&a&a*)a2!,0Wf!3Dt0=Bs'>6Re}3[xy~<5s%JwJZt1~Gs)c;&!#2sJkNuXvzq7rxu,Re8dka4!a8(aEZ+a@Y.X1Xa)[yd=Bs(3DtP>6Vz53[y4cX#X&Re:avRe9~<5s&JwJZtQ~Gs*i^rzvdRg+Jv{%!2sbB@bX}kdga,!Za?&^*T1/!a'Dt+[y6>6Vyf3Wf%g/u;s4hGu6?Rh-JvZ,!c%#&RoX54Rivj7uyvf8RgTKvZB%*!2sGh<vu5Rgq<=C::9bb~#dZ#T&Ta6Y.X*Dt>[y93Wf)coZ(T,6VyifluvRgC@95@B@bX~/hFu34cC#T,k/unq8w8Q5RkUklwQuzunq8w8Q5Rk8d/rJu?v8w9)-&!a0a;a&aIWejg3sEr/h1s<DtDJvyZqY5aws3Jvy!&Wei~Hr1:au5@Bag>23E~5c:Z&bX};kKv?w&unuVu5Rjc;>bs)#~@:Rh.=ay<a]C;b`}Vd6s/t{uAvoaxa()!a,a7%-a#a2Dt,[yF2Wo[>6Vyt3[xuNuPRi&NuPwpi#RoWh?vf8Ri%Jv]!%Ri:KvxD!.'2WeAjZu`q9rxu,Re7woeAg-unLq(qA_/*2Wg_g3u5q^9:4E}/jTrxrzv=Wkkd~0UX#^^Xa-a1a5T&a=U1a'*aEa]!a*aPaA-adok[y54Rn>;:p3~Dp5g9rpsFNvZqjg3uJp4~<5p0Pw;5qlJwNZt*@3p1Pw:5p/Ou!5p2JvG'!6Vye=<qnJvh_[xhg3v,Rh3kOwOw-sDuev/Re^dha[a%!%!a+#Ta7)-5TaCaO!aka!a)sf[yb2>Rl!9ARiq5E}Qg=ucRkBE|oJrJ_@Wk~@Wk{JrJ_@Wk|@WkyJrJ_@Wk}@WkzJvO_[y2g-vMRmiKuYC!)&>Ri;>Ri<@3RkNc](X#@9Rk=g5vuRmhKvDB!+'=]meg3u4Rmgd)#Y'Vz3CARmfd`a+!%T'!+#Ta1Ta6TaM-sTDt9[yA9sYd'%Y#s[[xpj:ueunaXRgEjRq,v-vuqdd2'`#6Rev<32@5>:2<E}5xIo9a*X#Y(;5RePJvD_g>vyRgNj8w)v8<wggs:RgXiZt|vjx,hSq3ah!-(~@:Ro/Ou!5RhWj^v(pyw8unRhUdx-UY#^Ua.a3a70!)%UX1TaDa)'omRiRRhE[y:3Dsz=Br,>6Vyj3[xkg6ruwjcqsrPw;5r*Ku]D'Zt-@3r(~?r.i[vwv]dU1a--U#`a4(g/vsRhPOu!5RhLj:rmu9Wo!~@:wdh@g/vsRiTjXuvvNr}:RhBj^v(pyw8unRn]dz1UYa'a+^Y(!aETZalaRY.Ta?a4[yDJw1!#qLsW>6Vyrfzq-pLflpwRe|Js>%!Dt@3Dt&Jvy_[xs~HrnjMuwpsw'RecKu+D#'!t<~Grl~?rjg5u-x,gwp{ah!-(~@:Rg~Ou!5Rh'jXuvvNr}:Rh#cW#X/c;&!#2sLi[v7u7RgpJv)(!iLrxu,Re6j7v@s@5Se[e7d`aW!Za(a`T.a#!a3!&aDa-!9)Dt_=6s+3[x~~DR|h~DS6avhGun5RkZj3w)v-]mkKunB!&*]kb97R|i<ARk<c:Z(6Vy}Juh'!wziMRoS:F|vkLuauJv5vtvQRh1d='T+Y#VyO~DR|jcF#T'7R|g97R|kJv3'!ay<Rj,Jvh&!:ReXcsa6*a+#a#_aIRf9aLRf?c,Z&Rf5Rf7c.Z&Rf;Rf>cQ#%T'p-Rf8Rf=ct#%'(*!,p,Rf4p+Rf6Rf:Rf<d~'Ua%U*^UYa(!a,-!#a4YaTalaEX0a8a<Weo3Dt/3Dsx=Br93Wen~Dr;~<5p<JwNZt2@3p=Pw:5p;Ou!5r3c7&!#:p>3Ds}KvGB)_6Vyk2sM=<r7x'eovA(!hFu1ARf}cV#X&@r5j6rvwQa^Rf3c=Za'wkghJv__g;unRggA53B9=b^}%j6uduo5Jq;!(hIv%2Re`Ou4ARe_e%a#^^^Xa&!a*a2!&a6YaP!*ad!#a:aE/5Rn?[y@>6Vyp;:pE~DrY~<5pBJwNZt8@3pCh=rt3rWPw:5pAJup_[xoNuPpF9c!#'45pD5ARn)d8#X'X*3@rU72s]h>v<<sSjJpqvewOJq/(!hNw'5ReBk0s2u3w/w'5ReE5@Jq.!a+JQ!&WeU23d(#Y&RjG5]jBk!u7w&u0udARjEe#+^^^Ub#!a2/a`Z(agT1!a-a;|@TaG!aS[yV=Re~fow'RguNuPRe?bz#'>RoUWeL>:Cbb|?JwPZtVg6ruRmzJvD'!6Vz(g/vmRh~Jvy_[y(g9voRgyx*cy(#2>Ri2B9b]~9kIw9u7rluJu3Rg]dI#a%UY'@=p%CAx.gQZ&RhwwygtRm{x5g_Z'+ABqR9Woa=Bp&dV#^*Xa'!&@o{g4v]Rk;Jv{!%Rk[wkkiA5RkiwwfUB=x,fUuqC&*!>RfTg8v0RfV~ARfSd;rJsAuAv9wR'ae+/aO!a@aza/a#[yQ@Wg!2Wemg3sEr0JvB_g>uvReWg2v+Re=KupB_+[y!2AbY~-~Hr2AJwD!(h<~El>h<~El?Kun@+_:9b`}Kg-v/Ri3g;vtwyk_9]k_d=&T#*U.6qh@Ab`|K9:H|CJv[!&3Dtex'fDwC%!Rf[9WlMd[(^X,!a%Z06Vz!@WgBg=v~Rgvg,QRe@awd,#Y+jTv|Q~EfWj]uNr|~FRfXdy#Y&^Ua%!aO.!(a)Ua;=!a@aKap!a-,a!Ta]a[rSa]p?[y82sK=Bq~;:p:~<5p8Pw:5p7d'#Y'Wf(;RnRi[u4w&RgJJvG'!6Vyh=<r#ijuuv/sIKuYD'ZtG@3p9~Gr&d2#`(g<vtRgFj`u5w&rqpxRf2CJuY!+:wfnTOu!5Rg}jNs1ucv&RfwJvA!&3@q|BDcC#T,k/unq8w8Q5RkTklwQuzunq8w8Q5Rk9dga#!a'!a=#a0!:+Tb*b@aO.a4!aba8aFJv^}?!VyR~Dr<g;u%Rn.~<5p[x'e`wNZtR@3p]Pw:5pZhNvjBp.woe_g5u-r4JwF!%DtO3:ooc7&!#:p^3DtpLuGw(!+%)Dtk6Vz#2sd=<r8d'#Y([y#<x3gJt`w@!)%}MRiowzikRij=]ilxAf3,U(#B2Rf#g0v-Rm[ck{`U#]giKv3>)!&6Ri154s,KuGB_%@r68r:dJ|t`#X(9<E|u2@H|rx3gJu?w'!+'1Nu7Reg4=H~+9<wxgY95Rm]xLggZ-`(X}U2:Ri4h<uOawRmsJv__5@bb{jbV~3dka#a'a]!,#a+U=a>b6a3b%!/aKa/)!arwve^VyJ;:pR~DpTg3uJpS~<5pOPw;5qmPw:5pNOu!5pQJvG'!6Vyx=<qoJvA!{~Jup!%@qk7Rn/KvyD!}''[xz;>wkh'?Rh,x8gyt`w5D!&),(SgyccRgztJ@3pPB5p#d'(Y#<]mmifubw&RgoJvE&!82s^JvF&!8Rf,ADb]~;x=h'rNu]vK!,%'*0RnORh)4Rh*AqQg-vaRnNg;wHwkh'ba~4cE#Ta*x3gctyw@'!+%RnFRnD<4Rn@hFvK5RnCxWg[#`&a0Ua()`1Rm75Rg[c]%X#qi8Rg^NvdRj>BwzgZauwji7Rm6A4wgg]d1#&(*,.0a#Rm;Rm<Rm=Rm>Rm?Rm@RmARmBe%#^^^Xaea?aC/b+(,!a+a#!a/!>a&Ta<aKbD!2wphBRnk[yPw}hE|.=Br-3Dtm>6Vy~g6urRf.x,hPrNav!%'RnqRo%Ro#Nu;q[Pw;5r+JwNZtM@3r)d'#Y'Weh;xChL#`&RnmRnoKu}>%(!Rne~Bs-;2wjcussJv+'!aYSO}6@B<5?ba~8LrNvj!.%*ROwungw~ng~:9;Ri^>wtnig;wHRnixDh@|(UZ.x1h@|)!#:2<H|*xHn]#-UX'3Ro)z=iT}6ARns=Bwsn_wpnaRncw]aR(#UXa&Ua*a/=]iPd'#Y&Ro'WnXf{QRm2hNvj]nZd`'T~&1`{|`#9b]{}c:'!#Wl{>@=be}]?cl{{U#:5Abb}Jds#^YaF!a*b4a#a3aPa>&Tb!bH!*a_!Eau?/a&RjY<]gj>6Vz*;:pe~DrZg,QRj1JwNZtX@wihspcJvZ&!VyX9WmOJu|!|N2WmHJvh&!]ht~Bpbcn&T(!#RmQ<s7Nu;padH#X'`+WmJ@>RmKCARhnKup=!)&Wf+:RhqNuPpf9c!#'45pd5AwghpARn(Ls@w!%,)!RmP@Wfe<E|IJva!&WmNg8vsRmLd`*.`#Y'Xa!axRn*]hrA8Rhug5s@rXg8u!RmMd8#X'X*3@rV72smdI*#UY&RmICARho~GsgxVgd)Ta'U-Y&Xa!T#RnEWnA@Wffg1uDRi0hFvK5RnBxGnG&#`%owp)@wsf+bX}Ze-*1!a*^^^Ua|!#a.aq&Ya2!a>.a6!a:aO`aJDtL[y`@Wg#>6Vz12@wzoYRoZNuPRi!NuPRhzg=ucRi,@=b`{Yg=ucRi-ACJvB!&Sh[ebSh]ebi`wUuFRm4Jw2_[y0JvB!.<Ju(!&SoG}6Shd}6<Ju(!&SoH}6She}6Kur@._g5vHRieJvx!{L2G{Kx6gd'T#?Rh82Wi5cZ#X(g1w)Rm5dW-Y(Ta#!a)!#aYa=wnfE=su2>>bU{0j9udv:<svj8uQv-7RgHdE%#^'sq9sp=>Bb_{TJv`!&g/r|snj6v(us5d,#Y(56H}[978H}]Jw5!&g1rushJvB!+j;v{u5?zDhd}6}bj;v{u5?zDhe}6}ce*#`(^^^a[aea!=!a6a*aoXb1a.!aAbL!b>,b'aL!aV@Wf|2Wlg3[y/JwNZt^@3piPw:5pgJunZou3@rsJva&!Vy_g<v~Rm#JvG'!6Vz0=<r{Ju{%!:pj@WfsiXuJu3Rm:JvZ&!WfA~Bph@c4Z&Dtwax5rubx(#:awRk1@d,#Y&RfjRfid1#,Y(@Wfp2Wlrg5s@ryKu[@!,'=]ig9wlk?Rk>g5u-rqJvy'!@9RkQcH(T#=>Ri~@<wkj(Wj(KuZB*!&<7rw@9RkRcH(T#=>Ri}@<wkj)Wj)dg(Ta2Xa9X#`-!a*CARhg@@=I}d9x;c~#X%so=<sj>2@@=aybb}XjWv0Q~EfEj3vLv;<d,#Y(56H}`978H}_dgaPaFa'a/!#a3Y0a_a;a|!1(a7-[yE3[xt;:pJNvZrrg3uJrvJwNZt=@3pIh=rt3rxPw:5pGOu!5rpJvG'!6Vys=<rz@c4Z&Dt(ax5rtJvZ!&~BpH@wsfNg-vaRlNci*U#=<wei<F}a5@Jq.!a*JQ!%@qZ23d(#Y&RjH5]jCk!u7w&u0udARjFd/prq=tyvpaEa(a:.!a1aZ(@@=I}:9wpd%=<sX55w_h}@@=I{t=ay<aU@@=I}T=ay<2@@=I})?C9:9au@9Cb]}DP~=x-fAZ(2Wl1=ay<aU@@=I}>5@d##Y+jTv|vV~EfFj]uNpn~FRfGdgaK!Z2&!a8a-Tb({E!acTbM*!a(DtY[yYd'%Y#sl[y*hHvh>Re5x2c{Z}.j4uCvcawRiMd+#X+_x&d!},<5RkX;2Hzw@x,gavfB-!{CcF&T#Roe;RodwWbBg5urRgaKvHC*_6Vz+<4opieuew&Rmq@d]&Y)X,T#X0Rh}<BqP=4qS9:ReMg/ujReNJw0!/<Jui%!bd{kawwnemRelAxUa?a3#*.&UX(Ya+a/RhvRnQ<o}9Wmtd-#Y&RgSRmw9;Rmxay=Rmyg-vaRmuxEhSrNu,v-voC!%(aR.a(a7+1Ro1>Ro5CE{A9b]{@;5x#eO{:g;urRi+KrNA!%(Ro3>Ro79;Ri_Ku@>{;&!x%gX|{KunA_+g5QRj/g3u5Rj#g>uERj%wio/xRhS&!,!#^1U}wba{8>>@=be}qC@:D5ba{7Ku+A&!}x?ba}t>>@=be}se(aA^^^Uat!b0#{pa+awUazbGa#aLb9bgaWac'a5TbS=Br!d1#`%scp_Jvl!#rT>Re0JvX&!VyN=H{Fcm#U&:pY=ReaJv2&!]h0=]nUJvG'!6Vy|=<r%JrM_=]h2@Wlud'#)U'Wf'b]{i=]h/Jvh!&~BpWg=v]RnMx+ny#'Nu;pVwjnu=]nwxJnx,T#`&Reqwjnt=]nvieu9vrRjLLuYwP(#+!th@wih5pX~Gr'g5v/Rh4KunA'!-CARnP@wwiN:Rm_9x'cvw>!|l=<saKvAA!0&3@q}>w^e1bp#&Re2Re3BDx7gH#T|f5H|eKuZ>!%(:qNAH{]Jv6!+3B2B9=b^{X<5<B92:E{ZLvhwA(a;a%!igQuyRmad+#Y}m@3Rh5d8#X'X*:AqUAHzmaxwbh<aXRnVcF}RT#Nw&cj#U(BWnug/vsRntdka)(a3+.Zb7aYYan1!bVa@Xa}[y^@b[{G=H{+hFu73Rj&Pv#5ReQcK%T#sig1v{Rj'Ku+D#'!t]~Grm~?rkKuMB!01d5#`'Vy.ta3Dtu~Hroc8#'{^45s85AwZbP&!#Rn!wghxWn#KvEA!)&2RlA2RlBx:h|#(T,=]j09Wobz>x]z/@awRoTd+#Y(az]hFhCrm4d,#Y+jTv|Q~EfMj]uNr|~FRfOdCa!Xa9_X#@<plJvf!%b`{(9;Rgwc;.!#2x7cw#T|UDb]|T5Ju={(!=@E{&Jv)&!Ab`{'awJvf!~*>>@=be{#KuY>!+&4Ezyi[ugv&RjIdea+T)#UXa&T-T&a!Rh9auRmW=]kLg5vuRn+g3u4Rn-Ow6ARn,hHus5xNk?#UX(U~)/g8v0RkD~AwkkF?Ri.OuNBwkkA?Ri/d|a2`a*^UYa.!aBTZaTa'Xa;!(!2!-a#b2[yC>6Vyq3[xr2Wi?g1rusVh%s?DtF~<5rbJs;%!DtBfswKtCj[uvuSsEu3RgVx3o:u+wN'*Zt;@3rd~Grh~?rfg8w)Lq)qE&-a%!>bI|`jWv0vV~EfCjTv|vV~Ef@j]uNpn~FRfBcK#T']gWNu7x,k7q4ai(0!hHv8<RhmkMu9vrsBuev/RhlCJvB!,g<v{wchh~@:Rhji[vrv{wchi~@:RhkdS&a5UY#Ta!RgPwwiI5BwciI~@:Rh`x'iJvj'!5]iJPu8Bwch]~@:Rhach)U#h3rp]gLh@t|Ax,hTq3ah!-(~@:Ro0Ou!5RhXj^v(pyw8unRhVd|)`,^UYas!a?/a2Z'a^Ta{Tb7Ta(a#!a,Wf&9sZ3DtAadamov=Bqt3[xig8vsRm~>waiL2b`{QJv*_Ouv2qgj<v]v2BqfdR'X*X#Y-@3qr~Gqv~?p6hHv-]glPup5Lq+q?_%*b_{qF{n9b^{rOu4ARhpKvCD!+&~Bqp:5Dbb}nwoiKl&unuTuBv]v+ueunaXRf0=Jvh!0nKufu8v1w&w7q%w&uHrz:Rgnj5w,uxDJq/(!hNw'5ReCk0s2u3w/w'5ReFd>Za&!*UaA=<wkgsRnSJv^!%Refifw3vyRgOKu_B'!,<]gkiiu:w&Rh<=C@a^<B57@2F{[<B5@aW:=3away9A5aW=<B=C@a^<B57@2F{Ie-#`(^^^bCara.b8aza6!/bZ,!adTbnTbOb+aFaS!aAT9@Wf~2Wli3Dtl2@d,#Y&RfnRfmJwJZtN~GqyJva&!VyMg<v~Rm%iXuJu3Rm9Jv[_=]ih9wlkDRkCd1#`(@Wg>2Wls3cH#T(@<Rj*=>Ri|b~'#23s9h<~El.d'#Y&Dtxi^rzvdRl#d*#U%(o|B2s`hJwSaxRmDKv4B&!1:Rmdd5#`'Vx}to~Hq{x'f1v3(!BA5ba|bJv_&!Wfug1v]ReIdO+U/Y#&G}-8wze=Rh{g1v]ReHg/uQRf/by#)ibQwERl/cH#T(@<Rj+=>Ri{cNu+vlax-!(#a0qa9<Rii2;;bU{H;x<i=&X#Rk`<4wwi=C9H~8xAI(Y#<azRi@45wXI<B9;5bb~7dL(X#Xa(+!aL6Vy{g5QqOau:5au2@ay547EzbxOcU(UX-T#Ta#:Cbb|A?wjh/b_|SOw6ARgtihr}u7Rhy<d1#T)X1@@=I|~=ay<2@@=aybb}Sj3vLv;<d,#Y(56H}A978H}@dGpvs@uAu`vcw9*!aFa+ai%(b!aXa8.a?a[ozWey=sU2@G}Nch&U#Rf_WexKu+D#'!t:~Gr`~?r^j]uNr|~FRg*j^psurwJt|RmcKv)@&!)7Rkv~Br[@wxfO:Rl3co#U'6Rezj_q#vIuavjRltwzeyh@vr5JqD0!>aY?C9:9au@9Cb]}9cl#U*5;5<H||jbuus1ucv&Rfvg1v~d/pppzqFr^a--a~!aMat1(hFv;Wiz@@=Izoj5uuv-7Rix~Cw`fk2WlVcZ#X,k)u3vWs@u2]ktg;wEx'fBq(_2Wg/jTv|vV~EfoJv]!15x'hzqG!(P~EfU~CRl_j6v(us5x4i-#T(2WmZ?C2F|d>Kq<aj1!*jTqIsBv=Wl`~Cw`fi2WlWj`v0u*~>RlR=c>Z,k#u3vWs@u2]kr<c1Z+jTqIsBv=Wla~Cw`fm2WlXdmb3!a{(arZa`bkTa%TbQTa-a9+c'!aM!/[yL=Bqug.w'RifhFvyDRj.g>vgwyk^9]k^Jv3_@WfbAARkhJw2_[x|JvB_wkoIRoKwkoJRoLd'(Y#<]gm=<9<H|yd'%_X#skDtb3awwqkgNulRkgdB#^',9:p'hJwSaxRmEBwVb8@4=H|qLu+w50&!)@3qs~?pU>Awwn;;Rn=c:Z'ARn<=<qwKvC@!/&~BqqJv6!&]eVb^z^xRge'/a%+^`#Sge}6<4Rn3=]n0Pw2>Rn8Jw0!&>Rn:>Rn6cY#a7+!a&=<wkaNw~h3z_c5Z{=wjh#=]nLKv^D!&)Vyz=bW|swYb<WetcG#T(2wxa@qVx@gD#Y&b^|V5JwG&!5bb|pg/w&RgD@x=kHs=uAvn!a%%/'+RmSRh694Ro`g-vaRmRhHv-]mlxCcS#`&ba~.5cD#Ta)P~=d,#Y(56H{>978H{Dd_#{2^Y%_+qbbb{6g3sERhsbU{?dfa.,`a(Xa<!aiX#(55RiG54RiHcI#T'WiU3RiVNvdwtfcRlKNvdd,#Y&RlHRlExQgf.1*^T'X#Sgf}6Wn4=]hfPrk>Rn7Jw0!&>Rn5>Rn9Lunw?&a2!,5<oq@@wqfdRlJj5Q~=d,#Y(~ARfcOuN]fdDKw;ay(}i!547E}j?cI#T(@5bV}iCbV}hdv(^^Tb?a40,b##Tbo!a*bR!a<b|a/!aKai!aU[yK=]o^g:v>ReGJwPZtK<7Rh+h<~El,Pv#5ReR@awwxjCg,ulRjDJv6&!]j!z?aQeeg>w=Sh<eeJw;!&axEzOg,Qosc!#*:wkeJ]eJ>x'h-u(!%Ro.w~h.zPdNZ(X,Ya![x{;9ReY;wkgxRiF:x?ap#Y&RmUg<s2Rkod]+UY0TZ'!a&A9sw<=bczLNvuw{gqzNhJwSaxRmCKuLay!#&s_Rf-55b^{uJvZa!!c%#(55Ri654wmiu5RiuawLu,vp!+}^%b_}Y9;wkgxba}o>A9:=b^}zKuh=a''!3awRk3c*'!#aHRk6c+Z&Rk5Rk4Jv)&!awRjSawd9*`#0?C2@EzMj8u<uJ5RmbjQrquJu3x,k>uq@_+=ayb^|W~ARkEOuN]k@7dhzV^X/X&a-#zRzSb`zXcJzTT#2WkVKvDBzW!%FzY9;5bbzWjQrquJu3Jw3%!b`zU=ayb^zQd:#X(T-a!6Vyywxh}=b]{Jg=u1RiAdGp~qHtzv!w(wA+a+a;<!aJaYai'anasb(=azRmV:Cbb{MLq2vb!%')RjuRjrRjtRjqx3jnqCw3!%')Rk(Rk+Rk&Rk)Lq2vb!%')Rj{RjxRjzRjwLq2vb!%')RjsRjpRjfRjex3jcqCw3!%')Rk'Rk*RjkRjl9<CbbzfOu4ARhxLq2vb!%')RjyRjvRjhRjgx=joq*uKvb!%')+-Rk.Rk%Rj~Rk-Rk#Rj}x=jdq*uKvb!%')+-Rk,Rk!Rj|RjmRjjRjidAq&qKs@uAv8Aa.'*-a@a&0!aM@a5[y73Dsy3Ds|3Dt):wxgI2sHJwJZt.~Gqxwsf0ikrzt}Rl0Jvy_[xj~HqzKv_A|D!&WfP8axRoVcf,U#k(v]v+ueunaXRf1Ju}'!g8u#Ri=jQw!sCunLprq>!,')~<5qeGzq9F{W=c##%s5au:5aU3CBE|;d4#X(D!a&6Vygx(b;#(=]ed?C2F{N<capoq2r[a&!aPa9,'Pw;5s:@@=I|,55w_h|@@=IzcP~=x'fCqB_2Wl2>aU@@=I|1OuNBc1Z+jTqIsBv=Wlc~Cw`fl2WlZ~AcTa%!Z+jTqIsBv=Wlb~Cw`fh2WlYk+uNqJsBv=WlSg,u3dca3#UXaMYa)TaB-=cM|7T#<bI}l5@B932:aV2G{BOuNBJq:|M!5Ezt=<B=C@a^<B57@2F{v>cB{/T#=ay<bI{3Jv6!a.6BKq0ah&+!5E}HP~Ef{978BaU@@=Iza<7d#.Y#978BaU@@=IzH~AJq0!(@@=IzG978BaU@@=IzFe,aU*Y&^^^bvJb,b:bFad!a,c2Ta>aL.bo6!a#CbTa'T#Re{2Wlh2@G{yg6t~Ro_NvdRfticuRQRllJv3&!x&c|zs@Jw3!%RflwpfkRlpKuL;%(!Re<@G|C2GzdhIvuBwgjAg-u0RjAKQB%!(GzZ@G|5NuuRl7d='T+Y#Vy[g<v~Rm!==G|>JvA!)@wma=]m1ifuaw&RmnLs@vT'!|/+[y,g:v>ReTJw1!#qX=x!eC{bLu+wT&)ZtZauq_~Graci&U#F|89:r_Lupvq!.)&2RlG8RfaC=x!eF{_h?rpWlmd&'!#X|&]k::xJey#`'T|+<E|&2@H|%dE#(^,g;u.RiEg6vjRiC9xCkA{O|zY#g=ucRmXKs0@!&*@G|m@awRknJuh!,3d(}gY}eJvj!%Rm):Jw3!%Rm+Rm-Ls0w(&!a(a#@b[|6cZ#X'7RkxWgAOu4ARn'dH'U#Y*Vz-Wm'CARm}d]*#a%^a*T'aK!a<9bV{PC=p*Jw4!&SgxcbB5r]idw(wBRmF7xFkt#&`(Rm/Rm8E|!JuY_9:Rl5=wrgr2:bbxd@xXfB(a*#T+!.X0X1Ta/a'T&RlDRfL>RlyARl9b[z[>RfZ:RlL:RfRwlg/ARl;9;RlxKv,A/!%7s69<74=BA5ba{-8Bde#`a<XaKYa1,a'P~=wxfB2bZ}}?C972@@=I}r8@55B9;5bb}G978B2@@=aybb}3j3vLv;<Jw3&!>Rfk=ayb^}4~Ad1#`*@@=aybb{w2@>==<bbz]dx+UY#^UaF!a9!bB'Ya1.!ajXa#%olRhD[y=3Dt#Ov5BrHKuMB%!(Rf^Wep~HrJwkiQjKr|~FRg)Ku+D#'!t5~GrF~?rDdV)UY,Z/_7RkuG{<~BrBg,rlsO:235B@bX}|d?a1!#`(6Vyn5@d##Y+jTv|vV~EfIj]uNpn~FRfH7Lq2vb1!a9-978BaU@@=Iz9978BbU}#~AJq0!(@@=Iz8978BaU@@=Iz7~AJQ|}!978BbU}!JvkaK!AdUa21-U#`a+(g/vsRn~Ou!5RPj:rmu9WhOjXuvvNr}:RhAj^v(pyw8unRn[kPr}p|u7vwv]RiSBd;pppzq@qHQa?(b.!a.a`@.|xa(hFv;Wiyj5uuv-7Riw~Cw`fg2WlU978BbU|wOuNBJqG!(P~EfD~CRlQcZ#X,k)u3vWs@u2]ksg;wEx'f@q1_2Wg.j]uNpn~FRfqJv]!15x'h{qG!(@@=IzK~CRl^j6v(us5x4i,#T(2WmY?C2F{1>Kq<aj1!*jTqIsBv=Wld~Cw`fj2Wl[j`v0u*~>RlT=c>Z,k#u3vWs@u2]kq<c1Z+jTqIsBv=Wle~Cw`fn2Wl]dn1#c(a(b^a2!b/bAT(bj!aDa7bu,a_a{c0!2T0g:v>ReD2@G{42@G{5~DpM~<5rc=Bx6i>{RT#RnI@zCx]y]z:2Jv[!zr5Awyk]9]k]dD(Y+X#6Vz.g=wKtgwhaCwgmTWj2Lu,w%_+/[y-B;b^xeg3u3Rj-2@bX{*KrJ<!+'@Wg(g?QRlC@Jv`!%b[zIwsfII}8JQ_@w|kW|=Jv(%!AqcOuNBJvEzh!bYzjLs@wP#(0!oy@>RkdJwMZtc3Dtd@BcG#T'9bWxg2@2Fznd*#Y+;2x'c}w<zizixNgwa#Z'U+!/!a'!a+w~g~z6wcn{Rn}wcnzRn|5Rh%=]nJg5vuRmvNvdRlvcprJu}w*az*a#!%.a.'Bot9qT]kj@Wg'ay2Gzv@Jv`!%b[zEwsfHI}1;ck#Ux`<Cbbx_Lu+w!a&0*!wko*wwo,So,}6Juqxf!E}PigQuyRm`d3(`#8>Rn%:A5B;bZ~%KvhCa!a2!x>k7#Uxb@b{#xaRk7Jw0!)>wwhlShl}6>wwhmShm}6CJvB!.x'hhvj{!!5Bwkhhbaz}x'hivjz~!5Bwkhibaz|xEhTrNu,v-vpD!a%&/)a3a.,%Ro2t[CE{)@3re9b]{%wjo09:rgc:Z&Ro6=<riifuaw&RmoKrNA!%(Ro4>Ro89;Ri`dSaL'UYzxZb)7Rka3xRhT&!,!#^1U}vbaz{>>@=be}yC@:D5bazzKu+A&!}{?ba}y>>@=be}wxBh[t`u~vJvr!%a!a()a,a0a4RoC=]o;Ju(!%RoGRhdwjh`=]oAg>w#Ro?g5vuRo=NvdRl|Ku]C.!&;RoEJvB!%RoORoMBx'h[v+_?w~h`}~5?w~hd~!xKh]oiptu-utv.vp!#%&a30a@a'a+(a/aOp(o~p!RoDJu(!%RoHRhewjha=]oBNvdRl}g>w#Ro@g5vuRo>c[#X']o<CauRoRAd-#Y':RkpauRoQKu]C.!&;RoFJvB!%RoNRoPBx'h]v+_?w~ha}t5?w~he}ue!/UbhYacXaW^Tc&a;b:a-c/#b&aja1(!cL+!bKbt!bmcRc9aIc?8[yW3Dtt94Rg`Jv}!&SiRMzBhEebShEMNuPRe>x7gL#TzuwjirRipc<Z&>on;>z=h-MSh.Mwqczx'a7vj&!>Re4@=ResJt__NuPRi*NuPRi)j]uNr|~FRfzKrJ>_+@Wfy@Wf]2WocKrJ<!+'@Wg%g/QRl@@Jv`!&awRl<wsfFIzgLu(w*!.*&ShBMwvhIRhI9;RhNx1hK'!#Sn]Mx1hK~0!#:2<H~7cNu+w7D*'1ZtW>Rn1~?rOc:Z&Rn2=<rQ<7wjh&=BSnLMc]#X(6Vz)w[b=a!U#9wzgMc3#&(RgMRitRis<x,gKt`ax!&+SioM=BSilMc3#&(RgKRinRimKurB,!&SiQMzBhDebShDM6BJQ!(P~Efx978B2@@=I}WLrJw!!,a*&@G}O@9wkibRid@@x'fKwC!&SlDMSfLMjUv~Q~EfKKv3@a+!(hFv-]mpx/hYZ(C5RiWz<o/MwkhY?So/M@x,gbvfB*&!SgEM:SoeeehFu3:Rgbda(,^TZa)X/7Sg[eb:2RgI~BrMC@wgkc:wwkcRerx3h(uUvK!&*,SnOM4Sh*MArRg;wHRh(x=h;rJvPwI!a4',a'0@Wg&=BSh/Mg>w=Rh=g3w*wwgGRgGcW(X#;Sg}M2Gzk@Jv`!&awRl=wsfGIz`dKZ*T'Y-:RhR7RhQg5u-p`j6v(us5d,#Y+~Awkia?RicOuNBwkibba}Ld6p~tyu_vbAa'a+!a/'a3aEa8a!>Sh,ebJv{!&Sh@ebSaReb9;SgwebNuPRi(NvdRl)NuPRi'hHu^<Rm^Jvv_@Wl(g;u1Si/ebKu'B&!*Sh?eb@Wl'z@aPeb95Si.ebcpputyvjB)!,&a+0a%ShAMWeK@G}C@WfJ9;RhMwvhH9w{ia}ix,hJvRA1(!zAn[MRhHx1hJ~*!#hFv(BSn[MBJQ!(@@=I~'978B2@@=I}2db.Ua<'X}+T#a0XaG2G}E;wkg|wuh!Rh!x,hZu,@)!&So0MVy)C5RiXACJvB!&5RiY5RiZg8w)cG}*T#2@bU}=KsA>(!a.3wkhZba~(x,h^u(A!&(SoCMRhb5Bz=h[eb?w~hb~6x,h_u(A!&(SoDMRhc5Bz=h]eb?w~hc~6e)aA1T#T,^^^c-bMb&blcPaP(a/!0!bA=b5c@a(!bfbrc#2afwmhARnjwchORnp2Wlf3DtsNvdRl-2@wpa<]m0bx(#:awRk2@Jw3!%RfhwpfgRlnKQB%!(G{V@G|'NuuRl6d='T+Y#VyUg<v~Rl~==G|<Jv+'!aYShC}6@B<5?ba~8@Jw3'!g2QRljhLrpWlOd+#Y'g.w'rIg>w*wgj@g-u0Rj@Lu+wT&)ZtUauq]~GrGci&U#F|39:rELrNvj!.%*RhCwunfw~nf~:9;Ri]>wtnhg;wHRnhx3hDs@v~!/+'@Wfr@9RkSNu&Rlo=@<5GzoKs0@_+@Wl+@awRkmJuh!-3d(}pY#qWJvj!%Rm(:Jw3!%Rm,Rm*de&!1U-U#`)Re;@G|.@9Ri82@wjfvRlq=@<5GzpLvOvr!).&2RlF8Rf`C=x!eE{.Jw3_g2QRlkhLrpWlPde(!#U{s,UXa*Ta'[y'g:v>ReS;x0PZ&RnlRnn~HrKJw1}f!=x!eB|2w]aP(#Xa&a*Ta.Ua2a7=]iOd'#Y&Ro&WnWg;u.RiDg6vjRiBNvdRlzhNvj]nYJuW_2Wm3x)kFze{9d])!a.!,Y01!#&aC!a3RndC=ox~BrC@2b^{pg,rlse7x'ksuq!%Rm.E{xidw(wBRmGx9o+)X#wwo-So-}69:Rl4@xSf@a#XZ'X)X,Ta(/ARl8b[xc>RfY:RlI:RfQwlg.ARl:9;Rlwdn'#^XafaQa1X1TaHTa)@b[{zcZ#X'7RkwWg@Ou4ARn&x)kG#{,g7u/RkGdH'U#Y*Vz'Wm&CARm|bx#(A]gUbUzJj9Q~=d,#Y(56H}l978H{U7d,0#U*2>ABb_xZ978BbU{e~AJQ{g!978BbU{hxMh?ad{oUYZ.x1h?{l!#:2<H{mx3n[t{vl!,&a%3Ro(z=iS}6ARnr=Bwsn^wvn`Rnbd`*T}B0!#^X'BG{c9b]{a>>@=be}F?JvS!&BG{d7BG}(Bde#`a1X,Ya@!a'P~=wxf@2bZ}I56B2@@=aybb}08@55B9;5bb}<j3vLv;<Jw3&!>Rfg=ayb^}&OuNBKuLA!)a!P~=x#fD{f2@>==<bbzl?C972@@=Ix^d6rSu,v7w*C(0a)a6#B+a%!sQ[y?3Dt%3[xn~<5rLOu!5p@Ku+D#'!t7~GrP~?rNKvlaya7'!h+v-5qMg=t|cd,U#5AAaa5Abb{S@52B5@a[@52B5Gx[iXueu;d<#`a(!/549C;ag>23ExY5@Dah89b^~689Jv)!~2b[~1Lv'w(%*!a#bX|aPrmawRe]keu7uhv-q6rxu,q`xTo]/a5aU!bNaDXbi!b-!ao!b<bwA!#5@B932:aV2G|:d-)Y#hJrL>RhG<7@C5<H|_=Cau:5aj5@B932:bJ|ng>vIbs)#?C2F|9jPv0w.vISh-MKvUaz(.!9ABbb|[5;5<H|Eg>unwfh;9:4E|YjQsBt|vjx'hYq3!(?C2F|J:2<BaY?C2F|GOu!5x,g|p{ah!-(?C2F|c9:4E|OjXuvvNr}:Rh&i[w*t|cd+U#jJvsu)vsSn~Mkfrmu9p}u7vwv]So!McW#Xa!ax5@A5aY:5;5<H|>kJv~vYrquJu3x4ib#T)2@SmZM?C2F|Bj:rmu9@xPhI(a*a#U#`a3-5Abb|L~@:RhK9:4E|0@52B5G|#C::aY?C2F|-:2<BaY?C2F|.5Jvk!a)javYrquJu3x4ia#T)2@SmYM?C2F|HAxPhH(!a#U#`a*-5Abb|4~@:RhJ9:4E|R@52B5G|F:2<BaY?C2F|Sc^#Xa2j=Qq5CJvB!-g<v{z;hhM?C2F|Zi[vrv{z;hiM?C2F|XKsA>!a)-g<v{z;h[eb?C2F|]i[vrv{z;h]eb?C2F|^iZu.vix,hZq3ah!.(?C2F|QOu!5ShXM:2<BaY?C2F|P", 13494, 2713, 49, 25, 61);
 
-// node_modules/entities/dist/generated/decode-data-xml.js
+// tools/node_modules/entities/dist/generated/decode-data-xml.js
 var xmlDecodeTree = /* @__PURE__ */ new Uint16Array([
   512,
   26465,
@@ -2018,7 +2018,7 @@ var xmlDecodeTree = /* @__PURE__ */ new Uint16Array([
   24615
 ]);
 
-// node_modules/entities/dist/internal/bin-trie-flags.js
+// tools/node_modules/entities/dist/internal/bin-trie-flags.js
 var BinTrieFlags;
 (function(BinTrieFlags2) {
   BinTrieFlags2[BinTrieFlags2["VALUE_LENGTH"] = 49152] = "VALUE_LENGTH";
@@ -2028,7 +2028,7 @@ var BinTrieFlags;
   BinTrieFlags2[BinTrieFlags2["VALUE_MASK"] = 8191] = "VALUE_MASK";
 })(BinTrieFlags || (BinTrieFlags = {}));
 
-// node_modules/entities/dist/decode.js
+// tools/node_modules/entities/dist/decode.js
 var CharCodes;
 (function(CharCodes2) {
   CharCodes2[CharCodes2["AMP"] = 38] = "AMP";
@@ -2478,7 +2478,7 @@ function determineBranch(decodeTree, current, nodeIndex, char) {
   return -1;
 }
 
-// node_modules/parse5/dist/common/html.js
+// tools/node_modules/parse5/dist/common/html.js
 var NS;
 (function(NS2) {
   NS2["HTML"] = "http://www.w3.org/1999/xhtml";
@@ -2989,7 +2989,7 @@ var UNESCAPED_TEXT = /* @__PURE__ */ new Set([
   TAG_NAMES.PLAINTEXT
 ]);
 
-// node_modules/parse5/dist/tokenizer/index.js
+// tools/node_modules/parse5/dist/tokenizer/index.js
 var State;
 (function(State2) {
   State2[State2["DATA"] = 0] = "DATA";
@@ -5605,7 +5605,7 @@ var Tokenizer = class {
   }
 };
 
-// node_modules/parse5/dist/parser/open-element-stack.js
+// tools/node_modules/parse5/dist/parser/open-element-stack.js
 var IMPLICIT_END_TAG_REQUIRED = /* @__PURE__ */ new Set([TAG_ID.DD, TAG_ID.DT, TAG_ID.LI, TAG_ID.OPTGROUP, TAG_ID.OPTION, TAG_ID.P, TAG_ID.RB, TAG_ID.RP, TAG_ID.RT, TAG_ID.RTC]);
 var IMPLICIT_END_TAG_REQUIRED_THOROUGHLY = /* @__PURE__ */ new Set([
   ...IMPLICIT_END_TAG_REQUIRED,
@@ -5922,7 +5922,7 @@ var OpenElementStack = class {
   }
 };
 
-// node_modules/parse5/dist/parser/formatting-element-list.js
+// tools/node_modules/parse5/dist/parser/formatting-element-list.js
 var NOAH_ARK_CAPACITY = 3;
 var EntryType;
 (function(EntryType2) {
@@ -6027,7 +6027,7 @@ var FormattingElementList = class {
   }
 };
 
-// node_modules/parse5/dist/tree-adapters/default.js
+// tools/node_modules/parse5/dist/tree-adapters/default.js
 var defaultTreeAdapter = {
   //Node construction
   createDocument() {
@@ -6199,7 +6199,7 @@ var defaultTreeAdapter = {
   }
 };
 
-// node_modules/parse5/dist/common/doctype.js
+// tools/node_modules/parse5/dist/common/doctype.js
 var VALID_DOCTYPE_NAME = "html";
 var VALID_SYSTEM_ID = "about:legacy-compat";
 var QUIRKS_MODE_SYSTEM_ID = "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd";
@@ -6308,7 +6308,7 @@ function getDocumentMode(token) {
   return DOCUMENT_MODE.NO_QUIRKS;
 }
 
-// node_modules/parse5/dist/common/foreign-content.js
+// tools/node_modules/parse5/dist/common/foreign-content.js
 var MIME_TYPES = {
   TEXT_HTML: "text/html",
   APPLICATION_XML: "application/xhtml+xml"
@@ -6528,7 +6528,7 @@ function isIntegrationPoint(tn, ns, attrs, foreignNS) {
   return (!foreignNS || foreignNS === NS.HTML) && isHtmlIntegrationPoint(tn, ns, attrs) || (!foreignNS || foreignNS === NS.MATHML) && isMathMLTextIntegrationPoint(tn, ns);
 }
 
-// node_modules/parse5/dist/parser/index.js
+// tools/node_modules/parse5/dist/parser/index.js
 var HIDDEN_INPUT_TYPE = "hidden";
 var AA_OUTER_LOOP_ITER = 8;
 var AA_INNER_LOOP_ITER = 3;
@@ -9553,7 +9553,7 @@ function endTagInForeignContent(p, token) {
   }
 }
 
-// node_modules/parse5/dist/serializer/index.js
+// tools/node_modules/parse5/dist/serializer/index.js
 var VOID_ELEMENTS = /* @__PURE__ */ new Set([
   TAG_NAMES.AREA,
   TAG_NAMES.BASE,
@@ -9575,12 +9575,12 @@ var VOID_ELEMENTS = /* @__PURE__ */ new Set([
   TAG_NAMES.WBR
 ]);
 
-// node_modules/parse5/dist/index.js
+// tools/node_modules/parse5/dist/index.js
 function parse2(html, options) {
   return Parser.parse(html, options);
 }
 
-// src/html.mjs
+// tools/src/html.mjs
 function parseHtml(text2) {
   return parse2(text2, { sourceCodeLocationInfo: true });
 }
@@ -9641,7 +9641,7 @@ function hostOf(url) {
   }
 }
 
-// src/palette.mjs
+// tools/src/palette.mjs
 var TOKEN_RE = /--c-([a-zA-Z][\w-]*)\s*:\s*([^;}]+)/g;
 var BG_RE = /--bg\s*:\s*([^;}]+)/;
 var FG_RE = /--fg\s*:\s*([^;}]+)/;
@@ -9707,7 +9707,7 @@ function checkPalette(palette, file, problems) {
   }
 }
 
-// src/glossary.mjs
+// tools/src/glossary.mjs
 var slugOf = (id, prefix) => id && id.startsWith(prefix) ? id.slice(prefix.length) : null;
 function checkGlossary(doc, file, problems) {
   const main3 = byTag(doc, "main")[0];
@@ -9774,7 +9774,7 @@ function checkGlossary(doc, file, problems) {
   }
 }
 
-// node_modules/katex/dist/katex.mjs
+// tools/node_modules/katex/dist/katex.mjs
 var ParseError = class _ParseError extends Error {
   // The underlying error message without any context added.
   constructor(message, token) {
@@ -10262,27 +10262,27 @@ var sqrtTall = function sqrtTall2(extraVinculum, hLinePad2, viewBoxHeight) {
 };
 var sqrtPath = function sqrtPath2(size, extraVinculum, viewBoxHeight) {
   extraVinculum = 1e3 * extraVinculum;
-  var path7 = "";
+  var path8 = "";
   switch (size) {
     case "sqrtMain":
-      path7 = sqrtMain(extraVinculum, hLinePad);
+      path8 = sqrtMain(extraVinculum, hLinePad);
       break;
     case "sqrtSize1":
-      path7 = sqrtSize1(extraVinculum, hLinePad);
+      path8 = sqrtSize1(extraVinculum, hLinePad);
       break;
     case "sqrtSize2":
-      path7 = sqrtSize2(extraVinculum, hLinePad);
+      path8 = sqrtSize2(extraVinculum, hLinePad);
       break;
     case "sqrtSize3":
-      path7 = sqrtSize3(extraVinculum, hLinePad);
+      path8 = sqrtSize3(extraVinculum, hLinePad);
       break;
     case "sqrtSize4":
-      path7 = sqrtSize4(extraVinculum, hLinePad);
+      path8 = sqrtSize4(extraVinculum, hLinePad);
       break;
     case "sqrtTall":
-      path7 = sqrtTall(extraVinculum, hLinePad, viewBoxHeight);
+      path8 = sqrtTall(extraVinculum, hLinePad, viewBoxHeight);
   }
-  return path7;
+  return path8;
 };
 var innerPath = function innerPath2(name, height) {
   switch (name) {
@@ -14456,8 +14456,8 @@ var svgData = {
 };
 var staticSvg = function staticSvg2(value, options) {
   var _svgData$value = svgData[value], pathName = _svgData$value[0], width = _svgData$value[1], height = _svgData$value[2];
-  var path7 = new PathNode(pathName);
-  var svgNode = new SvgNode([path7], {
+  var path8 = new PathNode(pathName);
+  var svgNode = new SvgNode([path8], {
     "width": makeEm(width),
     "height": makeEm(height),
     // Override CSS rule `.katex svg { width: 100% }`
@@ -15598,8 +15598,8 @@ var stretchySvg = function stretchySvg2(group, options) {
           pathName = "tilde" + imgIndex;
         }
       }
-      var path7 = new PathNode(pathName);
-      var svgNode = new SvgNode([path7], {
+      var path8 = new PathNode(pathName);
+      var svgNode = new SvgNode([path8], {
         "width": "100%",
         "height": makeEm(_height),
         "viewBox": "0 0 " + viewBoxWidth + " " + viewBoxHeight,
@@ -16803,8 +16803,8 @@ var makeGlyphSpan = function makeGlyphSpan2(symbol, font, mode) {
 };
 var makeInner = function makeInner2(ch2, height, options) {
   var width = fontMetricsData["Size4-Regular"][ch2.charCodeAt(0)] ? fontMetricsData["Size4-Regular"][ch2.charCodeAt(0)][4] : fontMetricsData["Size1-Regular"][ch2.charCodeAt(0)][4];
-  var path7 = new PathNode("inner", innerPath(ch2, Math.round(1e3 * height)));
-  var svgNode = new SvgNode([path7], {
+  var path8 = new PathNode("inner", innerPath(ch2, Math.round(1e3 * height)));
+  var svgNode = new SvgNode([path8], {
     "width": makeEm(width),
     "height": makeEm(height),
     // Override CSS rule `.katex svg { width: 100% }`
@@ -16973,10 +16973,10 @@ var makeStackedDelim = function makeStackedDelim2(delim, heightTotal, center, op
     var midHeight = realHeightTotal - topHeightTotal - bottomHeightTotal;
     var viewBoxHeight = Math.round(realHeightTotal * 1e3);
     var pathStr = tallDelim(svgLabel, Math.round(midHeight * 1e3));
-    var path7 = new PathNode(svgLabel, pathStr);
+    var path8 = new PathNode(svgLabel, pathStr);
     var width = makeEm(viewBoxWidth / 1e3);
     var height = makeEm(viewBoxHeight / 1e3);
-    var svg = new SvgNode([path7], {
+    var svg = new SvgNode([path8], {
       "width": width,
       "height": height,
       "viewBox": "0 0 " + viewBoxWidth + " " + viewBoxHeight
@@ -17017,8 +17017,8 @@ var makeStackedDelim = function makeStackedDelim2(delim, heightTotal, center, op
 var vbPad = 80;
 var emPad = 0.08;
 var sqrtSvg = function sqrtSvg2(sqrtName, height, viewBoxHeight, extraVinculum, options) {
-  var path7 = sqrtPath(sqrtName, extraVinculum, viewBoxHeight);
-  var pathNode = new PathNode(sqrtName, path7);
+  var path8 = sqrtPath(sqrtName, extraVinculum, viewBoxHeight);
+  var pathNode = new PathNode(sqrtName, path8);
   var svg = new SvgNode([pathNode], {
     // Note: 1000:1 ratio of viewBox to document em width.
     "width": "400em",
@@ -17517,8 +17517,8 @@ var htmlBuilder$7 = (group, options) => {
     var angleHeight = inner2.height + inner2.depth + lineWeight + clearance;
     inner2.style.paddingLeft = makeEm(angleHeight / 2 + lineWeight);
     var viewBoxHeight = Math.floor(1e3 * angleHeight * scale);
-    var path7 = phasePath(viewBoxHeight);
-    var svgNode = new SvgNode([new PathNode("phase", path7)], {
+    var path8 = phasePath(viewBoxHeight);
+    var svgNode = new SvgNode([new PathNode("phase", path8)], {
       "width": "400em",
       "height": makeEm(viewBoxHeight / 1e3),
       "viewBox": "0 0 400000 " + viewBoxHeight,
@@ -23919,7 +23919,7 @@ var katex = {
   __domTree
 };
 
-// src/tex.mjs
+// tools/src/tex.mjs
 var CLASS_RE = /\\(?:htmlClass|tok)\s*\{([^}]*)\}/g;
 var BANNED_RE = /\\(textcolor|color)\b/;
 var texElements = (doc) => elements(doc, (n2) => (n2.tagName === "span" || n2.tagName === "div") && hasClass(n2, "x-tex"));
@@ -23998,7 +23998,7 @@ function buildTex(doc, html, file, palette, problems) {
   return { html: splice(html, edits), count };
 }
 
-// src/budget.mjs
+// tools/src/budget.mjs
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
 var import_node_zlib = require("node:zlib");
@@ -24047,7 +24047,7 @@ function formatReport(report, budgetBytes) {
   return lines.join("\n");
 }
 
-// src/integrity.mjs
+// tools/src/integrity.mjs
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
 var INTEGRITY_FILE = "dist/integrity.json";
@@ -24127,12 +24127,12 @@ function buildIntegrity(doc, html, file, repoRoot, problems) {
   return { html: splice(html, edits), count };
 }
 
-// src/poster.mjs
+// tools/src/poster.mjs
 var import_node_fs3 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 var import_node_crypto = __toESM(require("node:crypto"), 1);
 
-// ../lib/core/layout.js
+// lib/core/layout.js
 function worldToPx(view, box) {
   const vw = view.x[1] - view.x[0], vh = view.y[1] - view.y[0];
   const s = Math.min(box.width / vw, box.height / vh);
@@ -24170,7 +24170,7 @@ function splitBoxes(box, panels) {
   return { main: main3, panels: out };
 }
 
-// ../lib/core/format.js
+// lib/core/format.js
 var MINUS = "\u2212";
 var NBSP = "\xA0";
 var SUPER = { "-": "\u207B", 0: "\u2070", 1: "\xB9", 2: "\xB2", 3: "\xB3", 4: "\u2074", 5: "\u2075", 6: "\u2076", 7: "\u2077", 8: "\u2078", 9: "\u2079" };
@@ -24247,7 +24247,7 @@ function renderTemplate(parts, scope, opts) {
   return out;
 }
 
-// ../lib/scene2d/label.js
+// lib/scene2d/label.js
 var overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 function fitBox(rect, bounds, { pad: pad2 = 4, obstacles = [], avoid = [] } = {}) {
   const lo = { x: bounds.x + pad2, y: bounds.y + pad2 };
@@ -24270,7 +24270,7 @@ function compileReadout(spec) {
   };
 }
 
-// ../lib/scene2d/layers.js
+// lib/scene2d/layers.js
 var FULL_TURN = Math.PI * 2;
 var HEAD_PX = 10;
 var EXPR_KEYS = {
@@ -24322,7 +24322,7 @@ var shorten = (a, b, d) => {
   return [b[0] - (b[0] - a[0]) / L * d, b[1] - (b[1] - a[1]) / L * d];
 };
 function geometryOf(L, scope, m, makePath = () => new Path2D()) {
-  const s = L.spec, g = L.g, path7 = makePath(), heads = [];
+  const s = L.spec, g = L.g, path8 = makePath(), heads = [];
   const head = (s.head || HEAD_PX) * (L.highlight ? 1.3 : 1);
   const wantStart = s.arrow === "start" || s.arrow === "both";
   const wantEnd = s.arrow === "end" || s.arrow === "both" || s.kind === "arrow";
@@ -24337,22 +24337,22 @@ function geometryOf(L, scope, m, makePath = () => new Path2D()) {
       heads.push({ at: a0, angle: angleOf(b0, a0), len: head });
       a = shorten(b0, a0, head * 0.85);
     }
-    path7.moveTo(a[0], a[1]);
-    path7.lineTo(b[0], b[1]);
+    path8.moveTo(a[0], a[1]);
+    path8.lineTo(b[0], b[1]);
     anchor = b0;
     dir = angleOf(a0, b0);
   };
   switch (L.kind) {
     case "circle": {
       const c = px(m, [g.cx(scope), g.cy(scope)]), r = m.len(g.r(scope));
-      path7.arc(c[0], c[1], Math.max(r, 0), 0, FULL_TURN);
+      path8.arc(c[0], c[1], Math.max(r, 0), 0, FULL_TURN);
       anchor = c;
       L.lastRadius = r;
       break;
     }
     case "ellipse": {
       const c = px(m, [g.cx(scope), g.cy(scope)]);
-      path7.ellipse(c[0], c[1], Math.max(m.len(g.rx(scope)), 0), Math.max(m.len(g.ry(scope)), 0), g.rotation ? -g.rotation(scope) : 0, 0, FULL_TURN);
+      path8.ellipse(c[0], c[1], Math.max(m.len(g.rx(scope)), 0), Math.max(m.len(g.ry(scope)), 0), g.rotation ? -g.rotation(scope) : 0, 0, FULL_TURN);
       anchor = c;
       L.lastRadius = m.len(g.ry(scope));
       break;
@@ -24360,8 +24360,8 @@ function geometryOf(L, scope, m, makePath = () => new Path2D()) {
     case "line": {
       const a = px(m, g.from(scope)), b = px(m, g.to(scope));
       const ang = angleOf(a, b), far = (m.rect.width + m.rect.height) * 2;
-      path7.moveTo(a[0] - Math.cos(ang) * far, a[1] - Math.sin(ang) * far);
-      path7.lineTo(b[0] + Math.cos(ang) * far, b[1] + Math.sin(ang) * far);
+      path8.moveTo(a[0] - Math.cos(ang) * far, a[1] - Math.sin(ang) * far);
+      path8.lineTo(b[0] + Math.cos(ang) * far, b[1] + Math.sin(ang) * far);
       anchor = b;
       dir = ang;
       break;
@@ -24378,8 +24378,8 @@ function geometryOf(L, scope, m, makePath = () => new Path2D()) {
     case "arc": {
       const c = px(m, [g.cx(scope), g.cy(scope)]), r = Math.max(m.len(g.r(scope)), 0);
       const from = g.from(scope), to = g.to(scope);
-      if (to - from >= FULL_TURN) path7.arc(c[0], c[1], r, 0, FULL_TURN);
-      else if (to !== from) path7.arc(c[0], c[1], r, -from, -to, true);
+      if (to - from >= FULL_TURN) path8.arc(c[0], c[1], r, 0, FULL_TURN);
+      else if (to !== from) path8.arc(c[0], c[1], r, -from, -to, true);
       const end = [c[0] + r * Math.cos(to), c[1] - r * Math.sin(to)];
       const start = [c[0] + r * Math.cos(from), c[1] - r * Math.sin(from)];
       if (wantEnd) heads.push({ at: end, angle: Math.atan2(-Math.cos(to), -Math.sin(to)), len: head });
@@ -24391,8 +24391,8 @@ function geometryOf(L, scope, m, makePath = () => new Path2D()) {
     case "polygon":
     case "path": {
       const pts = g.points.map((p) => px(m, p(scope)));
-      pts.forEach((p, i2) => i2 ? path7.lineTo(p[0], p[1]) : path7.moveTo(p[0], p[1]));
-      if (L.kind === "polygon") path7.closePath();
+      pts.forEach((p, i2) => i2 ? path8.lineTo(p[0], p[1]) : path8.moveTo(p[0], p[1]));
+      if (L.kind === "polygon") path8.closePath();
       else {
         if (wantEnd) heads.push({ at: pts.at(-1), angle: angleOf(pts.at(-2), pts.at(-1)), len: head });
         if (wantStart) heads.push({ at: pts[0], angle: angleOf(pts[1], pts[0]), len: head });
@@ -24407,7 +24407,7 @@ function geometryOf(L, scope, m, makePath = () => new Path2D()) {
       const y = g.y(scope), h = s.height;
       g.rows.forEach((row, i2) => {
         const a = px(m, [row.from(scope), y - i2 * h + h]), b = px(m, [row.to(scope), y - i2 * h]);
-        path7.rect(Math.min(a[0], b[0]), a[1], Math.abs(b[0] - a[0]), b[1] - a[1]);
+        path8.rect(Math.min(a[0], b[0]), a[1], Math.abs(b[0] - a[0]), b[1] - a[1]);
       });
       anchor = px(m, [g.rows[0].from(scope), y + h]);
       break;
@@ -24415,17 +24415,17 @@ function geometryOf(L, scope, m, makePath = () => new Path2D()) {
     case "image": {
       const [x, y, w, h] = g.rect.map((f2) => f2(scope));
       const tl = px(m, [x, y + h]);
-      path7.rect(tl[0], tl[1], m.len(w), m.len(h));
+      path8.rect(tl[0], tl[1], m.len(w), m.len(h));
       anchor = tl;
       break;
     }
     default:
       anchor = [m.rect.x, m.rect.y];
   }
-  return { path: path7, anchor, heads, dir };
+  return { path: path8, anchor, heads, dir };
 }
 
-// ../lib/scene2d/plot.js
+// lib/scene2d/plot.js
 var PAD = { left: 48, right: 14, top: 12, bottom: 34 };
 function niceTicks(min, max, n2 = 5) {
   const raw = (max - min) / Math.max(n2, 1);
@@ -24478,7 +24478,7 @@ function compileTimeline(shows) {
   };
 }
 
-// ../lib/scene2d/models/kepler.js
+// lib/scene2d/models/kepler.js
 function solveKepler(M, e) {
   let E = e < 0.8 ? M : Math.PI;
   for (let i2 = 0; i2 < 30; i2++) {
@@ -24496,7 +24496,7 @@ function kepler({ a, e, M }) {
   return { x: r * Math.cos(nu), y: r * Math.sin(nu), r, nu, E };
 }
 
-// ../lib/scene2d/models/twobody.js
+// lib/scene2d/models/twobody.js
 function twobody({ m1, m2, r0, v0, t }) {
   const mu = m1 + m2;
   const energy = v0 * v0 / 2 - mu / r0;
@@ -24552,7 +24552,7 @@ function leapfrog(mu, r0, v0, t) {
   return { x, y, vx, vy };
 }
 
-// ../lib/scene2d/models/cam.js
+// lib/scene2d/models/cam.js
 var TAU2 = 2 * Math.PI;
 function cam({ theta, lift, span }) {
   const th = theta - TAU2 * Math.floor((theta + Math.PI) / TAU2);
@@ -24562,7 +24562,7 @@ function cam({ theta, lift, span }) {
   return { lift: lift * (1 + Math.cos(phase)) / 2, velocity: -lift * Math.PI * Math.sin(phase) / (2 * half) };
 }
 
-// ../lib/scene2d/models/lunar.js
+// lib/scene2d/models/lunar.js
 var RAD = Math.PI / 180;
 var TAU3 = 2 * Math.PI;
 var norm = (x) => x - TAU3 * Math.floor(x / TAU3);
@@ -24581,7 +24581,7 @@ function lunar({ t }) {
   return { lon, lat, dist, phase, sun_lon };
 }
 
-// ../lib/scene2d/models/index.js
+// lib/scene2d/models/index.js
 var MODEL_FUNCTIONS = Object.freeze({ kepler, twobody, cam, lunar });
 function applyModel(model, paramGetters, scope) {
   const params = {};
@@ -24590,7 +24590,7 @@ function applyModel(model, paramGetters, scope) {
   for (const [k, v] of Object.entries(outputs)) scope.set(`${model.name}.${k}`, v);
 }
 
-// ../lib/scene3d/camera.js
+// lib/scene3d/camera.js
 var FOV_DEG = 40;
 var NEAR = 0.01;
 var POLAR_EPS = 0.02;
@@ -24653,7 +24653,7 @@ function toWorld(p, { position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }) {
   return [r[0] + position[0], r[1] + position[1], r[2] + position[2]];
 }
 
-// ../lib/scene3d/surface.js
+// lib/scene3d/surface.js
 var D2R = Math.PI / 180;
 var R2D = 180 / Math.PI;
 function latLonToPoint(lat, lon, r = 1) {
@@ -24661,7 +24661,7 @@ function latLonToPoint(lat, lon, r = 1) {
   return [r * c * Math.cos(lo), r * Math.sin(la), -r * c * Math.sin(lo)];
 }
 
-// ../lib/scene3d/objects.js
+// lib/scene3d/objects.js
 var EXPR_KEYS2 = ["scale", "opacity", "radius", "exaggeration"];
 var POINT_KEYS2 = ["position", "rotation", "from", "to"];
 var DEFAULT_HEAD = 0.15;
@@ -24720,7 +24720,7 @@ function labelSpecs(objects, getter2) {
   return out;
 }
 
-// ../lib/poster-svg.js
+// lib/poster-svg.js
 var POSTER_VERSION = 2;
 var POSTER_WIDTH = 704;
 var CORNER_STRIP_PX = 60;
@@ -25244,7 +25244,7 @@ function posterSvg(specOrCompiled, scopeOrState = null, { aspect = "3:2", tokens
   return out.svg(W, H, hash);
 }
 
-// src/poster.mjs
+// tools/src/poster.mjs
 var INLINE_LIMIT = 8 * 1024;
 var CAVEAT_SENTENCES = { not_to_scale: "Not to scale." };
 var figureEls = (root) => elements(root, (n2) => n2.tagName === "figure" && hasClass(n2, "x-fig"));
@@ -25358,14 +25358,51 @@ function buildCaptions(doc, html, figures) {
   return { html: splice(html, edits), count };
 }
 
-// src/article.mjs
+// tools/src/og.mjs
+var import_node_fs4 = __toESM(require("node:fs"), 1);
 var import_node_path4 = __toESM(require("node:path"), 1);
+var OG_IMAGE = "assets/og.png";
+var OG_WIDTH = 1200;
+var OG_HEIGHT = 630;
+var PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+function pngSize(buf) {
+  if (buf.length < 24 || !buf.subarray(0, 8).equals(PNG_SIGNATURE) || buf.toString("latin1", 12, 16) !== "IHDR") return null;
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
+function readHead(file, bytes) {
+  const fd = import_node_fs4.default.openSync(file, "r");
+  try {
+    const buf = Buffer.alloc(bytes);
+    const n2 = import_node_fs4.default.readSync(fd, buf, 0, bytes, 0);
+    return buf.subarray(0, n2);
+  } finally {
+    import_node_fs4.default.closeSync(fd);
+  }
+}
+function checkOgImage(doc, file, problems) {
+  const meta = byTag(doc, "meta").find((m) => attr(m, "property") === "og:image");
+  if (!meta) return;
+  const content = attr(meta, "content") || "";
+  if (content !== OG_IMAGE && !content.endsWith(`/${OG_IMAGE}`)) return;
+  const abs = import_node_path4.default.resolve(import_node_path4.default.dirname(file), OG_IMAGE);
+  const fix = `run: node tools/og-image.mjs ${file}`;
+  if (!import_node_fs4.default.existsSync(abs)) {
+    problems.warn(file, line(meta), null, `og:image ${OG_IMAGE} not found; ${fix}`);
+    return;
+  }
+  const size = pngSize(readHead(abs, 24));
+  if (!size) problems.warn(file, line(meta), null, `og:image ${OG_IMAGE} is not a PNG; ${fix}`);
+  else if (size.width !== OG_WIDTH || size.height !== OG_HEIGHT) problems.warn(file, line(meta), null, `og:image ${OG_IMAGE} is ${size.width}x${size.height}, not ${OG_WIDTH}x${OG_HEIGHT}; ${fix}`);
+}
+
+// tools/src/article.mjs
+var import_node_path5 = __toESM(require("node:path"), 1);
 var CHUNK_NAME = "explainers-3d.v1.js";
 var ALLOWED_HOSTS = /* @__PURE__ */ new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 var FIG_ID_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
 var ASPECT_RE = /^[1-9]\d*:[1-9]\d*$/;
 function loadArticle(file) {
-  const html = import_node_fs4.default.readFileSync(file, "utf8");
+  const html = import_node_fs5.default.readFileSync(file, "utf8");
   return { file, html, doc: parseHtml(html) };
 }
 var figureElements = (doc) => elements(doc, (n2) => n2.tagName === "figure" && hasClass(n2, "x-fig"));
@@ -25504,16 +25541,17 @@ function checkChunk({ file, doc }, figures, repoRoot, problems) {
   if (![...figures.values()].some((c) => c && c.type === "scene3d")) return;
   const runtime = byTag(doc, "script").map((s) => attr(s, "src")).find((src) => src && /(^|\/)dist\/explainers-runtime\.v\d+\.js$/.test(src));
   if (!runtime) return;
-  const dir = import_node_path4.default.dirname(runtime);
-  const local = import_node_path4.default.resolve(import_node_path4.default.dirname(file), dir, CHUNK_NAME);
-  const fromRoot = import_node_path4.default.join(repoRoot, "dist", CHUNK_NAME);
-  if (!import_node_fs4.default.existsSync(local) && !import_node_fs4.default.existsSync(fromRoot)) problems.warn(file, 0, null, `scene3d figure(s) but the lazy chunk ${import_node_path4.default.posix.join(dir, CHUNK_NAME)} is not found beside the runtime; run: node tools/build-3d.mjs`);
+  const dir = import_node_path5.default.dirname(runtime);
+  const local = import_node_path5.default.resolve(import_node_path5.default.dirname(file), dir, CHUNK_NAME);
+  const fromRoot = import_node_path5.default.join(repoRoot, "dist", CHUNK_NAME);
+  if (!import_node_fs5.default.existsSync(local) && !import_node_fs5.default.existsSync(fromRoot)) problems.warn(file, 0, null, `scene3d figure(s) but the lazy chunk ${import_node_path5.default.posix.join(dir, CHUNK_NAME)} is not found beside the runtime; run: node tools/build-3d.mjs`);
 }
 function validateArticle(article, { repoRoot, budget, problems }) {
   const palette = extractPalette(article.doc);
   checkPalette(palette, article.file, problems);
   checkStructure(article, problems);
   checkIntegrity(article.doc, article.file, repoRoot, problems);
+  checkOgImage(article.doc, article.file, problems);
   const figures = compileFigures(article, palette.names, problems);
   checkRefs(article, figures, problems);
   checkRefWarnings(article, figures, problems);
@@ -25558,7 +25596,7 @@ function checkFigureStates(file, fig, problems) {
   return lines;
 }
 
-// src/cli.mjs
+// tools/src/cli.mjs
 var VERSIONS = typeof define_EXPLAINERS_VERSIONS_default !== "undefined" ? define_EXPLAINERS_VERSIONS_default : { cli: "unbundled" };
 var USAGE = `explainers \u2014 validator and builder for explainer articles
 
@@ -25587,8 +25625,8 @@ Every failure prints  file:line: CODE figure-id: message  and exits 1.`;
 function findRepoRoot(start) {
   let dir = start;
   for (let i2 = 0; i2 < 6; i2++) {
-    if (import_node_fs5.default.existsSync(import_node_path5.default.join(dir, "lib", "spec.js")) && import_node_fs5.default.existsSync(import_node_path5.default.join(dir, "tools"))) return dir;
-    dir = import_node_path5.default.dirname(dir);
+    if (import_node_fs6.default.existsSync(import_node_path6.default.join(dir, "lib", "spec.js")) && import_node_fs6.default.existsSync(import_node_path6.default.join(dir, "tools"))) return dir;
+    dir = import_node_path6.default.dirname(dir);
   }
   return process.cwd();
 }
@@ -25649,7 +25687,7 @@ function cmdBuild(files, repoRoot, problems, out) {
     const integrity = buildIntegrity(doc, html, file, repoRoot, problems);
     html = integrity.html;
     if (problems.errors.length > before) continue;
-    if (html !== article.html) import_node_fs5.default.writeFileSync(file, html);
+    if (html !== article.html) import_node_fs6.default.writeFileSync(file, html);
     const ext = posters.external.length ? ` (${posters.external.length} external: ${posters.external.join(", ")})` : "";
     out.write(`${file}: ${tex.count} formula(s) rendered, ${posters.count} poster(s) written${ext}, ${captions.count} caption(s) amended, ${integrity.count} integrity attribute(s) set${html === article.html ? " (unchanged)" : ""}
 `);
@@ -25704,7 +25742,7 @@ ${USAGE}
 `);
     return 2;
   }
-  for (const f2 of args.files) if (!import_node_fs5.default.existsSync(f2)) {
+  for (const f2 of args.files) if (!import_node_fs6.default.existsSync(f2)) {
     stderr.write(`${f2}: no such file
 `);
     return 2;
@@ -25741,7 +25779,7 @@ ${USAGE}
 }
 var invokedDirectly = typeof require !== "undefined" ? require.main === module : /cli\.mjs$/.test(process.argv[1] || "");
 if (invokedDirectly) {
-  process.exitCode = main2(process.argv.slice(2), { here: import_node_path5.default.dirname(import_node_path5.default.resolve(process.argv[1])) });
+  process.exitCode = main2(process.argv.slice(2), { here: import_node_path6.default.dirname(import_node_path6.default.resolve(process.argv[1])) });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

@@ -73,6 +73,8 @@ test('build renders KaTeX, inserts the poster, resolves integrity, is idempotent
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-build-'));
   const file = path.join(tmp, 'fig-months.html');
   fs.copyFileSync(path.join(passDir, 'fig-months.html'), file);
+  fs.mkdirSync(path.join(tmp, 'assets'));
+  fs.writeFileSync(path.join(tmp, 'assets/og.png'), pngHead(1200, 630)); // the card is rendered by tools/og-image.mjs, not by build
   const first = run(['build', file]);
   assert.equal(first.code, 0, first.err);
   assert.match(first.out, /1 formula\(s\) rendered, 1 poster\(s\) written, 0 caption\(s\) amended, 2 integrity attribute\(s\) set/);
@@ -221,4 +223,59 @@ test('`errors` and `vocab` print the catalogue and the vocabulary', () => {
   assert.equal(v.code, 0);
   assert.match(v.out, /### Figure \(top level\)/);
   assert.match(v.out, /\| `smoothstep` \|/);
+});
+
+// A PNG header only: signature + IHDR (length, type, width, height). The og
+// check reads nothing past byte 24, and no library is needed to write it.
+function pngHead(width, height) {
+  const b = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b);
+  b.writeUInt32BE(13, 8);
+  b.write('IHDR', 12, 'latin1');
+  b.writeUInt32BE(width, 16);
+  b.writeUInt32BE(height, 20);
+  return b;
+}
+
+test('validate warns when og:image names assets/og.png and the file is missing or not a 1200x630 PNG', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-og-'));
+  const file = path.join(dir, 'index.html');
+  const base = fs.readFileSync(path.join(passDir, 'minimal.html'), 'utf8');
+  fs.writeFileSync(file, base.replace('<title>Minimal</title>', '<meta property="og:image" content="https://example.test/minimal/assets/og.png">\n<title>Minimal</title>'));
+  const line = /:\d+: warning -: og:image assets\/og\.png ([^\n]*); run: node tools\/og-image\.mjs \S+index\.html$/m;
+  let r = run(['validate', file]);
+  assert.equal(r.code, 0, r.err);
+  assert.equal(line.exec(r.err)?.[1], 'not found', r.err);
+  fs.mkdirSync(path.join(dir, 'assets'));
+  fs.writeFileSync(path.join(dir, 'assets/og.png'), pngHead(600, 315));
+  assert.equal(line.exec(run(['validate', file]).err)?.[1], 'is 600x315, not 1200x630');
+  fs.writeFileSync(path.join(dir, 'assets/og.png'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  assert.equal(line.exec(run(['validate', file]).err)?.[1], 'is not a PNG');
+  fs.writeFileSync(path.join(dir, 'assets/og.png'), pngHead(1200, 630));
+  r = run(['validate', file]);
+  assert.equal(r.code, 0, r.err);
+  assert.doesNotMatch(r.err, /og:image/, 'a 1200x630 PNG satisfies the check');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('both articles validate with zero warnings and carry the link-preview head', () => {
+  const articles = ['articles/hebrew-calendar/index.html', 'articles/moon/index.html'];
+  const r = run(['validate', ...articles, '--budget', '170k']);
+  assert.equal(r.code, 0, r.err);
+  assert.doesNotMatch(r.err, /warning/, `the committed articles validate without warnings\n${r.err}`);
+  const head = [
+    '<meta property="og:site_name" content="Explainers">',
+    '<meta property="og:image:width" content="1200">',
+    '<meta property="og:image:height" content="630">',
+    '<meta property="og:image:type" content="image/png">',
+    '<meta name="twitter:card" content="summary_large_image">',
+    '<link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">',
+  ];
+  for (const a of articles) {
+    const html = fs.readFileSync(path.join(root, a), 'utf8');
+    for (const tag of head) assert.ok(html.includes(tag), `${a} lacks ${tag}`);
+    assert.match(html, /<meta property="og:image" content="https:\/\/explainers\.sweedler\.com\/[a-z/-]*assets\/og\.png">/, `${a}: og:image points at its assets/og.png`);
+  }
+  assert.ok(fs.existsSync(path.join(root, 'assets/og.png')), 'assets/og.png (the front page card; run: node tools/og-image.mjs --site)');
+  assert.ok(fs.existsSync(path.join(root, 'assets/apple-touch-icon.png')), 'assets/apple-touch-icon.png (run: node tools/og-image.mjs --site)');
 });

@@ -10,6 +10,7 @@ import { checkTex } from './tex.mjs';
 import { checkBudget } from './budget.mjs';
 import { checkIntegrity } from './integrity.mjs';
 import { checkPosters } from './poster.mjs';
+import { checkOgImage } from './og.mjs';
 import path from 'node:path';
 
 const CHUNK_NAME = 'explainers-3d.v1.js';
@@ -164,6 +165,7 @@ export function validateArticle(article, { repoRoot, budget, problems }) {
   checkPalette(palette, article.file, problems);
   checkStructure(article, problems);
   checkIntegrity(article.doc, article.file, repoRoot, problems);
+  checkOgImage(article.doc, article.file, problems);
   const figures = compileFigures(article, palette.names, problems);
   checkRefs(article, figures, problems);
   checkRefWarnings(article, figures, problems);
