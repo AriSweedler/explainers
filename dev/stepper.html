@@ -28,7 +28,7 @@
       if (!f) return;
       if (q.get('state')) f.goto(q.get('state'), { ease: false });
       if (q.get('sim')) f.el.classList.add('x-sim-' + q.get('sim'));
-      if (q.get('focus')) { const el = f.el.querySelector(q.get('focus') === 'next' ? '.x-stepper .x-next' : q.get('focus') === 'radio' ? '.x-stepper input' : '.x-stepper .x-latch, .x-stepper input'); if (el) el.focus(); }
+      if (q.get('focus')) { const el = f.el.querySelector(q.get('focus') === 'next' ? '.x-stepper .x-next' : q.get('focus') === 'radio' ? '.x-stepper input' : q.get('focus') === 'slider' ? '.x-ctl-slider input' : '.x-stepper .x-latch, .x-stepper input'); if (el) el.focus(); }
       document.documentElement.dataset.harness = 'done';
     };
     setTimeout(apply, 0);
