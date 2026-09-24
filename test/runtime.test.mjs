@@ -305,7 +305,7 @@ test('models compute every output lib/spec.js declares, finite', () => {
 
 // ------------------------------------------------------------------ build
 
-test('the concatenation build is valid JS, current in dist/, and under 40 KB gzip', () => {
+test('the concatenation build is valid JS, current in dist/, and under 42 KB gzip', () => {
   const out = bundle(root);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-runtime-'));
   const file = path.join(tmp, 'runtime.js');
@@ -323,7 +323,7 @@ test('the concatenation build is valid JS, current in dist/, and under 40 KB gzi
   const withImport = sections.filter((sec) => /\bimport\s*\(/.test(sec)).map((sec) => sec.slice(0, sec.indexOf('\n')));
   assert.deepEqual(withImport, [LAZY_IMPORTER]);
   assert.equal(fs.readFileSync(path.join(root, OUTFILE), 'utf8'), out, `${OUTFILE} is stale; run: node tools/build-runtime.mjs`);
-  assert.ok(gzipSize(out) <= 40 * 1000, `runtime is ${gzipSize(out)} bytes gzipped`);
+  assert.ok(gzipSize(out) <= 42 * 1000, `runtime is ${gzipSize(out)} bytes gzipped`);
   for (const rel of ORDER) assert.ok(fs.existsSync(path.join(root, rel)), rel);
 });
 

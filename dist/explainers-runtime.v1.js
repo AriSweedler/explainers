@@ -2295,6 +2295,7 @@ const fallbackFmt = Number.isInteger(control.step) ? ',d' : '.2f';
 const valueOf = () => (discrete ? control.values[Number(input.value)] : Number(input.value));
 input.addEventListener('input', () => fig.set(control.name, valueOf(), 'user'));
 const ticks = discrete ? evenFractions(control.values.length) : stepFractions(control.min, control.max, control.step);
+if (ticks.length) wrap.classList.add('x-discrete');
 wrap.append(h('label', {}, h('span', { class: 'x-ctl-label' }, control.label), sliderTrack(ticks), input, out));
 return {
 el: wrap, name: control.name,
@@ -2326,6 +2327,7 @@ input.addEventListener('input', () => {
 if (scrub) fig.set(control.name, Number(input.value), 'user');
 else fig.set(`${control.name}.rate`, control.rates[Number(input.value)], 'user');
 });
+if (!scrub) wrap.classList.add('x-discrete');
 wrap.append(h('label', {}, h('span', { class: 'x-ctl-label' }, labelText), sliderTrack(scrub ? [] : evenFractions(control.rates.length)), input, out));
 const clockText = (ms) => (control.format === 'dhm' ? format(ms / 86400e3, 'dhm') : format(epochMs + ms, control.format, fig.fmt));
 return {
@@ -2462,15 +2464,16 @@ const wrap = h('div', { class: 'x-stepper', id: `${fig.id}_steps` });
 const caption = h('p', { class: 'x-caption', id: `${fig.id}_steps_cap` });
 const sr = h('span', { class: 'x-sr', 'aria-live': 'polite', 'aria-atomic': 'true' });
 const indexOf = (name) => states.findIndex((s) => s.name === name);
-const armedKeys = { ArrowLeft: -1, ArrowRight: 1, Home: -Infinity, End: Infinity };
+const armedKeys = { ArrowLeft: -1, ArrowRight: 1 };
 let last = '';
 const announce = (msg) => { if (msg !== last) { sr.textContent = msg; last = msg; } };
-const stepIn = (dir = 0) => { const near = nearestState(fig.compiled, fig.scope, 1e-6, dir); if (near) fig.goto(near.name, { ease: !near.exact }); };
+const jump = (name) => fig.goto(name, { ease: false });
+const stepIn = (dir = 0) => { const near = nearestState(fig.compiled, fig.scope, 1e-6, dir); if (near) jump(near.name); };
 const move = (delta) => {
 const i = indexOf(fig.activeState);
-if (i < 0) return stepIn(Math.sign(delta));
-const j = Math.max(0, Math.min(n - 1, delta === -Infinity ? 0 : delta === Infinity ? n - 1 : i + delta));
-if (j !== i) fig.goto(states[j].name);
+if (i < 0) return stepIn(delta);
+const j = Math.max(0, Math.min(n - 1, i + delta));
+if (j !== i) jump(states[j].name);
 };
 let focusIn = () => {};
 const enter = () => { if (fig.activeState === null) { stepIn(); focusIn(); } };
@@ -2484,7 +2487,7 @@ if (n <= PILL_MAX) {
 const row = h('fieldset', { role: 'radiogroup', class: 'x-stepper-row x-steps-seg', 'data-face': 'free' }, h('legend', {}, 'Steps'));
 const inputs = states.map((s) => {
 const input = h('input', { type: 'radio', name: `${fig.id}_steps`, value: s.name });
-input.addEventListener('change', () => { if (input.checked) fig.goto(s.name); });
+input.addEventListener('change', () => { if (input.checked) jump(s.name); });
 row.append(h('label', {}, input, h('span', {}, s.name)));
 return input;
 });
@@ -2523,7 +2526,7 @@ caption.textContent = stepped ? states[i].caption : '';
 announce(stepped ? `Step ${i + 1} of ${n}, ${active}. ${states[i].caption}` : '');
 };
 }
-return { el: wrap, sync, enter };
+return { el: wrap, sync, enter, key: onKey };
 }
 
 // ---- lib/site/scene3d.js
@@ -2613,6 +2616,7 @@ const stepper = spec.notice.steps !== 'none' && spec.notice.states.length ? moun
 if (stepper) {
 insert(stepper.el);
 panel.addEventListener('click', (e) => { if (!e.target.closest('button, input, label, a, .x-ctl, .x-stepper-row')) stepper.enter(); });
+panel.addEventListener('keydown', (e) => { if (e.target.closest('.x-ctl-slider:not(.x-discrete)')) stepper.key(e); });
 }
 let scene = null;
 let detachDrag = null;
@@ -2717,6 +2721,11 @@ fig.activeState = null; governed = null;
 if (fig.playing && playSpec && name === playSpec.target) fig.pause();
 }
 const v = assign(name, value, source);
+const c = source === 'user' ? controlOf(compiled, name) : null;
+if (c && c.kind === 'slider' && ('values' in c || (c.max - c.min) / c.step <= 40)) {
+const a = activeState(compiled, scope);
+if (a) { fig.activeState = a; governed = new Set(Object.keys(stateTargets(compiled, a).targets).map((k) => k.split('.')[0])); }
+}
 syncControls();
 requestDraw();
 return v;
