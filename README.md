@@ -131,6 +131,10 @@ node tools/og-image.mjs --site                       # -> assets/og.png (front p
 
 The renderer uses Playwright's `chrome-headless-shell` (the newest under `~/Library/Caches/ms-playwright/`, or the binary named by `$EXPLAINERS_HEADLESS_SHELL`) and never Chrome.app (see above). Messages ignores the SVG favicon and shows the PNG `<link rel="apple-touch-icon">` beside the card, which is why every page links `assets/apple-touch-icon.png`; `--site` regenerates it, so run it again only when `favicon.svg` changes. Check a result with `sips -g pixelWidth -g pixelHeight articles/<slug>/assets/og.png`.
 
+## Slider anatomy
+
+Slider, track (fill and rail), knob, halo, stop, tick, socket, value: `DESIGN.md` "Slider anatomy" defines the words and the DOM for every slider part. Code, comments, captions and prose use them; a drag control's on-canvas point is a handle, never a knob.
+
 ## How the runtime mounts
 
 `dist/explainers-runtime.v1.js` is loaded once with `<script defer>`. On `DOMContentLoaded` it

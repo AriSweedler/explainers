@@ -2240,10 +2240,13 @@ el.dispatchEvent(new CustomEvent(type, { bubbles: true, detail }));
 function sliderTrack(fractions) {
 const track = h('div', { class: 'x-track' });
 for (const f of fractions) {
+const socket = h('i', { class: 'x-socket' });
+socket.style.setProperty('--at', `${f * 100}%`);
 const tick = h('i', { class: 'x-tick' });
 tick.style.setProperty('--at', `${f * 100}%`);
-track.append(tick);
+track.append(socket, tick);
 }
+track.append(h('i', { class: 'x-knob' }));
 return track;
 }
 function stepFractions(min, max, step) {

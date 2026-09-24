@@ -85,30 +85,45 @@ cite { font-style: italic; }
 /* controls under the canvas, in spec order */
 .x-ctl { margin: 0.9rem auto 0; font: 0.9rem/1.3 var(--x-sans); }
 .x-ctl.x-hl { outline: 2px solid var(--token, var(--x-accent)); outline-offset: 6px; border-radius: 4px; }
-/* A native range moves the knob so its EDGE touches the input's ends, so the knob CENTER stops half a
-   knob (20 px) short of each end. The runtime therefore draws the visible track itself (.x-track), inset
-   by half the knob on both sides, and measures the fill (--x-pct) and the tick marks along that track:
-   the knob center lands exactly on the track ends and on every tick. The native track is transparent.
-   The wrapper is one knob wider than the track so a standard/long track still measures 380/600 px. */
-.x-ctl-slider { --x-thumb: 40px; width: min(calc(380px + var(--x-thumb)), 100%); }
+/* ---- Slider anatomy: the design language (DESIGN.md "Slider anatomy"; use these words everywhere) ----
+   slider    the whole control: label, track, knob, value
+   track     the bar the knob rides: the FILL (token color, from the start to the knob) and the RAIL (grey rest)
+   knob      the round handle the reader drags (the browser calls it a thumb; we never do): an 18 px token disc,
+             a 2 px page-colored gap and a 1 px grey OUTLINE at rest
+   halo      the translucent token ring that appears around the knob on hover, focus and while dragging
+   stop      an allowed value of a discrete slider (a values list, or 40 or fewer steps); a continuous slider has none
+   tick      the small grey bar marking a stop on the track
+   socket    the grey ring seated on the track at a stop, which the knob fits into
+   value     the <output> under the track; states: rest, hover, focus, active (dragging)
+   A native range moves its thumb so the thumb's EDGE touches the input's ends, so a thumb CENTER stops half a
+   thumb (20 px) short of each end. The runtime therefore keeps the native <input type=range> only for pointer
+   and keyboard handling (it draws nothing) and draws the track, ticks, sockets and knob itself inside .x-track,
+   inset by half the hit target on both sides, measuring the fill (--x-pct) along that track: the knob center
+   lands exactly on the track ends and on every stop, and the knob is always in front of the track.
+   The wrapper is one hit target wider than the track so a standard/long track still measures 380/600 px. */
+.x-ctl-slider { --x-thumb: 40px; --x-knob: 18px; --x-socket: 14px; width: min(calc(380px + var(--x-thumb)), 100%); }
 .x-ctl-slider.x-long { width: min(calc(600px + var(--x-thumb)), 100%); }
 .x-ctl-slider label { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "input input" "label output"; align-items: center; column-gap: 0.75rem; padding: 0 calc(var(--x-thumb) / 2); }
 .x-ctl-slider .x-ctl-label { grid-area: label; color: var(--x-muted); }
 .x-ctl-slider output { grid-area: output; color: var(--token); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-.x-ctl-slider .x-track { grid-area: input; position: relative; height: 4px; pointer-events: none; }
-.x-ctl-slider .x-track::before { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: 2px; background: linear-gradient(to right, var(--token) var(--x-pct, 0%), var(--x-rule) var(--x-pct, 0%)); }
-/* one tick per stop on a discrete slider (a values list, or 40 or fewer steps), behind the track so it never hides the fill */
+/* the track sits above the (invisible) input and lets every pointer event through to it */
+.x-ctl-slider .x-track { grid-area: input; position: relative; z-index: 1; height: 4px; pointer-events: none; }
+.x-ctl-slider .x-track::before { content: ""; position: absolute; inset: 0; border-radius: 2px; background: linear-gradient(to right, var(--token) var(--x-pct, 0%), var(--x-rule) var(--x-pct, 0%)); }
 .x-ctl-slider .x-tick { position: absolute; top: -2px; left: var(--at); width: 2px; height: 8px; margin-left: -1px; border-radius: 1px; background: var(--c-muted, var(--x-muted)); }
+.x-ctl-slider .x-socket { position: absolute; top: 50%; left: var(--at); width: var(--x-socket); height: var(--x-socket); margin: calc(var(--x-socket) / -2) 0 0 calc(var(--x-socket) / -2); box-sizing: border-box; border-radius: 50%; border: 1px solid var(--x-rule); background: var(--bg); }
+.x-ctl-slider .x-socket + .x-tick { top: 50%; height: 4px; margin-top: -2px; }
+.x-ctl-slider .x-knob { position: absolute; top: 50%; left: var(--x-pct, 0%); width: var(--x-knob); height: var(--x-knob); margin: calc(var(--x-knob) / -2) 0 0 calc(var(--x-knob) / -2); box-sizing: border-box; border-radius: 50%; background: var(--token); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--x-rule); transition: box-shadow 0.12s ease; }
+/* halo: a spread-only shadow (no blur) is the cheapest glow to paint */
+.x-ctl-slider:has(input:hover) .x-knob, .x-ctl-slider:has(input:focus-visible) .x-knob { box-shadow: 0 0 0 1px var(--x-rule), 0 0 0 6px color-mix(in srgb, var(--token) 28%, transparent); }
+.x-ctl-slider:has(input:active) .x-knob { box-shadow: 0 0 0 1px var(--x-rule), 0 0 0 8px color-mix(in srgb, var(--token) 40%, transparent); }
+/* the native input: a 40 px tall hit target that draws nothing */
 .x-ctl-slider input[type="range"] { grid-area: input; -webkit-appearance: none; appearance: none; width: calc(100% + var(--x-thumb)); height: 40px; margin: 0 calc(var(--x-thumb) / -2); background: transparent; cursor: pointer; }
 .x-ctl-slider input[type="range"]:focus { outline: none; }
 .x-ctl-slider input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
 .x-ctl-slider input[type="range"]::-moz-range-track { height: 4px; background: transparent; }
 .x-ctl-slider input[type="range"]::-moz-range-progress { height: 4px; background: transparent; }
-/* the thumb is a 40 px target drawn as an 18 px knob with a 2 px page-colored ring */
-.x-ctl-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; margin-top: -18px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--token) 0 9px, var(--bg) 9.5px 11px, transparent 11.5px); }
-.x-ctl-slider input[type="range"]::-moz-range-thumb { width: 40px; height: 40px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--token) 0 9px, var(--bg) 9.5px 11px, transparent 11.5px); }
-.x-ctl-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--token) 40%, transparent); }
-.x-ctl-slider input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--token) 40%, transparent); }
+.x-ctl-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; margin-top: -18px; border: 0; background: transparent; }
+.x-ctl-slider input[type="range"]::-moz-range-thumb { width: 40px; height: 40px; border: 0; background: transparent; }
 .x-ctl-toggle { text-align: center; }
 .x-ctl-segmented { text-align: center; }
 .x-ctl-segmented fieldset, .x-steps-seg { position: relative; display: inline-flex; margin: 0; padding: 0; border: 1px solid var(--x-rule); border-radius: 999px; overflow: hidden; }
@@ -193,6 +208,7 @@ div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .x-ctl-slider .x-knob { transition: none; }
   html { scroll-behavior: auto; }
   .x-flash { animation: none; background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); }
 }

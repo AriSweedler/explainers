@@ -829,7 +829,7 @@ Phase 2 shipped the 2D runtime, the stylesheet, and PoC 1. The rest of this sect
 
 **Added after delivery** (2026-09-22): prose refs inherit the visibility of what they point at. `figure.visibleIds` is recomputed after every scope change and state (`lib/core/state.js` `visibleIds`, the pure rule `isShown` follows), `x-fig:visibility` fires when the set changes, and `lib/site/hooks.js` toggles `x-ref-hidden` on the spans, which the stylesheet renders as plain prose with no hover highlight. Tested in `test/runtime.test.mjs` against fig-months.
 
-**Added after delivery** (2026-09-22): slider geometry and ticks. A native range moves the knob so its edge touches the input's ends, so the knob center stops half a knob (20 px) short; the runtime now draws the visible track itself (`div.x-track`, a sibling of the input inset by half the knob on both sides, `--x-pct` measured along it), so the knob center lands exactly on the track ends and the fill is flush with the knob center; the wrapper is one knob wider than the 380/600 px track. A discrete control (a `values` list, or `(max - min) / step <= 40`; a speed-mode time control's `rates`) gets one `i.x-tick` per stop (2 x 8 px, `--c-muted`, behind the track) where the knob center lands; a continuous control gets none (`lib/controls/slider.js` `stepFractions` / `evenFractions`).
+**Added after delivery** (2026-09-24): the knob is an element the runtime draws (`i.x-knob`, last in `.x-track`, so it is in front of the fill), with a grey outline at rest and a halo on hover, focus and drag; discrete sliders get a socket per stop; the vocabulary is fixed in "Slider anatomy". (2026-09-22): slider geometry and ticks. A native range moves the knob so its edge touches the input's ends, so the knob center stops half a knob (20 px) short; the runtime now draws the visible track itself (`div.x-track`, a sibling of the input inset by half the knob on both sides, `--x-pct` measured along it), so the knob center lands exactly on the track ends and the fill is flush with the knob center; the wrapper is one knob wider than the 380/600 px track. A discrete control (a `values` list, or `(max - min) / step <= 40`; a speed-mode time control's `rates`) gets one `i.x-tick` per stop (2 x 8 px, `--c-muted`, behind the track) where the knob center lands; a continuous control gets none (`lib/controls/slider.js` `stepFractions` / `evenFractions`).
 
 **Deferred to phase 3** (all delivered in 3A/3B below): `dist/explainers-3d.v1.js` and `lib/scene3d/*` (three.js; the placeholder above stood in), the drag `surface:<id>` constraint and `geolocate`; the test files this section names (`states`, `glossary`, `budget`, Playwright): `test/runtime.test.mjs` covers the goto transition under a fake clock, deep links and the runtime/CSS budgets in Node, and the DOM behavior was verified by headless Chrome screenshots (`preview/`, not committed). Posters, the caveat sentence, integrity and the three validator warnings landed in phase 3A (below).
 
@@ -940,7 +940,7 @@ Animation: there is no implicit clock variable. The only animated quantities are
     <div class="x-readouts" aria-live="polite">…</div>        <!-- text mirror of canvas readouts -->
   </div>
   <div class="x-ctl x-ctl-slider x-long" id="fig-x_sl0" style="--token: var(--c-moon)">
-    <label>days since new Moon <div class="x-track"><i class="x-tick" style="--at: 0%"></i>…</div> <input type="range" min max step value aria-valuetext> <output>0.00 days</output></label>   <!-- ticks only on discrete controls -->
+    <label>days since new Moon <div class="x-track"><i class="x-socket" style="--at: 0%"></i><i class="x-tick" style="--at: 0%"></i>…<i class="x-knob"></i></div> <input type="range" min max step value aria-valuetext> <output>0.00 days</output></label>   <!-- sockets and ticks only on discrete controls; the knob is always last -->
   </div>
   <div class="x-ctl x-ctl-segmented" id="fig-x_seg0"><fieldset role="radiogroup">…</fieldset></div>
   <button class="x-drag-proxy" id="fig-x_drag_p" role="slider" aria-label="p">…</button>   <!-- keyboard nudging -->
@@ -953,6 +953,24 @@ Animation: there is no implicit clock variable. The only animated quantities are
 ```
 
 Ids: `<fig>_sl<i>` for slider and time controls, `<fig>_seg<i>`, `<fig>_tg<i>`, `<fig>_drag_<name>`, `<fig>_steps`, `i` counting within the kind in spec order. Controls mount under the canvas in spec order, then the stepper. Play and toggle (`position: corner`) are absolutely positioned over the canvas box; nothing overlaps the drawing.
+
+#### Slider anatomy (design language)
+
+These are the words for a slider's parts, in code, comments, docs, captions and prose. Nobody says "thumb", "button", "dot" or "circle" for the knob, and a drag control's on-canvas point is its *handle*, never a knob.
+
+| word | what it is | in the DOM |
+|---|---|---|
+| slider | the whole control: label, track, knob and value | `.x-ctl.x-ctl-slider` (time controls add `.x-ctl-time`) |
+| track | the bar the knob rides; its **fill** is the token-colored part from the start to the knob, its **rail** the grey rest | `.x-track` (`::before` paints fill and rail from `--x-pct`) |
+| knob | the round handle the reader drags: an 18 px token disc, a 2 px page-colored gap, a 1 px grey **outline** at rest | `i.x-knob`, positioned at `--x-pct`, last child of the track so it is always in front |
+| halo | the translucent token ring around the knob on hover, keyboard focus and while dragging (active); a spread-only box-shadow, the cheapest glow to paint | `.x-ctl-slider:has(input:hover|:focus-visible|:active) .x-knob` |
+| stop | an allowed value of a **discrete** slider (a `values` list, or `(max - min) / step <= 40`, or a speed-mode time control's `rates`); a **continuous** slider has none | one `--at` per stop |
+| tick | the small grey bar that marks a stop | `i.x-tick` |
+| socket | the grey ring seated on the track at a stop, which the knob fits into | `i.x-socket` (page-colored fill, 1 px `--x-rule` border, 14 px) |
+| value | the formatted number under the track | `output` |
+| states | rest, hover, focus, active | the native `<input type=range>` keeps pointer and keyboard handling and draws nothing |
+
+The runtime draws all of this itself because a native range moves its thumb so the thumb's edge, not its center, reaches the input's ends; the visible track is inset by half the 40 px hit target so the knob center lands on the track ends and on every stop.
 
 ### Events (CustomEvent on the figure element, bubbles)
 

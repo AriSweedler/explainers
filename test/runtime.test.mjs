@@ -338,7 +338,7 @@ test('transformModule refuses a dynamic import() anywhere but the scene3d loader
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
   const css = fs.readFileSync(path.join(root, 'dist/explainers.v1.css'), 'utf8');
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
-  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
 });
 
 test('dist/integrity.json holds a current sha384 for the runtime, the stylesheet and the 3D chunk; the template carries the two include placeholders', () => {
