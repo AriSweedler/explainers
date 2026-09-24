@@ -427,4 +427,10 @@ test('nearestState: from the defaults the first step is exact; between steps the
   assert.equal(nearestState(compiled, scope(180, 1)).name, 'quarter', 'a step that sets the toggle the other way is a full unit away');
   assert.deepEqual(nearestState(compiled, scope(180, 0)), { name: 'half', d: 0, exact: true });
   assert.deepEqual(Object.keys(stateTargets(compiled, 'half').targets), ['a', 'rim']);
+  // directional: › from 50° lands on quarter (ahead), ‹ from 50° on start (behind); past the last step › lands on the last
+  assert.equal(nearestState(compiled, scope(50), 1e-6, 1).name, 'quarter');
+  assert.equal(nearestState(compiled, scope(50), 1e-6, -1).name, 'start');
+  assert.equal(nearestState(compiled, scope(300, 0), 1e-6, 1).name, 'half', 'nothing ahead: the last step');
+  assert.equal(nearestState(compiled, scope(-10), 1e-6, -1).name, 'start', 'nothing behind: the first step');
+  assert.equal(nearestState(compiled, scope(0), 1e-6, 1).name, 'quarter', 'exactly on a step, › goes to the next one ahead');
 });

@@ -1439,22 +1439,28 @@ if (keys.length && keys.every((k) => Math.abs(Number(scope.get(k)) - Number(targ
 }
 return null;
 }
-function nearestState(compiled, scope, eps = 1e-6) {
-let best = null;
+function nearestState(compiled, scope, eps = 1e-6, dir = 0) {
+let best = null, first = null, last = null;
 for (const st of compiled.spec.notice.states) {
 const { targets } = stateTargets(compiled, st.name);
-let d = 0, n = 0, exact = true;
+let d = 0, sd = 0, n = 0, exact = true;
 for (const [k, v] of Object.entries(targets)) {
 if (k.includes('.')) continue;
 const c = controlOf(compiled, k);
 const span = c && 'values' in c ? Math.abs(c.values.at(-1) - c.values[0]) || 1 : (c && c.max - c.min) || 1;
-const diff = Math.abs(Number(scope.get(k)) - Number(v));
-if (diff > eps) exact = false;
-d += diff / span; n++;
+const diff = Number(v) - Number(scope.get(k));
+if (Math.abs(diff) > eps) exact = false;
+d += Math.abs(diff) / span; n++;
+if (!c || c.kind !== 'toggle') sd += diff / span;
 }
-if (!best || d < best.d) best = { name: st.name, d, exact: exact && n > 0 };
+const cand = { name: st.name, d, exact: exact && n > 0 };
+if (!first) first = cand;
+last = cand;
+if (dir > 0 && !(sd > eps)) continue;
+if (dir < 0 && !(sd < -eps)) continue;
+if (!best || d < best.d) best = cand;
 }
-return best;
+return best || (dir > 0 ? last : first);
 }
 function stateIndex(compiled, name) {
 return compiled.states.indexOf(name);
@@ -2459,13 +2465,15 @@ const indexOf = (name) => states.findIndex((s) => s.name === name);
 const armedKeys = { ArrowLeft: -1, ArrowRight: 1, Home: -Infinity, End: Infinity };
 let last = '';
 const announce = (msg) => { if (msg !== last) { sr.textContent = msg; last = msg; } };
-const stepIn = () => { const near = nearestState(fig.compiled, fig.scope); if (near) fig.goto(near.name, { ease: !near.exact }); };
+const stepIn = (dir = 0) => { const near = nearestState(fig.compiled, fig.scope, 1e-6, dir); if (near) fig.goto(near.name, { ease: !near.exact }); };
 const move = (delta) => {
 const i = indexOf(fig.activeState);
-if (i < 0) return stepIn();
+if (i < 0) return stepIn(Math.sign(delta));
 const j = Math.max(0, Math.min(n - 1, delta === -Infinity ? 0 : delta === Infinity ? n - 1 : i + delta));
 if (j !== i) fig.goto(states[j].name);
 };
+let focusIn = () => {};
+const enter = () => { if (fig.activeState === null) { stepIn(); focusIn(); } };
 const onKey = (e) => {
 if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || !(e.key in armedKeys)) return;
 e.preventDefault();
@@ -2482,6 +2490,7 @@ return input;
 });
 row.prepend(h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '←'));
 row.append(h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '→'));
+focusIn = () => (inputs.find((i) => i.checked) || inputs[0]).focus({ preventScroll: true });
 wrap.append(row, caption, sr);
 sync = (active) => {
 const i = indexOf(active), stepped = i >= 0;
@@ -2498,9 +2507,10 @@ const counter = h('span', { class: 'x-counter' });
 const latch = h('button', { class: 'x-latch', type: 'button', 'aria-pressed': 'false' }, invite, counter);
 const row = h('div', { class: 'x-stepper-row', role: 'group', 'aria-label': 'Steps', 'data-face': 'free' },
 h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '←'), prev, latch, next, h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '→'));
+focusIn = () => latch.focus({ preventScroll: true });
 row.addEventListener('click', (e) => {
-if (fig.activeState === null) { stepIn(); latch.focus({ preventScroll: true }); return; }
 const t = e.target.closest('button');
+if (fig.activeState === null) { if (t === prev) move(-1); else if (t === next) move(1); else stepIn(); focusIn(); return; }
 if (t === prev) move(-1); else if (t === next) move(1); else if (t === latch) fig.stepOff();
 });
 row.addEventListener('keydown', onKey);
@@ -2516,7 +2526,7 @@ caption.textContent = stepped ? states[i].caption : '';
 announce(stepped ? `Step ${i + 1} of ${n}, ${active}. ${states[i].caption}` : '');
 };
 }
-return { el: wrap, sync };
+return { el: wrap, sync, enter };
 }
 
 // ---- lib/site/scene3d.js
@@ -2562,7 +2572,9 @@ const scope = new Map(compiled.defaults);
 const fig = { id: el.id, el, compiled, scope, fmt: env.fmt, playing: false, activeState: null, visible: false, mounted: false, visibleIds: new Set() };
 const is3d = compiled.type === 'scene3d';
 const figcaption = el.querySelector(':scope > figcaption');
-const insert = (node) => (figcaption ? el.insertBefore(node, figcaption) : el.append(node));
+const panel = h('div', { class: 'x-panel' });
+if (figcaption) el.insertBefore(panel, figcaption); else el.append(panel);
+const insert = (node) => panel.append(node);
 const box = h('div', { class: 'x-canvas-box' });
 const [aw, ah] = (el.dataset.aspect || '3:2').split(':').map(Number);
 box.style.aspectRatio = `${aw} / ${ah}`;
@@ -2572,7 +2584,7 @@ const readoutsEl = h('div', { class: 'x-readouts', 'aria-live': 'polite' });
 box.append(canvas, cornerRight, readoutsEl);
 const poster = el.querySelector(':scope > .x-poster');
 if (poster) canvas.after(poster);
-insert(box);
+el.insertBefore(box, panel);
 el.dataset.booted = '';
 const mounted = [];
 const counts = { sl: 0, tg: 0, seg: 0 }; // slider and time share the _sl<i> ids
@@ -2600,7 +2612,12 @@ const speedTimes = controls.filter((c) => c.kind === 'time' && c.mode === 'speed
 const playUi = playSpec || speedTimes.length ? mountPlay(fig) : null;
 if (playUi) box.append(playUi.el);
 const stepper = spec.notice.steps !== 'none' && spec.notice.states.length ? mountStepper(fig, spec.notice) : null;
-if (stepper) insert(stepper.el);
+if (stepper) {
+insert(stepper.el);
+const enterFromBackground = (e) => { if (!e.target.closest('button, input, label, a, .x-ctl, .x-stepper-row')) stepper.enter(); };
+panel.addEventListener('click', enterFromBackground);
+if (figcaption) figcaption.addEventListener('click', enterFromBackground);
+}
 let scene = null;
 let detachDrag = null;
 let pendingCamera = null;   // a state's camera pose asked for before the chunk was ready
@@ -2650,7 +2667,7 @@ let stateVisible = null;  // the last goto's visible.show/hide; like the layer o
 function syncControls() {
 for (const m of mounted) m.sync(scope);
 if (playUi) playUi.sync();
-if (stepper) stepper.sync(fig.activeState);
+if (stepper) { stepper.sync(fig.activeState); el.dataset.face = fig.activeState === null ? 'free' : 'stepped'; }
 syncVisibleIds();
 }
 function syncVisibleIds() {
@@ -2772,7 +2789,7 @@ return 'values' in target ? [target.values[0], target.values.at(-1)] : [target.m
 };
 fig.play = () => {
 if (!playUi || fig.playing) return;
-fig.activeState = null; governed = null; // Play steps off before the range reset, so no frame shows a step over a moving control
+fig.activeState = null; governed = null;
 const range = targetRange();
 if (range && scope.get(target.name) >= range[1] && !playSpec.loop) assign(target.name, range[0], 'play');
 fig.playing = true;
@@ -2900,12 +2917,13 @@ if (detachDrag) detachDrag();
 if (scene && scene.dispose) scene.dispose();
 clearTimeout(mirrorTimer);
 if (poster) el.prepend(poster);
-for (const node of el.querySelectorAll(':scope > .x-canvas-box, :scope > .x-ctl, :scope > .x-stepper, :scope > .x-drag-proxy')) node.remove();
+for (const node of el.querySelectorAll(':scope > .x-canvas-box, :scope > .x-panel, :scope > .x-drag-proxy')) node.remove();
+delete el.dataset.face;
 delete el.dataset.mounted;
 delete el.dataset.booted;
 delete el.dataset.fallback;
 };
-fig.activeState = null; // boot is always free: the stepper only offers a way in
+fig.activeState = null;
 syncControls();
 return fig;
 }

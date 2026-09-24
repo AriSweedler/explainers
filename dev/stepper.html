@@ -10,7 +10,7 @@
 <script defer src="../dist/explainers-runtime.v1.js"></script>
 <style>
   :root { color-scheme: light dark; --c-earth: light-dark(#2f6fb0, #6fa8e6); --c-mark: light-dark(#b0264c, #ff6f8f); --c-muted: light-dark(#7a756e, #8a857e); }
-.x-sim-hover .x-stepper-row, .x-sim-hover .x-steps-seg { background: var(--x-panel) !important; }
+.x-fig.x-sim-hover > .x-panel, .x-fig.x-sim-hover > figcaption { background: var(--x-panel) !important; }
 </style>
 <script>
 // dev only: ?scheme=dark, ?fig=<id>&state=<name> (goto without easing), &focus=1 (focus the stepper), &only=<id> (hide the other figures)
@@ -27,7 +27,7 @@
       if (!f || !f.mounted) { if (tries++ < 200) return setTimeout(apply, 50); }
       if (!f) return;
       if (q.get('state')) f.goto(q.get('state'), { ease: false });
-      if (q.get('sim')) f.el.querySelector('.x-stepper').classList.add('x-sim-' + q.get('sim'));
+      if (q.get('sim')) f.el.classList.add('x-sim-' + q.get('sim'));
       if (q.get('focus')) { const el = f.el.querySelector(q.get('focus') === 'next' ? '.x-stepper .x-next' : q.get('focus') === 'radio' ? '.x-stepper input' : '.x-stepper .x-latch, .x-stepper input'); if (el) el.focus(); }
       document.documentElement.dataset.harness = 'done';
     };

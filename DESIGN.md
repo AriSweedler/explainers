@@ -944,6 +944,7 @@ Animation: there is no implicit clock variable. The only animated quantities are
   </div>
   <div class="x-ctl x-ctl-segmented" id="fig-x_seg0"><fieldset role="radiogroup">…</fieldset></div>
   <button class="x-drag-proxy" id="fig-x_drag_p" role="slider" aria-label="p">…</button>   <!-- keyboard nudging -->
+  <div class="x-panel">                                            <!-- runtime-made: wraps every .x-ctl and the stepper; tints on hover with the figcaption; its background steps in -->
   <div class="x-stepper" id="fig-x_steps">                         <!-- paddle row (more than five steps); five or fewer render as the pill: fieldset.x-stepper-row.x-steps-seg[role=radiogroup][data-face] with legend "Steps", one radio per step, the same pip, caption, key hints and announcer -->
     <div class="x-stepper-row" role="group" aria-label="Steps" data-face="free">   <!-- data-face="stepped" once a step holds -->
       <kbd class="x-key" aria-hidden="true">←</kbd>
@@ -955,6 +956,7 @@ Animation: there is no implicit clock variable. The only animated quantities are
     <p class="x-caption" id="fig-x_steps_cap"></p>                 <!-- the step's sentence when stepped; the slot keeps one line -->
     <span class="x-sr" aria-live="polite" aria-atomic="true"></span>
   </div>
+  </div>                                                           <!-- /.x-panel; the figcaption follows -->
   <figcaption>…</figcaption>
 </figure>
 ```
@@ -987,19 +989,21 @@ The words for the stepper under a figure's controls, in code, comments, docs, ca
 |---|---|---|
 | stepper | the whole widget: the row and the caption | `.x-stepper` (`<fig>_steps`) |
 | step | one of the N named states as the reader meets it ("2 of 3"); spec, code, deep links and events keep `state` | `notice.states[i]`, `goto(name)`, `#fig-x=name` |
-| row | the one-line strip; carries the **face** (`data-face="free"` or `"stepped"`); hovering it tints it, because the row is one control | `.x-stepper-row[role=group]` or the pill's `fieldset.x-stepper-row.x-steps-seg` |
-| paddle | one of the ‹ › buttons that move one step; dimmed (`aria-disabled`) at the ends and in the free face, never removed, always focusable | `button.x-prev`, `button.x-next` |
+| panel | the region under the canvas that holds the controls, the stepper and the captions; hovering tints the whole panel (the figcaption after it included), and a click on its background or on a caption steps in, while the controls inside keep their own behaviour | `div.x-panel` (runtime-made, wraps every `.x-ctl` and the `.x-stepper`) plus the `figcaption` that follows it |
+| row | the one-line strip; carries the **face** (`data-face="free"` or `"stepped"`, mirrored on the figure element) | `.x-stepper-row[role=group]` or the pill's `fieldset.x-stepper-row.x-steps-seg` |
+| paddle | one of the ‹ › buttons that move one step; while free, › steps in at the nearest step ahead of the controls and ‹ at the nearest behind (the engine decides from the controls' values); dimmed (`aria-disabled`) at the ends and in the free face, never removed, always focusable | `button.x-prev`, `button.x-next` |
 | latch | the center button: free face = hollow **pip** + **invitation** ("Step through 3 steps"); stepped face = filled pip + **counter** ("2 of 3 · quarter"); press = step in / step off; its two spans are stacked so the width never changes | `button.x-latch[aria-pressed]` with `span.x-invite` and `span.x-counter` |
 | pip | the 0.7 em disc that says who is in control: a ring when free, solid when stepped; the corner toggle's dot is the same glyph | `.x-latch::before`, `.x-steps-seg::before`, `.x-toggle::before` |
 | pill | the radio-row form the runtime uses for five steps or fewer; a radio is a step; same pip, caption, hints and announcer | `fieldset.x-steps-seg` |
+| glow | the **armed** indicator: a 1 px accent border with a diffuse outer halo and a soft inner one around the whole row, never a ring on a child (a ring on a paddle, the latch or a segment reads as focus on that child); the focused child shows only a faint fill | `.x-stepper-row:focus-within` box-shadow |
 | key hints | the ← → `<kbd>` floating outside the row while it is **armed** (keyboard focus inside), fine pointers only; decorative | `kbd.x-key[aria-hidden]` |
 | caption | the step's sentence under the row; empty when free, its slot keeps one line so the figcaption never jumps | `p.x-caption` (`<fig>_steps_cap`) |
 | announcer | the hidden live text that speaks a step change; written only when it changes, emptied on step off | `span.x-sr[aria-live=polite]` |
 | free | mode: system-controlled; the figure follows its own controls, Play or its defaults; every figure boots free, even when its defaults equal a step | `figure.activeState === null` |
 | stepped | mode: human-controlled; the stepper holds the figure at a step | `figure.activeState === name` |
-| step in / step off | the two transitions: in = a click anywhere on the free row, a paddle, the latch, ← → while armed, a radio, a prose `data-state` link, a deep link; off = a **governed** control moved (one the step sets a value for; a toggle the step never names leaves it), Play, Restart, the latch pressed again | `figure.goto` / `figure.stepOff`, `figure.set(…, 'user')`, `figure.play` |
-| nearest | where stepping in from free lands: the step whose targets lie closest to the current controls (from the defaults, step 1, with no motion) | `nearestState(compiled, scope)` in `lib/core/state.js` |
-| armed | keyboard focus inside the row: ← → Home End act (unmodified only) and the key hints show; orthogonal to free/stepped | `.x-stepper-row:focus-within` |
+| step in / step off | the two transitions: in = a click on the free panel's background or a caption, a paddle, the latch, ← → while armed, a radio, a prose `data-state` link, a deep link; off = a **governed** control moved (one the step sets a value for; a toggle the step never names leaves it), Play, Restart, the latch pressed again | `figure.goto` / `figure.stepOff`, `figure.set(…, 'user')`, `figure.play` |
+| nearest | where stepping in from free lands: the step whose targets lie closest to the current controls (from the defaults, step 1, with no motion); with a direction, the nearest step ahead or behind, or that end when none is left | `nearestState(compiled, scope, eps, dir)` in `lib/core/state.js` |
+| armed | keyboard focus inside the row: ← → Home End act (unmodified only), the glow and the key hints show; orthogonal to free/stepped | `.x-stepper-row:focus-within` |
 
 The spec's `steps` key keeps its three values: `buttons` and `segmented` both show the stepper, whose form the runtime picks by count (the pill up to five steps, the paddle row above); `none` shows nothing and leaves the states addressable.
 
