@@ -2488,10 +2488,8 @@ input.addEventListener('change', () => { if (input.checked) fig.goto(s.name); })
 row.append(h('label', {}, input, h('span', {}, s.name)));
 return input;
 });
-row.prepend(h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '←'));
-row.append(h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '→'));
 focusIn = () => (inputs.find((i) => i.checked) || inputs[0]).focus({ preventScroll: true });
-wrap.append(row, caption, sr);
+wrap.append(h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '←'), row, h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '→'), caption, sr);
 sync = (active) => {
 const i = indexOf(active), stepped = i >= 0;
 row.dataset.face = stepped ? 'stepped' : 'free';
@@ -2505,8 +2503,7 @@ const next = h('button', { class: 'x-next', type: 'button', 'aria-label': 'next 
 const invite = h('span', { class: 'x-invite' }, `Step through ${n} step${n === 1 ? '' : 's'}`);
 const counter = h('span', { class: 'x-counter' });
 const latch = h('button', { class: 'x-latch', type: 'button', 'aria-pressed': 'false' }, invite, counter);
-const row = h('div', { class: 'x-stepper-row', role: 'group', 'aria-label': 'Steps', 'data-face': 'free' },
-h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '←'), prev, latch, next, h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '→'));
+const row = h('div', { class: 'x-stepper-row', role: 'group', 'aria-label': 'Steps', 'data-face': 'free' }, prev, latch, next);
 focusIn = () => latch.focus({ preventScroll: true });
 row.addEventListener('click', (e) => {
 const t = e.target.closest('button');
@@ -2514,7 +2511,7 @@ if (fig.activeState === null) { if (t === prev) move(-1); else if (t === next) m
 if (t === prev) move(-1); else if (t === next) move(1); else if (t === latch) fig.stepOff();
 });
 row.addEventListener('keydown', onKey);
-wrap.append(row, caption, sr);
+wrap.append(h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '←'), row, h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, '→'), caption, sr);
 sync = (active) => {
 const i = indexOf(active), stepped = i >= 0;
 row.dataset.face = stepped ? 'stepped' : 'free';

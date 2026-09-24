@@ -135,7 +135,6 @@ cite { font-style: italic; }
 .x-ctl-segmented label:has(input:checked) { background: var(--token); color: var(--bg); }
 .x-steps-seg label:has(input:checked) { background: var(--fg); color: var(--bg); }
 .x-ctl-segmented label:has(input:focus-visible) { outline: 2px solid var(--x-accent); outline-offset: -2px; }
-.x-steps-seg label:has(input:focus-visible):not(:has(input:checked)) { background: color-mix(in srgb, var(--fg) 7%, var(--bg)); }
 /* ---- Stepper anatomy: the design language (DESIGN.md "Stepper anatomy"; use these words everywhere) ----
    stepper    the whole widget under the controls: the row and the caption
    step       one of the N named states as the reader meets it ("2 of 3")
@@ -148,10 +147,11 @@ cite { font-style: italic; }
               pip + COUNTER "2 of 3 · quarter"; press = step in / step off. Both spans are stacked so the row's width
               never changes between faces
    pill       the radio-row form for five steps or fewer (.x-steps-seg); a radio is a step; same pip, caption, hints
-   glow       the ARMED indicator: a 1 px accent border and a diffuse halo around the WHOLE row (never a ring on a
-              paddle, the latch or a pill segment, which would read as focus on the child); the focused child inside
-              shows only a faint fill
-   key hints  the ← → <kbd> floating outside the row while it is ARMED (focus inside), fine pointers only
+   glow       the ARMED indicator and the only one: a 1 px accent border and a diffuse halo around the WHOLE row that
+              breathes (static under reduced motion); never a ring or fill on a paddle, the latch or a pill segment,
+              and always a shadow, so the footprint never changes when focus enters or leaves
+   key hints  the ← → <kbd> at the panel's far edges, level with the row, while it is ARMED (focus inside); fine
+              pointers only; never inside or beside the row
    caption    the step's sentence under the row; the slot keeps one line so the figcaption never jumps
    announcer  the visually hidden live text (.x-sr) that speaks a step change
    modes      FREE (system-controlled: the figure follows its controls, Play or its defaults; every figure boots
@@ -163,10 +163,15 @@ cite { font-style: italic; }
 .x-fig:has(> .x-panel:hover) > .x-panel, .x-fig:has(> .x-panel:hover) > figcaption, .x-fig:has(> figcaption:hover) > .x-panel, .x-fig:has(> figcaption:hover) > figcaption { background: var(--x-panel); }
 .x-fig[data-face="free"] > .x-panel, .x-fig[data-face="free"] > figcaption { cursor: pointer; }
 .x-fig[data-face="free"] > .x-panel .x-ctl { cursor: default; }
-.x-stepper { margin: 1rem auto 0; text-align: center; }
+.x-stepper { position: relative; margin: 1rem auto 0; text-align: center; }
 .x-stepper-row { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem; border-radius: 999px; transition: background-color 0.12s ease, box-shadow 0.12s ease; }
-.x-stepper-row:focus-within { background: var(--x-panel); box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 55%, transparent), 0 0 14px 3px color-mix(in srgb, var(--x-accent) 28%, transparent), inset 0 0 10px color-mix(in srgb, var(--x-accent) 12%, transparent); }
-.x-stepper-row button:focus-visible { outline: none; background: color-mix(in srgb, var(--fg) 7%, var(--bg)); }
+/* the glow is the only focus indicator: a shadow, so the row's footprint never changes; it breathes while armed */
+.x-stepper-row:focus-within { box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 55%, transparent), 0 0 14px 3px color-mix(in srgb, var(--x-accent) 28%, transparent), inset 0 0 10px color-mix(in srgb, var(--x-accent) 12%, transparent); animation: x-glow 2.2s ease-in-out infinite; }
+@keyframes x-glow {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 50%, transparent), 0 0 10px 2px color-mix(in srgb, var(--x-accent) 22%, transparent), inset 0 0 8px color-mix(in srgb, var(--x-accent) 10%, transparent); }
+  50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 75%, transparent), 0 0 20px 6px color-mix(in srgb, var(--x-accent) 38%, transparent), inset 0 0 14px color-mix(in srgb, var(--x-accent) 18%, transparent); }
+}
+.x-stepper-row button:focus-visible, .x-steps-seg input:focus-visible { outline: none; }
 .x-stepper-row[data-face="free"] { cursor: pointer; }
 .x-stepper .x-prev, .x-stepper .x-next { width: 2.75rem; height: 2.75rem; padding: 0; border-radius: 50%; font-size: 1.6rem; font-weight: 400; line-height: 1; }
 .x-stepper [aria-disabled="true"] { color: var(--x-muted); opacity: 0.45; }
@@ -179,10 +184,11 @@ cite { font-style: italic; }
 .x-stepper-row[data-face="free"] .x-counter, .x-stepper-row[data-face="stepped"] .x-invite { visibility: hidden; }
 .x-steps-seg::before { content: ""; align-self: center; width: 0.7em; height: 0.7em; margin-left: 0.9em; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--x-muted); }
 .x-steps-seg[data-face="stepped"]::before { border-width: 0.35em; border-color: var(--fg); }
-.x-key { position: absolute; top: 50%; transform: translateY(-50%); font: 0.75rem/1 var(--x-sans); color: var(--x-muted); border: 1px solid var(--x-rule); border-bottom-width: 2px; border-radius: 4px; padding: 0.2em 0.45em; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity 0.12s ease; }
-.x-key:first-child { right: 100%; margin-right: 0.75rem; }
-.x-key:last-child { left: 100%; margin-left: 0.75rem; }
-@media (hover: hover) and (pointer: fine) { .x-stepper-row:focus-within .x-key { opacity: 1; } }
+/* key hints sit at the panel's far edges, level with the row, never inside the row */
+.x-key { position: absolute; top: 1.625rem; transform: translateY(-50%); font: 0.75rem/1 var(--x-sans); color: var(--x-muted); border: 1px solid var(--x-rule); border-bottom-width: 2px; border-radius: 4px; padding: 0.2em 0.45em; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity 0.12s ease; }
+.x-stepper > .x-key:first-child { left: 0; }
+.x-stepper > .x-stepper-row + .x-key { right: 0; }
+@media (hover: hover) and (pointer: fine) { .x-stepper:focus-within .x-key { opacity: 1; } }
 .x-caption { margin: 0.6rem 0 0; min-height: 1.5em; font: 0.95rem/1.5 var(--x-serif); }
 
 /* scene3d: the WebGL canvas fills the box; a 2D overlay canvas (split panels, readouts, edge arrows)
@@ -251,6 +257,7 @@ div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .x-ctl-slider .x-knob, .x-stepper-row, .x-key, .x-panel, .x-fig > .x-panel + figcaption { transition: none; }
+  .x-stepper-row:focus-within { animation: none; }
   html { scroll-behavior: auto; }
   .x-flash { animation: none; background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); }
 }
