@@ -137,7 +137,7 @@ A figure and its panel (controls, stepper, caption) are read together, so the ru
 
 ## Slider and stepper anatomy
 
-Slider, track (fill and rail), knob, halo, stop, tick, socket, value; stepper, step, panel, row, paddle, counter, pill, face, free, stepped, near, nearest, enter, step in, step off, armed, glow, key hints, caption slot, invitation, footnote, announcer: `DESIGN.md` "Slider anatomy" and "Stepper anatomy" define the words and the DOM for every part. Code, comments, captions and prose use them; a drag control's on-canvas point is a handle, never a knob; a paddle is never an arrow.
+Slider, track (fill and rail), knob, halo, stop, tick, socket, value; stepper, step, panel, row, paddle, counter, pill, face, free, stepped, near, nearest, enter, step in, step off, armed, glow, key hints, caption slot, footnote, announcer: `DESIGN.md` "Slider anatomy" and "Stepper anatomy" define the words and the DOM for every part. Code, comments, captions and prose use them; a drag control's on-canvas point is a handle, never a knob; a paddle is never an arrow.
 
 ## How the runtime mounts
 

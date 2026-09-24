@@ -138,32 +138,33 @@ cite { font-style: italic; }
 .x-ctl-segmented label:has(input:checked) { background: var(--token); color: var(--bg); }
 /* the pill's shown step fills to the border: solid while stepped, a grey wash while free, an asterisk while near */
 .x-steps-seg [aria-current] { background: var(--fg); color: var(--bg); }
-.x-stepper[data-face="free"] [aria-current] { background: color-mix(in srgb, var(--fg) 16%, var(--bg)); color: var(--fg); }
-.x-stepper[data-near] [aria-current]::after { content: "*"; position: absolute; top: 0.3em; right: 0.4em; line-height: 1; }
+.x-stepper[data-face="near"] [aria-current] { background: color-mix(in srgb, var(--fg) 16%, var(--bg)); color: var(--fg); }
+.x-stepper[data-face="near"] [aria-current]::after { content: "*"; position: absolute; top: 0.3em; right: 0.4em; line-height: 1; }
 .x-ctl-segmented label:has(input:focus-visible), .x-steps-seg button:focus-visible { outline: 2px solid var(--x-accent); outline-offset: -2px; }
 /* ---- Stepper anatomy (DESIGN.md "Stepper anatomy" defines the words) ----
    The PANEL is everything under the canvas: it tints on hover, glows while ARMED (focus anywhere inside; a shadow, so
-   no footprint changes) and shows the ← → KEY HINTS at its far edges. The STEPPER carries the FACE (free = muted
-   counter or grey-wash segment, the INVITATION in the caption slot; stepped = full ink or solid, the step's caption)
-   and the NEAR flag (an asterisk, the FOOTNOTE). The PADDLES ‹ › are dimmed only at an end while stepped; the PILL's
-   shown segment fills to the pill's border. */
+   no footprint changes) and shows the ← → KEY HINTS at its far edges. The STEPPER is a pure view of the controls
+   and carries the FACE: stepped (exactly on a step: full ink or solid segment, the step's caption) or near (between
+   steps: the nearest step muted or grey-washed with an asterisk, the FOOTNOTE in the caption slot). The PADDLES ‹ ›
+   are dimmed only at an end while stepped; the PILL's shown segment fills to the pill's border. */
 .x-panel { margin-top: 0.5rem; padding: 0.25rem 0.75rem 0.7rem; border-radius: 10px; transition: background-color 0.12s ease; }
 .x-panel:hover { background: var(--x-panel); }
 .x-panel > figcaption { margin-top: 0.5rem; }
-.x-panel:has(.x-stepper[data-face="free"]) { cursor: pointer; }
-.x-panel:has(.x-stepper[data-face="free"]) .x-ctl { cursor: default; }
+.x-panel:has(.x-stepper[data-face="near"]) { cursor: pointer; }
+.x-panel:has(.x-stepper[data-face="near"]) .x-ctl { cursor: default; }
 .x-panel:focus-within { animation: x-glow 2.2s ease-in-out infinite; }
 @keyframes x-glow {
   0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 50%, transparent), 0 0 10px 2px color-mix(in srgb, var(--x-accent) 22%, transparent); }
   50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 75%, transparent), 0 0 20px 6px color-mix(in srgb, var(--x-accent) 38%, transparent); }
 }
+.x-stepper button:focus { outline: none; } /* the panel glow is the focus mark; no native ring, which the pill would clip anyway */
 .x-stepper { position: relative; margin: 1rem auto 0; text-align: center; }
 .x-stepper:focus { outline: 0; } /* focused only by a click on the panel; the glow is the mark */
 .x-stepper-row { display: inline-flex; align-items: center; }
 .x-stepper .x-prev, .x-stepper .x-next { width: 2.75rem; height: 2.75rem; padding: 0; border-radius: 50%; font-size: 1.6rem; font-weight: 400; line-height: 1; }
 .x-stepper [aria-disabled="true"] { color: var(--x-muted); opacity: 0.45; }
 .x-counter { min-width: 12ch; margin: 0 0.5rem; font: 500 0.9rem/1 var(--x-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.x-stepper[data-face="free"] .x-counter { color: var(--x-muted); }
+.x-stepper[data-face="near"] .x-counter { color: var(--x-muted); }
 .x-key { position: absolute; top: 1.625rem; transform: translateY(-50%); font: 0.75rem/1 var(--x-sans); color: var(--x-muted); border: 1px solid var(--x-rule); border-bottom-width: 2px; border-radius: 4px; padding: 0.2em 0.45em; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity 0.12s ease; }
 .x-stepper > .x-key:first-child { left: 0; }
 .x-stepper > .x-stepper-row + .x-key { right: 0; }
@@ -174,7 +175,7 @@ cite { font-style: italic; }
 }
 /* the caption slot keeps one line in both faces */
 .x-caption { margin: 0.6rem 0 0; min-height: 1.45rem; font: 0.95rem/1.5 var(--x-serif); }
-.x-stepper[data-face="free"] .x-caption { font: 0.85rem/1.5 var(--x-sans); color: var(--x-muted); }
+.x-stepper[data-face="near"] .x-caption { font: 0.85rem/1.5 var(--x-sans); color: var(--x-muted); }
 
 /* scene3d: the WebGL canvas fills the box; a 2D overlay canvas (split panels, readouts, edge arrows)
    and the DOM labels sit over it and let pointers through; the corner buttons stay on top of both */

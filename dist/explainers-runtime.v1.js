@@ -2462,9 +2462,8 @@ const caption = h('p', { class: 'x-caption', id: cap });
 const sr = h('span', { class: 'x-sr', 'aria-live': 'polite', 'aria-atomic': 'true' });
 const key = (t) => h('kbd', { class: 'x-key', 'aria-hidden': 'true' }, t);
 const wrap = h('div', { class: 'x-stepper', id: `${fig.id}_steps`, tabindex: '-1' }, key('←'), row, key('→'), caption, sr);
-const invite = `Step through ${n} step${n === 1 ? '' : 's'}`;
-let at = null; // the last reading: { i, name, exact, stepped }
-const jump = (name) => { if (!(at.stepped && name === at.name)) fig.goto(name, { ease: false }); };
+let at = null; // the last reading: { i, name, exact }
+const jump = (name) => { if (!(at.exact && name === at.name)) fig.goto(name, { ease: false }); };
 const go = (d) => jump(at.exact ? states[Math.max(0, Math.min(n - 1, at.i + d))].name : nearestState(fig.compiled, fig.scope, 1e-6, d).name);
 panel.addEventListener('click', (e) => {
 if (e.target.closest('.x-ctl, .x-drag-proxy, a')) return;
@@ -2479,21 +2478,19 @@ e.preventDefault();
 go(d);
 });
 const sync = () => {
-const stepped = fig.activeState !== null;
-const { i, name, exact } = stepped ? { i: states.findIndex((s) => s.name === fig.activeState), name: fig.activeState, exact: true } : nearestState(fig.compiled, fig.scope);
-if (at && at.i === i && at.exact === exact && at.stepped === stepped) return;
-at = { i, name, exact, stepped };
+const { i, name, exact } = nearestState(fig.compiled, fig.scope);
+if (at && at.i === i && at.exact === exact) return;
+at = { i, name, exact };
 const pos = `${i + 1} of ${n}`;
-wrap.dataset.face = stepped ? 'stepped' : 'free';
-wrap.toggleAttribute('data-near', !exact);
+wrap.dataset.face = exact ? 'stepped' : 'near';
 if (pill) segs.forEach((b, k) => (k === i ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')));
 else {
 counter.textContent = `${pos} · ${labels[i]}${exact ? '' : ' *'}`;
-prev.setAttribute('aria-disabled', String(stepped && i === 0));
-next.setAttribute('aria-disabled', String(stepped && i === n - 1));
+prev.setAttribute('aria-disabled', String(exact && i === 0));
+next.setAttribute('aria-disabled', String(exact && i === n - 1));
 }
-caption.textContent = stepped ? states[i].caption : exact ? invite : FOOTNOTE;
-sr.textContent = stepped ? `Step ${pos}, ${labels[i]}. ${states[i].caption}` : '';
+caption.textContent = exact ? states[i].caption : FOOTNOTE;
+sr.textContent = exact ? `Step ${pos}, ${labels[i]}. ${states[i].caption}` : '';
 };
 return { el: wrap, sync };
 }
@@ -2678,15 +2675,11 @@ emit(el, 'x-fig:set', { id: fig.id, name: key, value: v, source });
 return v;
 }
 fig.set = (name, value, source = 'user') => {
-if (source === 'user' && fig.playing && playSpec && name === playSpec.target) fig.pause();
-const v = assign(name, value, source);
-if (source === 'user' && fig.activeState !== null && Object.keys(stateTargets(compiled, fig.activeState).targets).some((k) => `${k}.`.startsWith(`${name}.`))) {
-const near = nearestState(compiled, scope);
-if (!(near.exact && near.name === fig.activeState)) {
+if (source === 'user') {
 if (running) { running.cancel(); running = null; }
-fig.activeState = null;
+if (fig.playing && playSpec && name === playSpec.target) fig.pause();
 }
-}
+const v = assign(name, value, source);
 syncControls();
 requestDraw();
 return v;
@@ -2993,6 +2986,8 @@ e.preventDefault();
 const r = fig.el.getBoundingClientRect();
 if (r.top < 0 || r.bottom > doc.documentElement.clientHeight) fig.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 fig.goto(a.dataset.state, { ease: true });
+const st = fig.el.querySelector('.x-stepper');
+if (st) st.focus({ preventScroll: true }); // the link arms the panel too
 });
 const pauseAll = doc.querySelector('a.x-pause-all');
 if (pauseAll) {
