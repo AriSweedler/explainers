@@ -1,3 +1,5 @@
+> Superseded 2026-09-24 by DESIGN.md "Stepper anatomy" (no pip, no latch, no Home/End, no governed set; the stepper is a readout plus figure.activeState).
+
 # Stepper redesign — panel spec (workflow wf_f357ff8e-513, 2026-09-24)
 
 # Stepper spec (panel verdict, verified)

@@ -131,9 +131,13 @@ node tools/og-image.mjs --site                       # -> assets/og.png (front p
 
 The renderer uses Playwright's `chrome-headless-shell` (the newest under `~/Library/Caches/ms-playwright/`, or the binary named by `$EXPLAINERS_HEADLESS_SHELL`) and never Chrome.app (see above). Messages ignores the SVG favicon and shows the PNG `<link rel="apple-touch-icon">` beside the card, which is why every page links `assets/apple-touch-icon.png`; `--site` regenerates it, so run it again only when `favicon.svg` changes. Check a result with `sips -g pixelWidth -g pixelHeight articles/<slug>/assets/og.png`.
 
+## One viewport per figure
+
+A figure and its panel (controls, stepper, caption) are read together, so the runtime caps the canvas at 95vh minus the panel's measured height and lets the width follow the aspect ratio; `validate` warns on figures taller than wide or with more than three controls under the canvas. Authors keep to 3:2 or 16:9 and at most three controls.
+
 ## Slider and stepper anatomy
 
-Slider, track (fill and rail), knob, halo, stop, tick, socket, value; stepper, step, row, paddle, latch, pip, pill, key hints, caption, announcer, free, stepped, step in, step off, armed: `DESIGN.md` "Slider anatomy" and "Stepper anatomy" define the words and the DOM for every part. Code, comments, captions and prose use them; a drag control's on-canvas point is a handle, never a knob; a paddle is never an arrow.
+Slider, track (fill and rail), knob, halo, stop, tick, socket, value; stepper, step, panel, row, paddle, counter, pill, face, free, stepped, near, nearest, enter, step in, step off, armed, glow, key hints, caption slot, invitation, footnote, announcer: `DESIGN.md` "Slider anatomy" and "Stepper anatomy" define the words and the DOM for every part. Code, comments, captions and prose use them; a drag control's on-canvas point is a handle, never a knob; a paddle is never an arrow.
 
 ## How the runtime mounts
 

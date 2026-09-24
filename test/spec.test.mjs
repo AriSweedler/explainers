@@ -413,19 +413,18 @@ test('ERROR_CATALOGUE has a one-line description for every code', () => {
   assert.equal(Object.keys(ERROR_CATALOGUE).filter((c) => c.startsWith('SPEC_')).length, 18);
 });
 
-test('nearestState: from the defaults the first step is exact; between steps the closer one wins; a toggle the step never names is ignored', () => {
+test('nearestState: shape { i, name, exact }; between steps the closer one wins; a toggle is a unit of distance; directional', () => {
   const compiled = {
     figureId: 'fig-t',
     controls: [{ kind: 'slider', name: 'a', min: 0, max: 360 }, { kind: 'toggle', name: 'rim' }],
     spec: { notice: { states: [{ name: 'start', a: 0 }, { name: 'quarter', a: 90 }, { name: 'half', a: 180, rim: false }] } },
   };
   const scope = (a, rim = 1) => ({ get: (k) => (k === 'a' ? a : rim) });
-  assert.deepEqual(nearestState(compiled, scope(0)), { name: 'start', d: 0, exact: true });
-  assert.equal(nearestState(compiled, scope(50)).name, 'quarter');
-  assert.equal(nearestState(compiled, scope(50)).exact, false);
+  assert.deepEqual(nearestState(compiled, scope(0)), { i: 0, name: 'start', exact: true });
+  assert.deepEqual(nearestState(compiled, scope(50)), { i: 1, name: 'quarter', exact: false });
   assert.equal(nearestState(compiled, scope(44)).name, 'start', 'ties and near-ties go by normalized distance');
   assert.equal(nearestState(compiled, scope(180, 1)).name, 'quarter', 'a step that sets the toggle the other way is a full unit away');
-  assert.deepEqual(nearestState(compiled, scope(180, 0)), { name: 'half', d: 0, exact: true });
+  assert.deepEqual(nearestState(compiled, scope(180, 0)), { i: 2, name: 'half', exact: true });
   assert.deepEqual(Object.keys(stateTargets(compiled, 'half').targets), ['a', 'rim']);
   // directional: › from 50° lands on quarter (ahead), ‹ from 50° on start (behind); past the last step › lands on the last
   assert.equal(nearestState(compiled, scope(50), 1e-6, 1).name, 'quarter');
@@ -433,4 +432,19 @@ test('nearestState: from the defaults the first step is exact; between steps the
   assert.equal(nearestState(compiled, scope(300, 0), 1e-6, 1).name, 'half', 'nothing ahead: the last step');
   assert.equal(nearestState(compiled, scope(-10), 1e-6, -1).name, 'start', 'nothing behind: the first step');
   assert.equal(nearestState(compiled, scope(0), 1e-6, 1).name, 'quarter', 'exactly on a step, › goes to the next one ahead');
+  assert.equal(nearestState(compiled, scope(90), 1e-6, -1).name, 'start', 'exactly on a step, ‹ goes to the one behind');
+});
+
+test('nearestState: segmented strings, drag components and camera-only states', () => {
+  const seg = { figureId: 'fig-s', controls: [{ kind: 'segmented', name: 'dir', options: [{ value: 'n' }, { value: 'e' }] }], spec: { notice: { states: [{ name: 'north', dir: 'n' }, { name: 'east', dir: 'e' }] } } };
+  const segScope = (dir) => ({ get: () => dir });
+  assert.deepEqual(nearestState(seg, segScope('e')), { i: 1, name: 'east', exact: true });
+  assert.deepEqual(nearestState(seg, segScope('n')), { i: 0, name: 'north', exact: true });
+  const drag = { figureId: 'fig-d', controls: [{ kind: 'drag', name: 'M', constrain: 'free' }], spec: { notice: { states: [{ name: 'a', drag: { M: [0, 0] } }, { name: 'b', drag: { M: [1, 0] } }] } } };
+  const dragScope = (x, y) => ({ get: (k) => (k === 'M.x' ? x : y) });
+  assert.deepEqual(nearestState(drag, dragScope(1, 0)), { i: 1, name: 'b', exact: true });
+  assert.deepEqual(nearestState(drag, dragScope(0.7, 0.1)), { i: 1, name: 'b', exact: false });
+  assert.deepEqual(nearestState(drag, dragScope(0.2, 0)), { i: 0, name: 'a', exact: false });
+  const cam = { figureId: 'fig-c', controls: [], spec: { notice: { states: [{ name: 'front', camera: { azimuth: 0 } }] } } };
+  assert.deepEqual(nearestState(cam, { get: () => 0 }), { i: 0, name: 'front', exact: false }, 'a camera-only state is never exact');
 });

@@ -744,12 +744,13 @@ SCHEMA.manipulates = {
 SCHEMA.stateFixed = {
   name: f("id", "unique state slug; the deep link is #<figure-id>=<name>", REQ),
   caption: f("string", "sentence shown by the stepper", REQ),
+  label: f("string", "what the stepper prints for the step; defaults to the name with hyphens as spaces"),
   camera: f(obj({ azimuth: f("number", "radians"), polar: f("number", "radians"), distance: f("number", "distance") }), "scene3d camera pose"),
   drag: f(map("pair"), "drag control name -> [x, y]"),
   visible: f(obj({ show: f(arr("ref:layer"), "layer ids to show"), hide: f(arr("ref:layer"), "layer ids to hide") }), "visibility overrides")
 };
 SCHEMA.notice = {
-  steps: f(en("buttons", "segmented", "none"), "prev/next stepper, radio row, or nothing (states stay addressable)", REQ),
+  steps: f(en("buttons", "segmented", "none"), "show the stepper (a pill of step buttons up to five states, a paddle row above five; both values mean show) or nothing (states stay addressable)", REQ),
   point_at: f(arr("id"), "layer or 3D object ids the surrounding prose references with data-ref (checked: SPEC_POINT_AT_MISSING)"),
   states: f(arr("state"), "ordered named states; other keys are <control name>: value", REQ)
 };
@@ -24700,6 +24701,9 @@ function evalObject(O, scope) {
   }
   return out;
 }
+function labelPosition(L, scope) {
+  return L.position ? L.position.map((g) => g(scope)) : null;
+}
 function circlePoints(n2) {
   const pts = [];
   for (let i2 = 0; i2 < n2; i2++) {
@@ -25205,7 +25209,7 @@ var Emitter = class {
           p = at(f2.position);
           if (p && f2.radius !== void 0) dflt = [0, f2.radius * f2.scale * pxPerWorld(p.depth, vb.height) + 14];
         }
-      } else if (L.position) p = at(L.position.map((g) => g(scope)));
+      } else if (L.position) p = at(labelPosition(L, scope));
       if (!p) continue;
       const [dx, dy] = L.offset || dflt;
       this.text(renderTemplate(compileTemplate(L.text), scope, {}), p.x + dx, p.y + dy, { align: "center", color, middle: true });
@@ -25433,7 +25437,12 @@ function compileFigures({ file, doc }, palette, problems) {
       continue;
     }
     try {
-      figures.set(id, validateSpec(spec, { figureId: id, palette }));
+      const compiled = validateSpec(spec, { figureId: id, palette });
+      figures.set(id, compiled);
+      const [aw, ah] = aspect && ASPECT_RE.test(aspect) ? aspect.split(":").map(Number) : [3, 2];
+      if (ah > aw) problems.warn(file, line(fig), id, `data-aspect ${aspect} is taller than wide; with its panel the figure cannot share a phone viewport, prefer 3:2 or 16:9`);
+      const under = (spec.manipulates.controls || []).filter((c) => c.kind === "slider" || c.kind === "time" || c.kind === "segmented" || c.kind === "toggle" && c.position !== "corner").length;
+      if (under > 3) problems.warn(file, line(fig), id, `${under} controls under the canvas; more than three push the drawing and its panel apart on a phone`);
     } catch (e) {
       if (!(e instanceof FigSpecError)) throw e;
       problems.error(file, line(script2), e.code, id, `${e.path}: ${e.detail}`);

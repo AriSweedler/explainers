@@ -13,7 +13,7 @@ import { validateSpec, scopeForState } from '../lib/spec.js';
 import { format, compileTemplate, renderTemplate } from '../lib/core/format.js';
 import { smoothstep, transition } from '../lib/core/ease.js';
 import { createClock } from '../lib/core/clock.js';
-import { coerce, isDiscrete, stateTargets, activeState, controlOf, visibleIds } from '../lib/core/state.js';
+import { coerce, snaps, hasStops, stateTargets, nearestState, controlOf, visibleIds } from '../lib/core/state.js';
 import { parseHash, formatHash, glossaryTarget } from '../lib/core/deeplink.js';
 import { worldToPx, splitBoxes, dprFor } from '../lib/core/layout.js';
 import { constrainPoint } from '../lib/core/drag.js';
@@ -140,7 +140,7 @@ test('clock: injected now/schedule, dt in seconds clamped to 100 ms, stops when 
 
 // ----------------------------------------------------------------- state
 
-test('state: coerce validates against the control; discrete kinds are known', () => {
+test('state: coerce validates against the control; snaps and hasStops are known', () => {
   const c = figMonths();
   const t = controlOf(c, 't'), showSun = controlOf(c, 'showSun');
   assert.equal(coerce(t, 70), 60);
@@ -148,22 +148,29 @@ test('state: coerce validates against the control; discrete kinds are known', ()
   assert.equal(coerce(t, 12.5), 12.5);
   assert.equal(coerce(showSun, true), 1);
   assert.equal(coerce(showSun, 0), 0);
-  assert.equal(isDiscrete(t), false);
-  assert.equal(isDiscrete(showSun), true);
+  assert.equal(snaps(t), false);
+  assert.equal(snaps(showSun), true);
+  assert.equal(hasStops(t), false, 'a 0..60 step 0.01 slider has no stops');
+  assert.equal(hasStops({ kind: 'slider', min: 0, max: 30, step: 1 }), true, '30 stops');
+  assert.equal(hasStops({ kind: 'slider', min: 0, max: 360, step: 1 }), false, 'more than 40 is continuous');
+  assert.equal(hasStops({ kind: 'slider', values: [1, 2] }), true);
+  assert.equal(hasStops({ kind: 'time', mode: 'speed', rates: [1, 2] }), true);
+  assert.equal(hasStops({ kind: 'time', mode: 'scrub', window: '24h' }), false);
   assert.equal(coerce({ kind: 'slider', values: [1, 2, 4] }, 3.2), 4);
   assert.equal(coerce({ kind: 'segmented', options: [{ value: 1 }, { value: 5 }] }, 4), 5);
   assert.equal(coerce({ kind: 'time', mode: 'scrub', window: '24h' }, 1e12), 86400e3);
   assert.equal(controlOf(c, 'nope'), null);
 });
 
-test('state: stateTargets and activeState round-trip every named state', () => {
+test('state: stateTargets and nearestState(...).exact round-trip every named state', () => {
   const c = figMonths();
   const { targets, caption } = stateTargets(c, 'sidereal');
   assert.deepEqual(targets, { t: 27.321661, showSun: 1 });
   assert.match(caption, /sidereal month/);
-  for (const name of c.states) assert.equal(activeState(c, scopeForState(c, name)), name);
-  assert.equal(activeState(c, scopeForState(c, null)), 'new-moon', 'the defaults are the first state');
-  assert.equal(activeState(c, scopeForState(c, null, { t: 5 })), null);
+  const at = (scope) => { const n = nearestState(c, scope); return n.exact ? n.name : null; };
+  for (const name of c.states) assert.equal(at(scopeForState(c, name)), name);
+  assert.equal(at(scopeForState(c, null)), 'new-moon', 'the defaults are the first state');
+  assert.equal(at(scopeForState(c, null, { t: 5 })), null);
   assert.throws(() => stateTargets(c, 'nope'));
   const withDrag = { spec: { notice: { states: [{ name: 'a', caption: '', drag: { p: [1, 2] } }] } } };
   assert.deepEqual(stateTargets(withDrag, 'a').targets, { 'p.x': 1, 'p.y': 2 });
@@ -338,7 +345,7 @@ test('transformModule refuses a dynamic import() anywhere but the scene3d loader
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
   const css = fs.readFileSync(path.join(root, 'dist/explainers.v1.css'), 'utf8');
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
-  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-latch', '.x-key', '[data-face="free"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[data-near]', '[aria-current]', '.x-key', '[data-face="free"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
 });
 
 test('dist/integrity.json holds a current sha384 for the runtime, the stylesheet and the 3D chunk; the template carries the two include placeholders', () => {

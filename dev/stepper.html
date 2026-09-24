@@ -10,10 +10,10 @@
 <script defer src="../dist/explainers-runtime.v1.js"></script>
 <style>
   :root { color-scheme: light dark; --c-earth: light-dark(#2f6fb0, #6fa8e6); --c-mark: light-dark(#b0264c, #ff6f8f); --c-muted: light-dark(#7a756e, #8a857e); }
-.x-fig.x-sim-hover > .x-panel, .x-fig.x-sim-hover > figcaption { background: var(--x-panel) !important; }
+.x-fig.x-sim-hover > .x-panel { background: var(--x-panel) !important; }
 </style>
 <script>
-// dev only: ?scheme=dark, ?fig=<id>&state=<name> (goto without easing), &focus=1 (focus the stepper), &only=<id> (hide the other figures)
+// dev only: ?scheme=dark, ?only=<id> (hide the other figures), ?fig=<id>&state=<name> (goto; instant unless &ease), &set=<name>:<value> (a reader's change, so the near face shows), &play, &focus=row|next|step|slider|proxy, &sim=hover
 (() => {
   const q = new URLSearchParams(location.search);
   if (q.get('scheme') === 'dark') document.documentElement.style.colorScheme = 'dark';
@@ -26,9 +26,12 @@
       const f = window.explainers && window.explainers.figures.get(figId);
       if (!f || !f.mounted) { if (tries++ < 200) return setTimeout(apply, 50); }
       if (!f) return;
-      if (q.get('state')) f.goto(q.get('state'), { ease: false });
+      if (q.get('state')) f.goto(q.get('state'), { ease: q.has('ease') });
+      if (q.get('set')) { const [name, value] = q.get('set').split(':'); f.set(name, Number(value), 'user'); }
+      if (q.has('play')) f.play();
       if (q.get('sim')) f.el.classList.add('x-sim-' + q.get('sim'));
-      if (q.get('focus')) { const el = f.el.querySelector(q.get('focus') === 'next' ? '.x-stepper .x-next' : q.get('focus') === 'radio' ? '.x-stepper input' : q.get('focus') === 'slider' ? '.x-ctl-slider input' : '.x-stepper .x-latch, .x-stepper input'); if (el) el.focus(); }
+      const focus = { row: '.x-stepper', next: '.x-stepper .x-next', step: '.x-steps-seg button', slider: '.x-ctl-slider input', proxy: '.x-drag-proxy' }[q.get('focus')];
+      if (focus) f.el.querySelector(focus).focus();
       document.documentElement.dataset.harness = 'done';
     };
     setTimeout(apply, 0);
@@ -39,7 +42,7 @@
 <body>
 <main>
 <h1>Stepper playground</h1>
-<p class="x-lede">Dev page for the stepper widget (not linked from the site). Six figures: 2, 3, 6 and 8 steps with arrows, a segmented row, and a discrete five-value slider with a five-step pill.</p>
+<p class="x-lede">Dev page for the stepper widget (not linked from the site). Seven figures: 2, 3, 6 and 8 steps (the pill up to five, paddles above), three steps declared segmented, a discrete five-value slider with a five-step pill, and a drag handle.</p>
 
 <section id="fig-three-s">
 <h2>Three steps, slider, play and a corner toggle (the common case)</h2>
@@ -66,10 +69,10 @@
 </figure>
 </section>
 <section id="fig-seg-s">
-<h2>Segmented steps (a radio row) for comparison</h2>
+<h2>Three steps declared <code>steps: "segmented"</code>, with <code>label</code>s (the same pill: the runtime picks the form by count)</h2>
 <p>The <span data-fig="fig-seg" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-seg" data-state="north">jump to step 2</a>.</p>
 <figure class="x-fig" id="fig-seg" data-aspect="1:1">
-<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"},{"kind":"play","target":"a","rate":60,"loop":true,"autoplay":false}]},"notice":{"steps":"segmented","point_at":["dot"],"states":[{"name":"east","a":0,"caption":"East."},{"name":"north","a":90,"caption":"North."},{"name":"west","a":180,"caption":"West."}]}}</script>
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"},{"kind":"play","target":"a","rate":60,"loop":true,"autoplay":false}]},"notice":{"steps":"segmented","point_at":["dot"],"states":[{"name":"east","label":"East","a":0,"caption":"East."},{"name":"north","label":"North","a":90,"caption":"North."},{"name":"west","label":"West","a":180,"caption":"West."}]}}</script>
 <figcaption>Drag the slider or press play.</figcaption>
 </figure>
 </section>
@@ -90,6 +93,14 @@
 </figure>
 </section>
 <details id="glossary" class="x-glossary"><summary>Glossary</summary><dl></dl></details>
+<section id="fig-drag-s">
+<h2>A drag handle (its keyboard proxy keeps ← →)</h2>
+<p>Drag the <span data-fig="fig-drag" data-ref="dot">blue dot</span> along the line; <a href="#fig-drag" data-state="right">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-drag" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"dot","kind":"circle","cx":"p.x","cy":"p.y","r":0.1,"fill":"earth"}]},"manipulates":{"controls":[{"kind":"drag","name":"p","default":[-1,0],"constrain":"x","token":"earth"}]},"notice":{"steps":"buttons","point_at":["dot"],"states":[{"name":"left","drag":{"p":[-1,0]},"caption":"Left."},{"name":"right","drag":{"p":[1,0]},"caption":"Right."}]}}</script>
+<figcaption>Drag the dot, or Tab to it and press the arrow keys.</figcaption>
+</figure>
+</section>
 </main>
 </body>
 </html>

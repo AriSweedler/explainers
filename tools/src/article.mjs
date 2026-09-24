@@ -45,7 +45,13 @@ export function compileFigures({ file, doc }, palette, problems) {
     let spec;
     try { spec = JSON.parse(textOf(script)); } catch (e) { problems.error(file, line(script), 'SPEC_JSON', id, e.message); continue; }
     try {
-      figures.set(id, validateSpec(spec, { figureId: id, palette }));
+      const compiled = validateSpec(spec, { figureId: id, palette });
+      figures.set(id, compiled);
+      // one viewport per figure: the drawing and its panel are read together (DESIGN.md "Page contract")
+      const [aw, ah] = aspect && ASPECT_RE.test(aspect) ? aspect.split(':').map(Number) : [3, 2];
+      if (ah > aw) problems.warn(file, line(fig), id, `data-aspect ${aspect} is taller than wide; with its panel the figure cannot share a phone viewport, prefer 3:2 or 16:9`);
+      const under = (spec.manipulates.controls || []).filter((c) => c.kind === 'slider' || c.kind === 'time' || c.kind === 'segmented' || (c.kind === 'toggle' && c.position !== 'corner')).length;
+      if (under > 3) problems.warn(file, line(fig), id, `${under} controls under the canvas; more than three push the drawing and its panel apart on a phone`);
     } catch (e) {
       if (!(e instanceof FigSpecError)) throw e;
       problems.error(file, line(script), e.code, id, `${e.path}: ${e.detail}`);
