@@ -522,7 +522,7 @@ Control kinds: `slider`, `time`, `drag`, `toggle`, `segmented`, `play`. Every co
 
 | key | type | required | meaning |
 |---|---|---|---|
-| `steps` | `buttons` \| `segmented` \| `none` | yes | prev/next stepper, radio row, or nothing (states stay addressable) |
+| `steps` | `buttons` \| `segmented` \| `none` | yes | show the stepper (a pill of radio steps up to five states, a paddle row above five; both values mean show) or nothing (states stay addressable) |
 | `point_at` | array of id |  | layer or 3D object ids the surrounding prose references with data-ref (checked: SPEC_POINT_AT_MISSING) |
 | `states` | array of state (see States) | yes | ordered named states; other keys are <control name>: value |
 
@@ -829,7 +829,7 @@ Phase 2 shipped the 2D runtime, the stylesheet, and PoC 1. The rest of this sect
 
 **Added after delivery** (2026-09-22): prose refs inherit the visibility of what they point at. `figure.visibleIds` is recomputed after every scope change and state (`lib/core/state.js` `visibleIds`, the pure rule `isShown` follows), `x-fig:visibility` fires when the set changes, and `lib/site/hooks.js` toggles `x-ref-hidden` on the spans, which the stylesheet renders as plain prose with no hover highlight. Tested in `test/runtime.test.mjs` against fig-months.
 
-**Added after delivery** (2026-09-24): the knob is an element the runtime draws (`i.x-knob`, last in `.x-track`, so it is in front of the fill), with a grey outline at rest and a halo on hover, focus and drag; discrete sliders get a socket per stop; the vocabulary is fixed in "Slider anatomy". (2026-09-22): slider geometry and ticks. A native range moves the knob so its edge touches the input's ends, so the knob center stops half a knob (20 px) short; the runtime now draws the visible track itself (`div.x-track`, a sibling of the input inset by half the knob on both sides, `--x-pct` measured along it), so the knob center lands exactly on the track ends and the fill is flush with the knob center; the wrapper is one knob wider than the 380/600 px track. A discrete control (a `values` list, or `(max - min) / step <= 40`; a speed-mode time control's `rates`) gets one `i.x-tick` per stop (2 x 8 px, `--c-muted`, behind the track) where the knob center lands; a continuous control gets none (`lib/controls/slider.js` `stepFractions` / `evenFractions`).
+**Added after delivery** (2026-09-24, stepper): every figure boots free; the stepper has a free face (dimmed paddles, hollow pip, "Step through N steps") and a stepped face (filled pip, counter, caption), a click anywhere on the free row steps in at the nearest step, ← → Home End act while the row is armed with `<kbd>` hints outside it, a governed control moved or Play steps off, and five steps or fewer render as the pill; vocabulary in "Stepper anatomy". (2026-09-24, slider): the knob is an element the runtime draws (`i.x-knob`, last in `.x-track`, so it is in front of the fill), with a grey outline at rest and a halo on hover, focus and drag; discrete sliders get a socket per stop; the vocabulary is fixed in "Slider anatomy". (2026-09-22): slider geometry and ticks. A native range moves the knob so its edge touches the input's ends, so the knob center stops half a knob (20 px) short; the runtime now draws the visible track itself (`div.x-track`, a sibling of the input inset by half the knob on both sides, `--x-pct` measured along it), so the knob center lands exactly on the track ends and the fill is flush with the knob center; the wrapper is one knob wider than the 380/600 px track. A discrete control (a `values` list, or `(max - min) / step <= 40`; a speed-mode time control's `rates`) gets one `i.x-tick` per stop (2 x 8 px, `--c-muted`, behind the track) where the knob center lands; a continuous control gets none (`lib/controls/slider.js` `stepFractions` / `evenFractions`).
 
 **Deferred to phase 3** (all delivered in 3A/3B below): `dist/explainers-3d.v1.js` and `lib/scene3d/*` (three.js; the placeholder above stood in), the drag `surface:<id>` constraint and `geolocate`; the test files this section names (`states`, `glossary`, `budget`, Playwright): `test/runtime.test.mjs` covers the goto transition under a fake clock, deep links and the runtime/CSS budgets in Node, and the DOM behavior was verified by headless Chrome screenshots (`preview/`, not committed). Posters, the caveat sentence, integrity and the three validator warnings landed in phase 3A (below).
 
@@ -944,9 +944,16 @@ Animation: there is no implicit clock variable. The only animated quantities are
   </div>
   <div class="x-ctl x-ctl-segmented" id="fig-x_seg0"><fieldset role="radiogroup">…</fieldset></div>
   <button class="x-drag-proxy" id="fig-x_drag_p" role="slider" aria-label="p">…</button>   <!-- keyboard nudging -->
-  <div class="x-stepper" id="fig-x_steps">
-    <button class="x-prev">‹</button> <output aria-live="polite">2 of 3 · sidereal</output> <button class="x-next">›</button>
-    <p class="x-caption">One sidereal month: …</p>
+  <div class="x-stepper" id="fig-x_steps">                         <!-- paddle row (more than five steps); five or fewer render as the pill: fieldset.x-stepper-row.x-steps-seg[role=radiogroup][data-face] with legend "Steps", one radio per step, the same pip, caption, key hints and announcer -->
+    <div class="x-stepper-row" role="group" aria-label="Steps" data-face="free">   <!-- data-face="stepped" once a step holds -->
+      <kbd class="x-key" aria-hidden="true">←</kbd>
+      <button class="x-prev" type="button" aria-label="previous step" aria-describedby="fig-x_steps_cap" aria-disabled="true">‹</button>
+      <button class="x-latch" type="button" aria-pressed="false"><span class="x-invite">Step through 3 steps</span><span class="x-counter"></span></button>   <!-- stepped: aria-pressed="true", counter "2 of 3 · sidereal" -->
+      <button class="x-next" type="button" aria-label="next step" aria-describedby="fig-x_steps_cap" aria-disabled="true">›</button>
+      <kbd class="x-key" aria-hidden="true">→</kbd>
+    </div>
+    <p class="x-caption" id="fig-x_steps_cap"></p>                 <!-- the step's sentence when stepped; the slot keeps one line -->
+    <span class="x-sr" aria-live="polite" aria-atomic="true"></span>
   </div>
   <figcaption>…</figcaption>
 </figure>
@@ -971,6 +978,30 @@ These are the words for a slider's parts, in code, comments, docs, captions and 
 | states | rest, hover, focus, active | the native `<input type=range>` keeps pointer and keyboard handling and draws nothing |
 
 The runtime draws all of this itself because a native range moves its thumb so the thumb's edge, not its center, reaches the input's ends; the visible track is inset by half the 40 px hit target so the knob center lands on the track ends and on every stop.
+
+#### Stepper anatomy (design language)
+
+The words for the stepper under a figure's controls, in code, comments, docs, captions and prose. Nobody says "arrow" for a paddle (arrow is a scene2d layer kind), "thumb", "held" or "release" (drag words), or "tick" (a slider stop's mark).
+
+| word | what it is | in the DOM |
+|---|---|---|
+| stepper | the whole widget: the row and the caption | `.x-stepper` (`<fig>_steps`) |
+| step | one of the N named states as the reader meets it ("2 of 3"); spec, code, deep links and events keep `state` | `notice.states[i]`, `goto(name)`, `#fig-x=name` |
+| row | the one-line strip; carries the **face** (`data-face="free"` or `"stepped"`); hovering it tints it, because the row is one control | `.x-stepper-row[role=group]` or the pill's `fieldset.x-stepper-row.x-steps-seg` |
+| paddle | one of the ‹ › buttons that move one step; dimmed (`aria-disabled`) at the ends and in the free face, never removed, always focusable | `button.x-prev`, `button.x-next` |
+| latch | the center button: free face = hollow **pip** + **invitation** ("Step through 3 steps"); stepped face = filled pip + **counter** ("2 of 3 · quarter"); press = step in / step off; its two spans are stacked so the width never changes | `button.x-latch[aria-pressed]` with `span.x-invite` and `span.x-counter` |
+| pip | the 0.7 em disc that says who is in control: a ring when free, solid when stepped; the corner toggle's dot is the same glyph | `.x-latch::before`, `.x-steps-seg::before`, `.x-toggle::before` |
+| pill | the radio-row form the runtime uses for five steps or fewer; a radio is a step; same pip, caption, hints and announcer | `fieldset.x-steps-seg` |
+| key hints | the ← → `<kbd>` floating outside the row while it is **armed** (keyboard focus inside), fine pointers only; decorative | `kbd.x-key[aria-hidden]` |
+| caption | the step's sentence under the row; empty when free, its slot keeps one line so the figcaption never jumps | `p.x-caption` (`<fig>_steps_cap`) |
+| announcer | the hidden live text that speaks a step change; written only when it changes, emptied on step off | `span.x-sr[aria-live=polite]` |
+| free | mode: system-controlled; the figure follows its own controls, Play or its defaults; every figure boots free, even when its defaults equal a step | `figure.activeState === null` |
+| stepped | mode: human-controlled; the stepper holds the figure at a step | `figure.activeState === name` |
+| step in / step off | the two transitions: in = a click anywhere on the free row, a paddle, the latch, ← → while armed, a radio, a prose `data-state` link, a deep link; off = a **governed** control moved (one the step sets a value for; a toggle the step never names leaves it), Play, Restart, the latch pressed again | `figure.goto` / `figure.stepOff`, `figure.set(…, 'user')`, `figure.play` |
+| nearest | where stepping in from free lands: the step whose targets lie closest to the current controls (from the defaults, step 1, with no motion) | `nearestState(compiled, scope)` in `lib/core/state.js` |
+| armed | keyboard focus inside the row: ← → Home End act (unmodified only) and the key hints show; orthogonal to free/stepped | `.x-stepper-row:focus-within` |
+
+The spec's `steps` key keeps its three values: `buttons` and `segmented` both show the stepper, whose form the runtime picks by count (the pill up to five steps, the paddle row above); `none` shows nothing and leaves the states addressable.
 
 ### Events (CustomEvent on the figure element, bubbles)
 

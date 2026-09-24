@@ -1,3 +1,4 @@
+import { nearestState, stateTargets } from '../lib/core/state.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -410,4 +411,20 @@ test('ERROR_CATALOGUE has a one-line description for every code', () => {
     assert.ok(desc.length > 10 && !desc.includes('\n'), code);
   }
   assert.equal(Object.keys(ERROR_CATALOGUE).filter((c) => c.startsWith('SPEC_')).length, 18);
+});
+
+test('nearestState: from the defaults the first step is exact; between steps the closer one wins; a toggle the step never names is ignored', () => {
+  const compiled = {
+    figureId: 'fig-t',
+    controls: [{ kind: 'slider', name: 'a', min: 0, max: 360 }, { kind: 'toggle', name: 'rim' }],
+    spec: { notice: { states: [{ name: 'start', a: 0 }, { name: 'quarter', a: 90 }, { name: 'half', a: 180, rim: false }] } },
+  };
+  const scope = (a, rim = 1) => ({ get: (k) => (k === 'a' ? a : rim) });
+  assert.deepEqual(nearestState(compiled, scope(0)), { name: 'start', d: 0, exact: true });
+  assert.equal(nearestState(compiled, scope(50)).name, 'quarter');
+  assert.equal(nearestState(compiled, scope(50)).exact, false);
+  assert.equal(nearestState(compiled, scope(44)).name, 'start', 'ties and near-ties go by normalized distance');
+  assert.equal(nearestState(compiled, scope(180, 1)).name, 'quarter', 'a step that sets the toggle the other way is a full unit away');
+  assert.deepEqual(nearestState(compiled, scope(180, 0)), { name: 'half', d: 0, exact: true });
+  assert.deepEqual(Object.keys(stateTargets(compiled, 'half').targets), ['a', 'rim']);
 });

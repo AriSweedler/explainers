@@ -1,0 +1,792 @@
+{
+ "spec": {
+  "vocabulary": [
+   {
+    "word": "stepper",
+    "meaning": "the whole widget under the controls: the row and the caption",
+    "dom": ".x-stepper (id <fig>_steps)"
+   },
+   {
+    "word": "step",
+    "meaning": "one of the N named states in author order, as the reader meets it (\"2 of 3\"); spec, code, deep link and events keep `state`. A slider's `step` key is its increment (DESIGN.md:460 already says so; the Slider-anatomy stop row is rewritten to match), so the word is free.",
+    "dom": "notice.states[i]; goto(name); #fig-x=name"
+   },
+   {
+    "word": "label",
+    "meaning": "optional reader-facing text for a step (`states[i].label`); the counter, announcer and segmented labels show `label ?? name`; goto, hash and events keep `name`",
+    "dom": "notice.states[i].label"
+   },
+   {
+    "word": "row",
+    "meaning": "the one-line strip: two paddles, the latch between them, the key hints floating outside; carries the face",
+    "dom": ".x-stepper-row[role=group][aria-label=Steps][data-face=free|stepped]"
+   },
+   {
+    "word": "paddle",
+    "meaning": "one of the two round ‹ › buttons that move one step; never \"arrow\" (a scene2d layer kind) or \"chevron\"",
+    "dom": "button.x-prev / button.x-next, aria-label \"previous step\" / \"next step\", aria-describedby → the caption"
+   },
+   {
+    "word": "latch",
+    "meaning": "the center toggle button, always present and focusable. Free: hollow pip + \"Step through 3 steps\" (\"Step through 1 step\" for N=1); pressing it steps in at the nearest step. Stepped: filled pip + counter; pressing it steps off (the figure stays put, the caption empties). The one door in and the one deliberate door out; completes the corner toggle's pressed/unpressed idiom.",
+    "dom": "button.x-latch[aria-pressed=false|true]; two stacked spans, the inactive one visibility:hidden so the width never changes"
+   },
+   {
+    "word": "invitation",
+    "meaning": "the latch's free-face text, \"Step through 3 steps\"",
+    "dom": "span.x-invite inside .x-latch"
+   },
+   {
+    "word": "counter",
+    "meaning": "the latch's stepped-face text, \"2 of 3 · quarter\" (label ?? name); not a readout (on-canvas text) and not a value (a slider's number)",
+    "dom": "span.x-counter inside .x-latch"
+   },
+   {
+    "word": "pip",
+    "meaning": "the .7em border-box disc at the start of the latch: 1.5px ring when free, solid (border-width .35em, no background, so forced colors keep it) when stepped. The corner toggle's dot uses the same rule, so the figure has one pressed/unpressed glyph; never token-colored on the latch (currentColor)",
+    "dom": ".x-latch::before, .x-toggle::before; filled via [aria-pressed=true]::before { border-width: .35em }"
+   },
+   {
+    "word": "caption",
+    "meaning": "the stepped step's sentence under the row (spec key `caption`); empty when free, its slot keeps one line so the figcaption does not jump",
+    "dom": "p.x-caption#<fig>_steps_cap"
+   },
+   {
+    "word": "key hints",
+    "meaning": "the two <kbd> glyphs ← → floating just outside the paddles while the row is armed on a fine-pointer device; decorative",
+    "dom": "kbd.x-key[aria-hidden=true] ×2, absolutely positioned"
+   },
+   {
+    "word": "announcer",
+    "meaning": "the visually hidden live text that speaks a step change (\"Step 2 of 3, quarter. <caption>\"); written only when the string changes, emptied on step off; in segmented mode it carries the caption alone (the radio already says its name and position)",
+    "dom": "span.x-sr[aria-live=polite][aria-atomic=true]"
+   },
+   {
+    "word": "stepped",
+    "meaning": "mode: the stepper holds the figure at a step (the owner's human-controlled); set only by goto. Replaces \"held\", which DESIGN.md:988 uses for a drag handle",
+    "dom": "fig.activeState === name; row[data-face=stepped]"
+   },
+   {
+    "word": "free",
+    "meaning": "mode: the figure follows its own controls: defaults, a control the reader moved, Play, Restart (the owner's system-controlled)",
+    "dom": "fig.activeState === null; row[data-face=free]"
+   },
+   {
+    "word": "step in / step off",
+    "meaning": "the two transitions: step in = free → stepped (latch, paddles from free via arrows, prose link, deep link, radio); step off = stepped → free (a governed control moved, Play pressed, Restart, the latch pressed again). Replaces \"release\", a drag word (DESIGN.md:220, 850)",
+    "dom": "fig.activeState set by goto / cleared in fig.set, fig.play, fig.restart"
+   },
+   {
+    "word": "armed",
+    "meaning": "mode: keyboard focus is inside the row (the owner's clicked-in), so ← → Home End act and the key hints show. Orthogonal to stepped/free: a prose link steps in without arming, Tab arms without stepping in",
+    "dom": ".x-stepper-row:focus-within"
+   },
+   {
+    "word": "face",
+    "meaning": "which of the row's two appearances shows: the free face (hollow pip, invitation, dimmed paddles, empty caption) or the stepped face (filled pip, counter, live paddles, caption)",
+    "dom": "data-face on .x-stepper-row; CSS swaps the latch spans by visibility"
+   },
+   {
+    "word": "ends",
+    "meaning": "step 1 for ‹ and step N for ›: the paddle is inert but stays focusable and keeps its focus ring; the tour never wraps",
+    "dom": "[aria-disabled=true] (stepped face); `disabled` only in the free face"
+   },
+   {
+    "word": "nearest",
+    "meaning": "the step whose targets are closest to the current scope (per-target difference normalized by the control's range, booleans 0/1, camera and drag targets ignored, ties to the lower index) and whether it is exact (every measurable target within 1e-6); where the latch lands",
+    "dom": "nearestState(compiled, scope, eps = 1e-6) → { name, exact } in lib/core/state.js"
+   },
+   {
+    "word": "governed",
+    "meaning": "a control the stepped step sets a value for; moving a governed control steps off, moving any other (a toggle the step never names) does not. Computed once per goto as the set of target-name prefixes; `p.x` and `p.y` govern `p`, so grabbing a governed drag handle (`p.dragging`, set with source 'user' at pointerdown) steps off",
+    "dom": "held-set = new Set(Object.keys(targets).map(k => k.split('.')[0])), tested in fig.set as set.has(name.split('.')[0])"
+   },
+   {
+    "word": "advance",
+    "meaning": "one Play clock step (`advance(dt)` in figure.js); never \"tick\", which Slider anatomy owns for the bar at a stop",
+    "dom": "advance(dt)"
+   },
+   {
+    "word": "ease",
+    "meaning": "the 600 ms glide of a goto (0 ms under prefers-reduced-motion); the counter and caption already show the target while the controls catch up",
+    "dom": "transition() in figure.js; x-fig:state fires on completion"
+   }
+  ],
+  "modes": [
+   {
+    "name": "free",
+    "meaning": "System-controlled. The figure shows its defaults, whatever the reader set on a control, or Play's progress. The stepper only offers a way in.",
+    "enter": [
+     "Boot, always, even when the defaults equal step 1 (figure.js:418 is removed and the unused activeState import dropped; activeState() stays exported for test/runtime.test.mjs:159-166 and the CLI)",
+     "Boot with #fig-x (no state) or a plain scroll to the figure",
+     "The reader moves a governed control (slider knob, keyboard nudge, drag handle grab or move, segmented pick, a toggle the step sets) → fig.set(..., 'user')",
+     "Play pressed: fig.play() clears activeState synchronously, before its range reset, so the free face and the snapped slider appear together (no frame shows '3 of 3' over a slider already at 0)",
+     "Restart",
+     "The latch pressed while stepped (step off; the figure stays where it is)"
+    ],
+    "leave": [
+     "Press the latch (steps in at nearest)",
+     "← or → while armed with focus on the latch (same as pressing it)",
+     "Click a prose a[data-state] link",
+     "Load or hashchange to #fig-x=<state>",
+     "Segmented mode: pick a radio"
+    ],
+    "shown_by": "Hollow pip; the latch reads \"Step through 3 steps\" with aria-pressed=false; both paddles `disabled` at .35 opacity; caption empty (slot keeps one line); announcer emptied so stepping off says nothing; hash unchanged."
+   },
+   {
+    "name": "stepped (step k of N)",
+    "meaning": "Human-controlled. The stepper holds the figure at step k: the controls sit at that step's values and the caption is true of the drawing.",
+    "enter": [
+     "Latch: goto(nearest.name, {ease: !nearest.exact})",
+     "Paddle press, ← → Home End while armed, from another step (retargets a running ease from its current values)",
+     "a[data-state] click: goto with ease, scroll only if off-screen, does not arm (hooks.js:46 unchanged)",
+     "#fig-x=<state> at load or hashchange: goto without ease, scrolled to, then fig.el (tabIndex -1) takes focus with preventScroll so Tab and the reading cursor continue from the figure; not armed",
+     "Segmented radio change"
+    ],
+    "leave": [
+     "Reader moves a governed control (a drag handle's grab counts)",
+     "Play pressed (synchronous in fig.play)",
+     "Restart",
+     "The latch pressed again",
+     "Never by Escape (unbound), never by a paddle"
+    ],
+    "shown_by": "Filled pip; latch reads \"2 of 3 · quarter\" (label ?? name) with aria-pressed=true; caption below; paddles live, the one at an end dimmed by color, not opacity, with aria-disabled; hash #fig-x=quarter; announcer \"Step 2 of 3, quarter. <caption>\"; x-fig:state when the ease completes."
+   },
+   {
+    "name": "armed",
+    "meaning": "Keyboard focus is inside the row (the owner's clicked-in). Keyboard traversal is live. Orthogonal to stepped/free.",
+    "enter": [
+     "Tab or Shift+Tab onto a stepper button (the latch in the free face; ‹, latch, › in the stepped face)",
+     "Any pointer or touch activation of a stepper button: the handler calls .focus({preventScroll:true}) so Safari, which never focuses a clicked button, arms too"
+    ],
+    "leave": [
+     "Tab or Shift+Tab out",
+     "Pointer down anywhere else (a slider, Play, the prose)",
+     "Step off while focus is on a paddle (Play's click in Safari leaves focus on ›): stepper.sync() moves focus to the latch with preventScroll before the paddles are disabled, so it never lands on body"
+    ],
+    "shown_by": "Key hints ← → outside the paddles, only under @media (hover: hover) and (pointer: fine); the house 2 px --x-accent :focus-visible ring on the focused button after keyboard focus, none after a mouse click. Nothing is drawn around the row itself."
+   },
+   {
+    "name": "easing (transient, inside stepped)",
+    "meaning": "A goto is in flight for up to 600 ms (0 under reduced motion); the controls glide to the step's values while the counter and caption already show the target.",
+    "enter": [
+     "Any step in or any step change"
+    ],
+    "leave": [
+     "The transition completes (hash written, x-fig:state emitted, the readout mirror follows 300 ms later as one line)",
+     "Retargeted by the next press (no queue, no overshoot)",
+     "Cancelled by a governed 'user' set (step off; the figure stays where the ease had got to). A non-governed set (a toggle the step never names) leaves the ease running: fig.set scopes the cancel to the step-off branch"
+    ],
+    "shown_by": "The knob and drawing moving; nothing on the stepper changes. Deliberate: the counter is the promise, the figure catches up."
+   },
+   {
+    "name": "playing (sub-case of free)",
+    "meaning": "Play is advancing its target control; the stepper stepped off the moment Play was pressed.",
+    "enter": [
+     "Play or Restart pressed; autoplay on approach (never under reduced motion, and skipped when the figure booted stepped: markMounted guards on !fig.activeState, so a scene3d deep link is not undone by its late mount)"
+    ],
+    "leave": [
+     "Latch, prose link or deep link: goto pauses Play first, then steps in",
+     "Pause, or a non-looping play reaching its max: stays free"
+    ],
+    "shown_by": "Free face plus the corner button reading Pause; the stepper does not say \"playing\", the Play button already does. The announcer is not rewritten per advance (writes are guarded)."
+   }
+  ],
+  "interactions": [
+   {
+    "trigger": "Click or tap the latch",
+    "when": "free face",
+    "result": "nearestState → goto(name, {ease: !exact}); face → stepped; pip fills; counter and caption appear; paddles enable; focus stays on the latch (explicit .focus for Safari) so the row is armed and arrows work at once; hash → #fig-x=<step>. From a defaults-equal-step-1 figure this is step 1 with no motion; from a slider at 170° with steps at 0/90/180 it is half (180°), never backwards."
+   },
+   {
+    "trigger": "Click or tap the latch",
+    "when": "stepped face",
+    "result": "Step off: activeState → null; face → free; caption empties; the figure does not move; announcer emptied; hash unchanged. Pressing again steps in at the same step with no motion (exact)."
+   },
+   {
+    "trigger": "Click or tap ›",
+    "when": "stepped, k < N",
+    "result": "goto(step k+1) eased; counter, caption and announcer update at once; › keeps focus (armed)."
+   },
+   {
+    "trigger": "Click or tap ‹",
+    "when": "stepped, k > 1",
+    "result": "goto(step k−1) eased; same as above."
+   },
+   {
+    "trigger": "Click or tap a paddle at an end",
+    "when": "stepped, k = 1 (‹) or k = N (›)",
+    "result": "No-op. The paddle is aria-disabled, stays focusable, keeps focus and its full-contrast focus ring. No wrap."
+   },
+   {
+    "trigger": "Click or tap a paddle",
+    "when": "free face",
+    "result": "Nothing; the paddles are `disabled`. The latch is the one door in."
+   },
+   {
+    "trigger": "Pointer down on any stepper button",
+    "when": "any",
+    "result": "Explicit .focus({preventScroll:true}) so :focus-within holds in every browser; no :focus-visible ring for pointer-originated focus."
+   },
+   {
+    "trigger": "Hover a paddle or the latch",
+    "when": "fine pointer",
+    "result": "Border darkens to --x-muted (existing .x-fig button:hover). Hover never changes state."
+   },
+   {
+    "trigger": "Move a governed control: drag the knob, nudge it with keys, grab or drag a handle, pick a segment, press a toggle the step sets",
+    "when": "stepped",
+    "result": "Step off on the first 'user' set: running ease cancelled, activeState → null; face → free; caption empties; the figure stays where the reader put it; the announcer is emptied, not rewritten."
+   },
+   {
+    "trigger": "Press a toggle or control the step does not set (\"show the rim\" at quarter)",
+    "when": "stepped, including mid-ease",
+    "result": "The step holds and a running ease keeps running; the toggle just draws. (Today fig.set:190 cancels and clears unconditionally.)"
+   },
+   {
+    "trigger": "Press Play",
+    "when": "stepped",
+    "result": "fig.play() steps off synchronously, then resets the range and starts; the free face and any snapped slider appear in the same frame. If focus was on a paddle it moves to the latch first. Works under pause-all and off screen, since it no longer waits for advance()."
+   },
+   {
+    "trigger": "Press the latch, a prose link or a deep link",
+    "when": "playing",
+    "result": "goto pauses Play, then steps in; the corner button reads Play again."
+   },
+   {
+    "trigger": "Press Restart",
+    "when": "any",
+    "result": "Step off (free face); the target control snaps to its start and Play runs."
+   },
+   {
+    "trigger": "Click a[data-state][href=\"#fig-x\"] in the prose",
+    "when": "any",
+    "result": "Step in at that step, eased; the figure scrolls into view only if off-screen; stepped face shown but not armed, focus stays on the link; the announcer speaks the step and caption."
+   },
+   {
+    "trigger": "Load with #fig-x=<state>, or hashchange to it",
+    "when": "any",
+    "result": "Figure boots eagerly, goto without ease → stepped face, scrolled to; route() then focuses fig.el (tabIndex -1, preventScroll) so sequential focus and the reading cursor start at the figure; not armed. An unknown state is ignored (existing compiled.states check)."
+   },
+   {
+    "trigger": "Segmented mode: click or tap a radio label, or arrow keys in the radiogroup",
+    "when": "steps: 'segmented'",
+    "result": "Native radio → goto(that step), stepped face with caption; no radio checked is the free face; the legend reads \"Steps\"; labels show label ?? name and are 2.75rem tall; the announcer carries the caption only."
+   },
+   {
+    "trigger": "Rapid › presses or held-down → during an ease",
+    "when": "stepped",
+    "result": "Each press retargets the running transition from the current interpolated values; hash and x-fig:state fire once, at the end; the counter always shows the latest target."
+   },
+   {
+    "trigger": "Scheme change (light ↔ dark)",
+    "when": "any",
+    "result": "Pip, paddles, key hints and latch recolor through tokens; no state change."
+   }
+  ],
+  "keyboard": [
+   {
+    "key": "Tab / Shift+Tab",
+    "when": "from outside the row",
+    "result": "Free face: lands on the latch (disabled paddles are skipped). Stepped face: ‹, latch, › (paddles focusable even at an end). The row is armed; key hints appear on fine-pointer devices."
+   },
+   {
+    "key": "→",
+    "when": "armed and stepped",
+    "result": "Same as ›: goto(k+1), clamped at N (swallowed no-op at the last step); preventDefault."
+   },
+   {
+    "key": "←",
+    "when": "armed and stepped",
+    "result": "Same as ‹: goto(k−1), clamped at 1; preventDefault."
+   },
+   {
+    "key": "→ or ←",
+    "when": "armed and free (focus is on the latch)",
+    "result": "Same as pressing the latch: step in at nearest; focus stays on the latch."
+   },
+   {
+    "key": "Home / End",
+    "when": "armed and stepped",
+    "result": "goto(step 1) / goto(step N); preventDefault. First to drop if the budget is tight."
+   },
+   {
+    "key": "Enter / Space",
+    "when": "on a focused paddle or the latch",
+    "result": "Native button activation, identical to a click; a no-op on an aria-disabled paddle."
+   },
+   {
+    "key": "Escape",
+    "when": "armed",
+    "result": "Not bound. blur() would send focus to body (APG focus-loss anti-pattern) and no key needs handing back: ↑ ↓ PageUp PageDown were never taken. Tab out or a pointer elsewhere disarms."
+   },
+   {
+    "key": "Any of the above with Alt, Ctrl, Meta or Shift held",
+    "when": "armed",
+    "result": "Not handled, not prevented (Cmd+← is Back in Safari, Alt+← in Chrome)."
+   },
+   {
+    "key": "↑ ↓ PageUp PageDown",
+    "when": "armed",
+    "result": "Not bound; the page scrolls."
+   },
+   {
+    "key": "Tab / Shift+Tab",
+    "when": "from inside the row",
+    "result": "Leaves the row (never a trap); disarms; key hints hide."
+   }
+  ],
+  "visuals": [
+   "Row: .x-stepper-row { position: relative; display: inline-flex; align-items: center; gap: .75rem; max-width: 100%; min-height: 2.75rem }. Paddles are always in the DOM (dimmed, never hidden); the latch is one element whose two spans are stacked (.x-latch { display: inline-grid; align-items: center } .x-latch > span { grid-area: 1 / 1 }) with the inactive span visibility: hidden, so the slot is always the width of the wider face and switching face or arming never moves a paddle. The row has no border or background in any mode.",
+   "Paddles: unchanged 2.75rem circles, ‹ ›, 1.6rem/400 glyph, 1 px --x-rule border, translucent --bg fill. Two dim rules: .x-stepper button:disabled { opacity: .35 } (free face, unfocusable) and .x-stepper button[aria-disabled=\"true\"] { color: color-mix(in srgb, currentColor 35%, transparent); border-color: color-mix(in srgb, var(--x-rule) 50%, transparent); cursor: default } (stepped-face ends, focusable), so the :focus-visible outline keeps full contrast.",
+   "Latch: the house pill as the corner toggle draws it (600 .8125rem sans, 1 px --x-rule border, color-mix(--bg 88%) fill, hover darkens the border); .x-stepper .x-latch { min-height: 2.75rem; min-width: 0 } repeated inside the 40rem block so line 204's 2.5rem shrink never applies (one row, one height). Not inverted when pressed: it follows .x-toggle (dot fills), not .x-play.",
+   "Counter span: .9rem sans is dropped in favor of the pill's own font; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis so at 360 px the latch shrinks to the column (44 + 12 + latch + 12 + 44 ≤ 328) instead of overflowing at a fixed 14rem. Color inherits --fg (today's --x-muted made the active thing look inactive).",
+   "Pip: shared rule .x-toggle::before, .x-latch::before { content: ''; display: inline-block; box-sizing: border-box; width: .7em; height: .7em; border-radius: 50%; border: 1.5px solid var(--token, currentColor); margin-right: .5em; vertical-align: -.05em } and .x-toggle[aria-pressed=\"true\"]::before, .x-latch[aria-pressed=\"true\"]::before { border-width: .35em }. The fill is border, not background, so forced-colors mode (which paints backgrounds Canvas) still shows a solid disc; the toggle's own latent bug goes with it (its dot grows ~1 px).",
+   "Key hints: kbd.x-key { position: absolute; top: 50%; translate: 0 -50%; font: 600 .7rem/1 var(--x-sans); padding: .2em .4em; min-width: 1.6rem; text-align: center; color: var(--fg); background: var(--x-panel); border: 1px solid var(--x-rule); border-bottom-width: 2px; border-radius: 4px; visibility: hidden; opacity: 0; transition: opacity .12s } with left: -2.4rem / right: -2.4rem; .x-stepper-row:focus-within .x-key { visibility: visible; opacity: 1 } inside @media (hover: hover) and (pointer: fine); display: none otherwise and under @media (max-width: 40rem).",
+   "Caption: .x-caption { margin: .6rem 0 0; min-height: 1.5em; font: .95rem/1.5 var(--x-serif) }; the :empty { display: none } rule (CSS:144) goes so stepping off does not pull the figcaption up. No fade; the caption changes at the start of the ease.",
+   "Focus: the existing 2 px --x-accent :focus-visible ring on every stepper button; nothing on the row.",
+   "Dark mode: every color is a token (--fg, --bg, --x-rule, --x-panel, --x-accent); the pip is currentColor; nothing new to theme.",
+   "Phone (360 px, 328 px content): key hints hidden; free row ≈ 44 + 12 + ~150 + 12 + 44 = 262 px; the stepped row is the same width (stacked faces); a long name ellipsizes inside the latch. The 40rem block's 2.5rem shrink is overridden for .x-latch; paddles keep 2.75rem.",
+   "Segmented: CSS:130 changes to min-height: 2.75rem for both .x-ctl-segmented label and .x-steps-seg label, so the one pill idiom has one height and every radio is a 44 px target; legend \"Steps\"; no pip.",
+   "Reduced motion: the key-hint transition is set to none in the existing @media (prefers-reduced-motion: reduce) block; goto is already 0 ms; faces switch instantly.",
+   "Forced colors: pip is border-drawn (above); key hints are real borders; aria-disabled paddles read in GrayText through the color-mix of currentColor."
+  ],
+  "aria": [
+   "Row: role=\"group\" aria-label=\"Steps\" on .x-stepper-row so the paddles and latch announce as one control; the keydown listener lives on the row, so arrows act only while a stepper button has focus and never intercept browse-mode arrows, the slider's native arrows or the drag proxy's handler.",
+   "Latch: a toggle button, aria-pressed=\"false\" free / \"true\" stepped; its accessible name is the visible span (\"Step through 3 steps\" or \"2 of 3 · quarter\"), since a visibility:hidden span is excluded from name computation; the name changes with state the way the house Play/Pause button's does.",
+   "Paddles: aria-label \"previous step\" / \"next step\"; aria-describedby=\"<fig>_steps_cap\" (the caption's id) so a Tab onto a paddle says where the figure is; `disabled` only in the free face (focus is never on them then); aria-disabled=\"true\" at the ends in the stepped face so they stay in the tab order. No aria-keyshortcuts: browse-mode readers never deliver arrows to the page handler, and the attribute is for shortcuts that work without focus.",
+   "Announcer: one persistent visually hidden span.x-sr[aria-live=polite][aria-atomic=true] (reuse the sr-only rule at CSS:71). sync() writes \"Step 2 of 3, quarter. <caption>\" only when the string changed, \"\" on step off, and in segmented mode the caption alone (the native radio already says \"north, radio button, checked, 2 of 3\"). Not the visible caption or a toggled element: a region that leaves and re-enters the tree via display:none is a new region and often silent, and per-frame syncControls during an ease must not re-announce.",
+   "A paddle press yields the announcer line and, 300 ms after the ease settles, one readout-mirror line (\"angle 90°\", figure.js:344 debounce); the two regions carry different content and each speaks once per press.",
+   "Focus management: explicit .focus({preventScroll:true}) on pointer activation (Safari); no handoff on step in, the latch keeps focus; on step off while focus is on a paddle, stepper.sync() moves focus to the latch (preventScroll) before `disabled` is applied. No `disabled` is ever set on a focused element. Deep links focus fig.el (tabIndex -1) after scrolling.",
+   "Touch: every target is the 2.75rem (44 px) house size including the latch on phones and both radio rows; touch-action: manipulation on all buttons; no hover-only affordance; key hints never render on coarse pointers.",
+   "Modifier-safe: the row handler returns early on altKey || ctrlKey || metaKey || shiftKey.",
+   "No new global shortcuts, no keyboard traps: Tab always leaves the row; Escape is not bound.",
+   "Contrast: latch text in --fg; key hint text in --fg on --x-panel; :disabled paddles at .35 are exempt as unfocusable disabled controls; aria-disabled ends dim by color only so their focus ring is full strength.",
+   "Segmented legend reads \"Steps\" (stepper.js:12 says \"States\" today).",
+   "Verify on VoiceOver macOS + Safari (explicit focus arms; latch name change), NVDA + Firefox (announcer on prose link; describedby on Tab), VoiceOver iOS (44 px targets, no hints), TalkBack."
+  ],
+  "dom_sketch": "<!-- buttons mode, FREE face (boot, or after stepping off) -->\n<div class=\"x-stepper\" id=\"fig-x_steps\">\n  <div class=\"x-stepper-row\" role=\"group\" aria-label=\"Steps\" data-face=\"free\">\n    <kbd class=\"x-key\" aria-hidden=\"true\">←</kbd>\n    <button class=\"x-prev\" type=\"button\" aria-label=\"previous step\" aria-describedby=\"fig-x_steps_cap\" disabled>‹</button>\n    <button class=\"x-latch\" type=\"button\" aria-pressed=\"false\">        <!-- ::before = hollow pip -->\n      <span class=\"x-invite\">Step through 3 steps</span>\n      <span class=\"x-counter\"></span>                                  <!-- stacked; visibility:hidden in this face -->\n    </button>\n    <button class=\"x-next\" type=\"button\" aria-label=\"next step\" aria-describedby=\"fig-x_steps_cap\" disabled>›</button>\n    <kbd class=\"x-key\" aria-hidden=\"true\">→</kbd>\n  </div>\n  <p class=\"x-caption\" id=\"fig-x_steps_cap\"></p>                       <!-- empty; min-height keeps one line -->\n  <span class=\"x-sr\" aria-live=\"polite\" aria-atomic=\"true\"></span>     <!-- announcer, emptied on step off -->\n</div>\n\n<!-- buttons mode, STEPPED face at step 2 of 3 (armed: focus on .x-next; key hints visible on fine pointers) -->\n<div class=\"x-stepper\" id=\"fig-x_steps\">\n  <div class=\"x-stepper-row\" role=\"group\" aria-label=\"Steps\" data-face=\"stepped\">\n    <kbd class=\"x-key\" aria-hidden=\"true\">←</kbd>\n    <button class=\"x-prev\" type=\"button\" aria-label=\"previous step\" aria-describedby=\"fig-x_steps_cap\">‹</button>\n    <button class=\"x-latch\" type=\"button\" aria-pressed=\"true\">         <!-- ::before = filled pip (border-width .35em) -->\n      <span class=\"x-invite\">Step through 3 steps</span>              <!-- visibility:hidden in this face -->\n      <span class=\"x-counter\">2 of 3 · quarter</span>                  <!-- label ?? name -->\n    </button>\n    <button class=\"x-next\" type=\"button\" aria-label=\"next step\" aria-describedby=\"fig-x_steps_cap\">›</button>   <!-- aria-disabled=\"true\" at step 3 -->\n    <kbd class=\"x-key\" aria-hidden=\"true\">→</kbd>\n  </div>\n  <p class=\"x-caption\" id=\"fig-x_steps_cap\">A quarter turn: the dot is straight up.</p>\n  <span class=\"x-sr\" aria-live=\"polite\" aria-atomic=\"true\">Step 2 of 3, quarter. A quarter turn: the dot is straight up.</span>\n</div>\n\n<!-- segmented mode: radio row, legend renamed, labels 2.75rem, label ?? name, announcer carries the caption only -->\n<div class=\"x-stepper\" id=\"fig-x_steps\">\n  <fieldset role=\"radiogroup\" class=\"x-steps-seg\"><legend>Steps</legend>\n    <label><input type=\"radio\" name=\"fig-x_steps\" value=\"east\"><span>East</span></label>…\n  </fieldset>\n  <p class=\"x-caption\" id=\"fig-x_steps_cap\"></p>\n  <span class=\"x-sr\" aria-live=\"polite\" aria-atomic=\"true\"></span>\n</div>",
+  "edge_cases": [
+   {
+    "case": "Figure whose defaults equal step 1 (the dev page's fig-three, most article figures, likely the owner's noon figure)",
+    "behaviour": "Boots free: hollow pip, \"Step through 3 steps\", empty caption slot. The latch lands on step 1 with no motion (nearest.exact) and reveals its caption. Authors who want the step-1 sentence visible before any interaction put it in the figcaption. Deliberate removal of figure.js:418."
+   },
+   {
+    "case": "Reader drags the slider exactly onto a step's values (a = 90)",
+    "behaviour": "Stays free (a 'user' set steps off; no auto-landing). nearest = quarter, exact, so the latch fills the pip and shows the caption without moving anything."
+   },
+   {
+    "case": "Reader is between steps (a = 170, steps at 0/90/180)",
+    "behaviour": "Latch → half (180°), a 10° ease forward, counter \"3 of 3 · half\", › dimmed with aria-disabled. Ties in normalized distance go to the lower index."
+   },
+   {
+    "case": "Nearest under multi-control steps",
+    "behaviour": "Sum of squared per-target differences, each normalized by its control's range (values lists by index / length, booleans and segmented 0/1); camera and drag targets are skipped; a step with no measurable targets is never nearest unless it is the only step; exact requires every measured target within 1e-6 (the activeState() rule at state.js:57)."
+   },
+   {
+    "case": "Latch pressed while stepped",
+    "behaviour": "Steps off: caption empties, pip hollows, paddles disable, figure unchanged, hash unchanged. A second press steps back in at the same step with no motion. Recoverable in one press."
+   },
+   {
+    "case": "N = 1",
+    "behaviour": "\"Step through 1 step\"; stepped face \"1 of 1 · name\" with both paddles aria-disabled; the latch is still the only way to see the caption."
+   },
+   {
+    "case": "N = 2, 6, 8 (dev figures)",
+    "behaviour": "Identical faces; only digits change; the row keeps the free face's width."
+   },
+   {
+    "case": "Long step name at phone width",
+    "behaviour": "The latch shrinks with the row (min-width: 0) and the counter ellipsizes; the announcer speaks the full string."
+   },
+   {
+    "case": "Press › three times quickly, or hold → (OS key repeat), during an ease",
+    "behaviour": "Each press cancels the running transition and eases from the current interpolated values; hash and x-fig:state fire once, at the end."
+   },
+   {
+    "case": "Non-governed toggle pressed mid-ease",
+    "behaviour": "The ease keeps running to the step's values; the toggle draws; the counter's promise is kept. fig.set cancels only in the step-off branch."
+   },
+   {
+    "case": "Grab a governed drag handle without moving it",
+    "behaviour": "Steps off at pointerdown (`p.dragging` is set with source 'user' at figure.js:93 and `p` is governed). Stated, not hidden: a grab is intent to move."
+   },
+   {
+    "case": "Play is running and the reader presses the latch",
+    "behaviour": "goto pauses Play, steps in at the step nearest the paused position; the corner button flips to Play."
+   },
+   {
+    "case": "Play pressed while stepped under pause-all, or with the figure off screen",
+    "behaviour": "Steps off at once (fig.play clears activeState), so the stepper never sits stepped under a Pause button."
+   },
+   {
+    "case": "Deep link at boot on a figure with autoplay: true, including a scene3d whose chunk mounts after route()",
+    "behaviour": "goto runs first; markMounted skips autoplay because fig.activeState is set; the figure lands stepped and stays. Autoplay is already ignored under reduced motion."
+   },
+   {
+    "case": "hashchange to #fig-x=state while armed",
+    "behaviour": "Stepped face at that step; focus moves to fig.el (route() focuses it), disarming; the reader Tabs back into the row from the figure."
+   },
+   {
+    "case": "Toggle a control the step does not set (\"show the rim\" at quarter)",
+    "behaviour": "Stays stepped, caption stays; the toggle just draws. Requires the governed test in fig.set."
+   },
+   {
+    "case": "Safari mouse click on a paddle or the latch",
+    "behaviour": "The handler's explicit .focus() arms the row so key hints appear and arrows work; no ring, since the focus was pointer-originated."
+   },
+   {
+    "case": "Focus is on › when Play is pressed (Safari left focus on › after the reader clicked Play)",
+    "behaviour": "fig.play → syncControls → stepper.sync(null) sees a paddle focused and moves focus to the latch (preventScroll) before disabling the paddles; focus never drops to body and the page does not scroll."
+   },
+   {
+    "case": "Coarse pointer with a keyboard attached (iPad + keyboard)",
+    "behaviour": "Arrow keys work while armed; key hints stay hidden because the media query keys on the primary pointer. Accepted trade-off."
+   },
+   {
+    "case": "Two steppers on one page",
+    "behaviour": "Only the row containing the focused button handles keys; each has its own announcer and caption id."
+   },
+   {
+    "case": "Segmented mode after a prose link, then a slider nudge",
+    "behaviour": "Radio checks on the link (announcer: caption only), unchecks on step off; caption follows; no pip."
+   },
+   {
+    "case": "steps: 'none'",
+    "behaviour": "Nothing mounts; deep links and prose links still step the figure in (activeState set) with no visible indicator, the author's choice."
+   },
+   {
+    "case": "Reader steps off and copies the URL",
+    "behaviour": "The hash still names the step they left; kept, because a reload cannot restore a nudged position and returning to the last authored step is the useful outcome."
+   },
+   {
+    "case": "prefers-reduced-motion",
+    "behaviour": "All gotos snap; no key-hint fade; faces switch instantly; nothing animates on its own."
+   },
+   {
+    "case": "Deep link to an undeclared state",
+    "behaviour": "Ignored (existing compiled.states check); the page scrolls to the figure, which boots free; route() still focuses the figure."
+   },
+   {
+    "case": "Forced colors (Windows high contrast)",
+    "behaviour": "Pip stays a ring or a solid disc because both are border; key hints keep their borders; aria-disabled paddles read in GrayText."
+   },
+   {
+    "case": "fig.dispose()",
+    "behaviour": ".x-stepper is removed with the other nodes (figure.js:412); the keydown listener lives on the row, so nothing leaks."
+   }
+  ],
+  "decisions": [
+   {
+    "decision": "The paddles are inert in the free face; the latch (\"Step through 3 steps\") is the one door in, and it lands on the nearest step in one press.",
+    "rationale": "The owner's complaint is exactly that › entered the tour. A labeled door says what the first press does; landing on a step in that press keeps touch to one tap and gives the paddles a defined \"next\" from the moment they light up.",
+    "dissent": "Accessibility and the first-time reader would keep › as the entry from free, relabeled with its destination. Rejected: the paddle's meaning keeps shifting, and \"ahead\" is undefined for multi-control steps."
+   },
+   {
+    "decision": "The center slot is one always-present toggle button, the latch, with aria-pressed and two stacked text faces; pressing it while stepped steps off.",
+    "rationale": "The design-language verifier showed the pip borrowed the corner toggle's pressed/unpressed dot but sat on a non-pressable span, giving one glyph two meanings. Making the slot a real toggle completes the idiom, gives the owner an explicit hand-back, removes the entry focus handoff (focus never leaves the latch), and the grid-stacked spans hold the row's width across faces. The earlier rule \"never by clicking the counter\" is reversed.",
+    "dissent": "The earlier panel held that stepping off without moving anything only makes the caption vanish; the visual designer may object that the stepped face is now a bordered pill rather than plain text. Recorded as an open question."
+   },
+   {
+    "decision": "Boot is always free, even when the defaults equal a step; activeState means strictly \"the stepper holds the figure\" and is set only by goto. figure.js:418 goes; activeState() stays exported.",
+    "rationale": "This is the owner's four-state model: uninteracted, then 1..N. The pip is honest: filled = the stepper is in control.",
+    "dissent": "Accessibility, the editor and the first-time reader wanted a defaults-equal-step figure to boot \"1 of 3\". Mitigation: the latch lands on step 1 with no motion, and authors put the opening sentence in the figcaption."
+   },
+   {
+    "decision": "Vocabulary: stepped / free for the modes, step in / step off for the transitions, latch for the center button, advance for Play's clock step.",
+    "rationale": "\"held\" (DESIGN.md:988), \"release\" (:220, :850) and \"tick\" (Slider anatomy) are already taken by drags and sliders; \"enter button\" collides with the Enter key in the same table. None of the new words appear in Slider anatomy, the `arrow` layer kind, or the Play/Restart prose.",
+    "dissent": "The design-language verifier proposed \"start button\"; rejected because \"start\" is Restart's word and the range's start. \"door\" was considered and kept only as prose (\"the one door in\")."
+   },
+   {
+    "decision": "Step off when a governed control moves (drag grab included), when Play is pressed (synchronously in fig.play), on Restart, or when the latch is pressed again. A non-governed control never steps off and never cancels a running ease.",
+    "rationale": "Runtime verifier: advance() runs only while visible and not paused-all, so the old release could hang; the range reset in play() showed a stale counter for a frame; fig.set:190 cancelled before any governed test. Moving the clear to play() and scoping the cancel fixes all three.",
+    "dissent": "The editor and the first-time reader wanted auto-landing when a drag ends exactly on a step; deferred."
+   },
+   {
+    "decision": "Autoplay is skipped when the figure booted stepped (markMounted guards on !fig.activeState).",
+    "rationale": "A scene3d mounts after route()'s deep-link goto, so autoplay's first advance would undo the link."
+   },
+   {
+    "decision": "No per-step pips in this pass.",
+    "rationale": "Six small targets at 360 px repeat the counter; segmented mode, prose links and deep links give direct choice by name; and the measured headroom (~1.1 KB) leaves no room for ~200 B of optional chrome.",
+    "dissent": "The visual designer and the editor wanted a row of pips."
+   },
+   {
+    "decision": "Armed = DOM focus inside the row (:focus-within), forced with an explicit .focus({preventScroll:true}) on pointer activation; no JS mode flag. Escape is not bound.",
+    "rationale": "Focus is what keyboard readers already have; Safari needs the explicit call; Tab and pointer-away disarm for free. blur() on Escape would send focus to body, and there is nothing to hand back since ↑ ↓ and Page keys were never taken."
+   },
+   {
+    "decision": "role=group with the latch and two paddle tab stops; aria-disabled at the ends dims by color-mix, not opacity.",
+    "rationale": "aria-disabled keeps focus from dropping to body; the opacity rule would also fade the focus ring on a now-focusable element, so the ends dim text and border while the outline keeps full contrast.",
+    "dissent": "The accessibility specialist proposed an APG spin button. With one always-present latch it is now a plausible later unification; recorded as an open question."
+   },
+   {
+    "decision": "Keys: ← → Home End on the row, unmodified only; no ↑ ↓; no aria-keyshortcuts.",
+    "rationale": "Left/Right conflict with nothing; Up/Down and Page keys stay with the page; modifiers stay with the browser; browse-mode readers never receive the arrows, so advertising them to AT was false."
+   },
+   {
+    "decision": "Key hints are real <kbd> elements, aria-hidden, absolutely positioned outside the paddles, shown on :focus-within under (hover: hover) and (pointer: fine), hidden under 40rem.",
+    "rationale": "The owner asked for kbd items at the far edges; two elements cost ~40 B and never shift the row.",
+    "dissent": "Pseudo-elements at zero JS are the fallback if the budget is hit."
+   },
+   {
+    "decision": "The announcer is a persistent visually hidden live span with guarded writes; segmented mode writes the caption alone. The readout mirror is left as is.",
+    "rationale": "A region toggled through display:none is often silent; the radio already speaks its name and position. The mirror's 300 ms debounce (figure.js:344) already collapses an ease to one line, so the earlier spec claim was corrected rather than the code changed."
+   },
+   {
+    "decision": "The counter, announcer and segmented labels show `label ?? name`; `label` is a new optional key on a state.",
+    "rationale": "Three of five experts and the accessibility verifier wanted slugs like \"s1\" and \"year-4\" out of reader-facing text; ~40 B resolves it and keeps `name` for goto, hash and events."
+   },
+   {
+    "decision": "Faces are swapped by data-face on the row and visibility on the latch's spans, not the hidden attribute.",
+    "rationale": "An author display value would override UA display:none; visibility:hidden also keeps the stacked span in layout for width and out of the accessible name."
+   },
+   {
+    "decision": "Phone height: .x-latch keeps 2.75rem inside the 40rem block, and CSS:130 raises both radio rows to 2.75rem.",
+    "rationale": "Line 204 shrinks every .x-fig button to 2.5rem; one row must have one height, and raising only .x-steps-seg would leave .x-ctl-segmented at another height for the same pill idiom."
+   },
+   {
+    "decision": "Deep links focus the figure after scrolling (fig.el.tabIndex = -1 once; focus with preventScroll).",
+    "rationale": "The hash matches no element id, so nothing moved the sequential focus start; a keyboard or screen-reader reader who followed a link began at the top of the document."
+   },
+   {
+    "decision": "The caption slot reserves one line (min-height 1.5em) and never display:none.",
+    "rationale": "The figcaption no longer jumps on every nudge; a multi-line caption still shifts by its extra lines, accepted."
+   },
+   {
+    "decision": "The hash stays on the last stepped step after stepping off.",
+    "rationale": "A reload cannot restore a nudged position; the last authored step is the useful landing.",
+    "dissent": "The first-time reader suggested replaceState back to #fig-x for an honest URL."
+   },
+   {
+    "decision": "DESIGN.md edits, beyond the new \"Stepper anatomy\" table beside \"Slider anatomy\": the Notice `steps` row (:525) reads \"paddles and a latch (buttons), a radio row (segmented), or nothing (states stay addressable)\"; the states table gains optional `label`; :828 \"stepper buttons or radio row with `aria-live` output\" becomes \"stepper (paddles, latch, caption, a visually hidden announcer) or radio row\"; :867 item 8 becomes \"Play, Restart and manual input on a governed control step off; the stepper shows the free face, 'Step through N steps', with an empty caption slot\"; the DOM sketch at :947–950 is replaced by this spec's; the Figure object section states that activeState is set only by goto and never computed from the scope; the Slider anatomy table gains an `increment` row (\"the `step` key of a continuous slider, the distance one arrow press moves the knob\") and its stop row reads `(max - min) / increment <= 40`.",
+    "rationale": "Both verifiers listed passages the spec makes false; :460 already calls the key an increment, so only the anatomy table lags."
+   },
+   {
+    "decision": "Implementation notes: top-level names must be unique across the bundle (tools/build-runtime.mjs:121 refuses duplicates) and lib/core/state.js already owns `clamp` and `nearest`, so nearestState's helpers stay inside it; both focus handoffs live in stepper.sync() because every step-off reaches the stepper through syncControls(); dev/stepper.html:40 says \"paddles\" and its &focus=1 selector becomes `.x-stepper .x-latch, .x-stepper input`; the dev page keeps one figure whose defaults match no step so the free face is screenshotted.",
+    "rationale": "Each was a place the earlier spec assumed freedom the code does not give."
+   }
+  ],
+  "size_estimate": "Measured now: `node tools/build-runtime.mjs` → dist/explainers-runtime.v1.js 129,162 B raw, 38,896 B gzip; the ceiling is 40,000 B (test/runtime.test.mjs:326 asserts `<= 40 * 1000`), so headroom is ~1.1 KB, not 2.1. Stylesheet 5.2 KB gzip of 8 KB. Estimate: stepper.js ~2.1 → ~3.6 KB raw (+~0.55 KB gz: latch with two spans and aria-pressed, data-face upkeep, disabled/aria-disabled upkeep, keydown with 4 keys and the modifier check, explicit pointer focus, step-off focus rescue in sync(), announcer with guarded writes and the segmented caption-only branch, two kbd, label ?? name, legend rename); nearestState({name, exact}) in state.js ~0.35 KB raw (+~0.15 KB gz); figure.js (drop :418 and the import, governed set built in goto and tested in set with the cancel scoped, clear in play(), markMounted guard) ~0.25 KB raw (+~0.12 KB gz); boot.js route() focus ~+0.03 KB gz. Total about +0.85 KB gz, landing near 39,750 B; hard cap +1.0 KB measured on the built bundle, checked by the existing test. CSS +~0.6 KB gz (latch stack, pip rule shared with the toggle, dim rules, key hints, caption min-height, 40rem overrides, segmented height), inside its room. Drop order if over: (1) Home/End (~80 B); (2) aria-describedby on the paddles (~50 B); (3) the kbd elements become ::before/::after on the row (~40 B); (4) nearestState replaced by `activeState(compiled, scope) ?? states[0].name`, which keeps exact-match → that step and otherwise starts at step 1 (~150 B; the between-steps backward jump returns, last resort); (5) the governed refinement (~80 B). Per-step pips (~200 B) would need a drop from this list before they could be added.",
+  "open_questions": [
+   "Does the owner's noon figure boot with its defaults equal to noon? If so it opens \"Step through 3 steps\" with no caption until the first press; the opening sentence should move to the figcaption. Confirm this is wanted rather than boot-in-step for that figure.",
+   "The latch is now a bordered pill in both faces and pressing it while stepped steps off (caption empties, figure unchanged). Is that the look and the hand-back the owner wants, or should the stepped face stay plain text with no door out?",
+   "Should stepping off rewrite the hash to #fig-x (honest URL) or keep the last step (useful reload)? Spec says keep.",
+   "Per-step pips as direct access: defer (budget says so today), or make room by dropping Home/End?",
+   "Auto-landing when a drag ends exactly on a step's values: defer, or add on the slider's change event?",
+   "Spinbutton (one tab stop, aria-valuetext on the latch) as a later unification of buttons and segmented modes, now that the latch is always present?",
+   "Raising both radio rows to 2.75rem moves every existing segmented control by 4 px; accept, or keep the stepper's row alone at 2.75rem and live with two heights?"
+  ],
+  "summary_markdown": "# Stepper spec (panel verdict, verified)\n\n## Vocabulary (new \"Stepper anatomy\" table beside \"Slider anatomy\")\n\n| word | what it is | DOM |\n|---|---|---|\n| stepper | the whole widget: row + caption | `.x-stepper` |\n| step | one named state as the reader meets it (\"2 of 3\"); code keeps `state`; a slider's `step` key is its *increment* | `notice.states[i]`, optional `label` |\n| row | paddles, latch, key hints; carries the face | `.x-stepper-row[role=group][data-face]` |\n| paddle | the ‹ › buttons (never \"arrow\") | `.x-prev` / `.x-next` |\n| latch | the center toggle: free \"Step through 3 steps\", stepped \"2 of 3 · quarter\"; press = step in / step off | `button.x-latch[aria-pressed]` |\n| counter | the latch's stepped text (`label ?? name`) | `span.x-counter` |\n| pip | .7em disc: ring = free, solid = stepped; the corner toggle's dot, one rule | `.x-latch::before` |\n| caption | the step's sentence; slot keeps one line | `p.x-caption` |\n| key hints | ← → `<kbd>` outside the paddles while armed | `kbd.x-key` |\n| announcer | hidden live text, guarded writes | `span.x-sr[aria-live]` |\n\n## Modes\n\nTwo axes. **stepped / free** is the figure's pose: stepped = the stepper holds a step (`activeState`, set only by `goto`); free = the figure follows its controls. **armed** = focus inside the row, forced with an explicit `focus()` so Safari arms on click. Boot is always free, even when defaults equal step 1: your fourth state. **Step off** = a *governed* control moved (grabbing a drag handle counts; \"show the rim\" does not), Play pressed (synchronous, so it works under pause-all), Restart, or the latch pressed again. Prose and deep links step in without arming.\n\n## The first click\n\nIt is no longer on ›. The free face dims both paddles and puts one labeled door in the middle: **Step through 3 steps**, hollow pip. Pressing it steps in at the **nearest** step (step 1 from defaults, no motion; the closest step after dragging, never backwards), fills the pip, reveals the caption, lights the paddles, and keeps focus so arrows work at once. Pressing the filled latch steps off. Hollow = system, filled = you.\n\n## Keyboard (armed, unmodified)\n\n| key | result |\n|---|---|\n| Tab | latch (free) or ‹ latch › (stepped); never a trap |\n| ← → | previous / next, clamped; on the latch when free = step in |\n| Home / End | first / last step |\n| Enter / Space | the focused button |\n| Escape, ↑ ↓, Page keys | not bound |\n\nEnds use `aria-disabled` dimmed by color, so focus never drops and the ring keeps contrast.\n\n## Visuals\n\nPaddles unchanged (44 px). Latch = house pill, two spans grid-stacked so the row never changes width; 2.75rem on phones too. Counter ellipsizes with the row. Pip drawn as border (survives forced colors; the toggle gets the same fix). Key hints `<kbd>` at ±2.4rem on `:focus-within` under `(hover: hover) and (pointer: fine)`, hidden under 40rem. Caption `min-height: 1.5em`. Both radio rows 2.75rem. All tokens; nothing for dark mode; no transitions under reduced motion.\n\n## Edge cases\n\nDefaults equal a step → boots free, latch lands with no motion. Drag onto 90° → still free. Between steps → nearest. Play while stepped → off at once, focus rescued to the latch. Deep link → stepped, figure focused, not armed. Autoplay skipped when booted stepped (scene3d safe). Non-governed toggle mid-ease → ease continues. Rapid presses → retarget. Segmented → legend \"Steps\", caption-only announcer.\n\n## Budget\n\nBundle 38,896 B gz today; ceiling 40,000 (`test/runtime.test.mjs:326`). Estimate +0.85 KB → ~39,750. Cap +1.0 KB measured. Drop order: Home/End, paddle `aria-describedby`, kbd → pseudo-elements, nearest → step-1 fallback, governed refinement.\n\n## Verifiers\n\nAccepted: renamed held/release/enter/tick to stepped, step off, latch, advance (drag and slider own the old words); made the center slot a real toggle (`aria-pressed`), which also fixes the pip idiom, the width shift and the entry focus handoff; dropped Escape and `aria-keyshortcuts`; color-dim for `aria-disabled`; 44 px latch and radio labels on phones; border-drawn pip; `label ?? name`; caption-only announcer in segmented; step off moved into `fig.play()`; autoplay guard; cancel scoped to the step-off branch; handoffs in `sync()` with `preventScroll`; governed set built once per goto, drag grab stated; `nearestState → {name, exact}`; deep-link focus; corrected ceiling and measurement; DESIGN.md edit list (:525, :828, :867, :947–950, Figure object, increment row); dev page words and selector; unique top-level names. Rejected: the readout-mirror JS change (the 300 ms debounce already yields one line per press; the spec's claim was corrected instead); `[hidden] !important` (superseded by `data-face` + visibility); \"start button\" (collides with Restart and the range start); describedby to the counter (it is now the latch's own name; caption only).\n\n## Dissent\n\nBoot-in-step; › as entry; per-step pips; spinbutton; auto-landing; plain-text stepped face. Open questions list what to revisit."
+ },
+ "critiques": [
+  {
+   "lens": "interaction-designer",
+   "diagnosis": [
+    "The › paddle means two different things, \"enter the tour at step 1\" and \"advance one step\", and the free-mode counter \"3 states\" is a count rather than a position, so before the first press the reader cannot predict what › will do (stepper.js:30: activeState null → indexOf = -1 → goto(states[0]); ‹ has the same target but is disabled).",
+    "\"Next\" is undefined when the figure is off the steps: from a slider position of 170° the first › moves the figure backwards to 0°, because the paddles have no notion of where the figure currently is relative to the ladder of steps.",
+    "\"At a step\" and \"held at a step\" are conflated at boot: figure.js:418 sets activeState from a scope match, so a figure whose defaults equal step 1 boots showing \"1 of 3 · start\" plus the caption (preview/stepper/current-default-crop.png) and looks identical to a figure the reader deliberately stepped to.",
+    "There is no mode indicator: the only visible difference between the figure following its controls and the figure held at a step is whether a caption paragraph happens to exist, and the reader has to infer that dragging the slider is what made it vanish.",
+    "disabled paddles drop out of the tab order and drop focus: at step 1 there is nothing focusable on the left (current-focus-crop.png shows no ring anywhere), and pressing › into the last step disables the very button that has focus, throwing keyboard focus to the document body.",
+    "Arrow keys do nothing and nothing says they might: the row listens only for clicks, so a keyboard reader must Tab between two paddles and press Enter, and a mouse reader never learns there is a faster way.",
+    "The caption sits outside the aria-live output, so a screen reader hears \"2 of 3 · quarter\" and never the sentence that is the whole point of the step.",
+    "Every 'user' set releases the hold (figure.js:191), including a corner toggle the step never sets, so pressing \"show the rim\" at quarter silently erases the quarter caption while the figure is still exactly at quarter.",
+    "Release is announced as a reset: when Play's first tick or a slider nudge clears activeState the counter reverts to \"3 states\", which reads as \"the figure went back to the beginning\" rather than \"you are now driving it yourself\".",
+    "The reader-facing word is inconsistent: the spec, deep link and aria-labels say \"state\" (\"previous state\"), the spec key and the owner say \"steps\", and a slider's numeric increment is also spelled `step` in the JSON."
+   ],
+   "answers": [
+    "First click: it is no longer on ›. The free face puts one labeled door in the center of the row, a pill reading \"Step through 3 steps\" with a hollow pip; pressing it holds the figure at the step nearest to where the figure already is (step 1 when the figure sits at its defaults, the closest step after you have been dragging), reveals that step's caption and lights the paddles. The paddles are dimmed and inert until you are on a step, because \"next\" has no meaning off the ladder.",
+    "Indicator: a pip, the same 0.6em dot the corner toggles already use for off/on: hollow = free (system-controlled: defaults, your slider, Play), filled = held (human-controlled: the stepper holds a step). The face reinforces it: an invitation (\"Step through…\") versus a position (\"2 of 3 · quarter\" in full-strength text plus the caption). Screen readers get it from the live text and from the enter pill's name.",
+    "Click in, set, traverse: click in = press the enter pill (arms the row and holds at nearest) or follow a prose link / deep link (holds a specific step without stealing focus from the prose); set = the step you landed on, with segmented mode, prose links and deep links for picking a specific one by name; traverse = ‹ › or ← →, clamped at the ends, never wrapping; leave = drive the figure another way (slider, drag, a toggle the step governs, Play, Restart). Escape only disarms; it never releases, because releasing without moving anything would only make the caption vanish.",
+    "Arrow keys: ← and → step back and forward whenever focus is inside the stepper row (Tab in, or any click arms it, with an explicit focus() so Safari arms too); Home and End go to the first and last step; when armed on the free face an arrow does what the enter pill does. The paddles are never `disabled` in the held face (aria-disabled at the ends) so the key you are resting on never disappears from under you.",
+    "kbd hints: two `<kbd>` glyphs ← and → float just outside the paddles at the far edges of the row while it is armed, on fine-pointer devices only (a phone shows none: no keyboard), absolutely positioned so the row never shifts; aria-hidden, with aria-keyshortcuts on the paddles carrying the same information to assistive tech."
+   ]
+  },
+  {
+   "lens": "accessibility-specialist",
+   "diagnosis": [
+    "The only focusable parts are the two chevron <button>s and each is `disabled` at an end of the sequence, so the widget's tab stops change with state, and a keyboard user who presses › onto the last step has focus dropped to <body> (the button under focus became disabled) and must Tab in again from wherever the browser restarts.",
+    "Arrow keys do nothing today and nothing in the accessibility tree promises them: the stepper is a bare <div> holding two buttons and an <output>, with no composite role, so a screen-reader user hears 'previous state, button' and 'next state, button' and has no reason to try arrows.",
+    "The <output aria-live=polite> announces '2 of 3 · quarter' but the caption <p> (the actual content) is not live, so a screen-reader user who activates a prose <a data-state> link or lands on a #fig-x=state deep link hears the position and never the sentence.",
+    "sync() rewrites out.textContent and caption.textContent unconditionally, and advance() runs it every frame while Play is on, so the live region is mutated at 60 Hz with identical text ('3 states') and NVDA/JAWS will re-announce or churn for the whole play.",
+    "Free mode reads '3 states', a count rather than a status, so a blind reader who drags the slider off step 2 has no text saying they left the steps, and a sighted reader sees the same grey pill as '1 of 3 · start' with a number missing.",
+    "In free mode indexOf(null) is -1, so ‹ is disabled and › jumps to step 1 (and pauses Play) under the unchanged name 'next state': the first press changes meaning from 'advance' to 'enter at step 1' without saying so, which is exactly the owner's 'brings me INTO it' complaint.",
+    "The accessible names 'previous state' / 'next state' are programmer vocabulary, the visible glyphs ‹ › carry no text, and the state slug is read raw ('s1', 'quarter'), so nothing tells the reader where a press will take them.",
+    "current-focus-crop.png shows no focus ring because the harness focused `.x-stepper button`, i.e. the disabled ‹, and focus() on a disabled button is a no-op: the widget has no focus target that is always enabled.",
+    "Clicking a chevron does not focus it in Safari (Safari never focuses buttons on click), so any 'clicked-in' state built on :focus-within would never appear for Safari mouse users unless the click handler calls focus() itself.",
+    "The segmented mode's labels are 2.5rem (40 px) tall, under the 44 px house target; its native radios wrap Left/Right from last to first while the buttons mode has hard ends; and its free mode (no radio checked) has no text equivalent and an empty caption.",
+    "The counter text is --x-muted (fg mixed 62% into bg), which is 4.65:1 on the light theme: it passes AA for 14.4 px text with almost no margin, and once it becomes a control's value any translucent pill behind it will push it under 4.5:1.",
+    "Escape, Home and End have no meaning, and the widget never distinguishes 'a step was applied because you pressed something here' from 'a step arrived from a prose link, deep link or play', so announcements cannot be tuned to either."
+   ],
+   "answers": [
+    "First click: from free the first › should still enter the sequence (there is nowhere else for it to go), but it must say so before you press: in free mode the chevron is named and rendered as the destination ('Go to step 1, start', or 'Go to step 3, half' when you had been on step 2), the counter says 'free · 3 steps' instead of a look-alike of '1 of 3', and the stepper remembers the last step so leaving and coming back resumes rather than restarting.",
+    "Indicator: the real state space is {on a step, free} times {engaged, released}, with 'untouched' only a boot condition; free ('human overridden') is shown by text in the counter and by aria-valuenow being removed, so a screen reader reads 'Step, spin button, free, 3 steps' and nothing relies on a glyph or color.",
+    "Click in, set, traverse: 'clicked in' is DOM focus on the counter, not a JS flag: every chevron click or tap ends with counter.focus(), so one tap sets a step and the arrows work from that moment; Escape, Tab or a click elsewhere releases.",
+    "Arrow keys: bind ArrowLeft/Right and ArrowUp/Down (the role promises both pairs), plus Home/End, only while the counter has focus and only without modifiers; this borrows the same page-scroll keys the slider above already borrows, and Escape hands them back.",
+    "kbd hints: two <kbd aria-hidden=\"true\"> at the far edges, laid out from the start with visibility: hidden and shown on .x-stepper:focus-within so nothing shifts, hidden entirely on coarse pointers; they are decoration because role=spinbutton already tells assistive technology that arrows work."
+   ]
+  },
+  {
+   "lens": "visual-designer",
+   "diagnosis": [
+    "A step the system put the figure in (boot defaults, deep link, prose link) and a step the reader chose look pixel-identical, so nothing in the widget says who holds the figure.",
+    "The free state ('3 states') and a held step ('2 of 3 · quarter') differ only in text, both in --x-muted at the same weight, so leaving a step by dragging or playing changes no shape, weight or fill.",
+    ".x-caption:empty { display: none } collapses the caption when the figure is free, so the figcaption jumps up one or two lines every time a step is entered or left: a layout shift inside the widget's own body.",
+    "output { min-width: 11ch } is a guess; a state name longer than 11ch widens the counter on that step and pushes both arrows outward, so the arrow under the reader's pointer moves as they click it.",
+    "<button disabled> at the ends cannot take focus and drops it: pressing › to reach the last step throws keyboard focus to <body>, and the focus screenshot is blank because ‹ at step 1 is unfocusable.",
+    "The arrows are full-strength 44 px circles in every mode, so › looks equally live whether it will move the figure or not; from free it jumps to step 1, the surprise the owner reports.",
+    "The counter is the only per-step signal and offers no direct access and no glance-level position: at 6 steps the reader must read '4 of 6' rather than see it.",
+    "Nothing hints that a keyboard can drive the widget; there is no key handling beyond native Tab/Enter and no visual key affordance anywhere in the figure.",
+    "There is no engaged look for the whole widget: :focus-visible rings one button, and Safari does not focus a clicked button at all, so a Safari mouse user never sees the widget change except for its text.",
+    "The caption cuts hard the instant goto starts while the figure eases for 600 ms, so the words arrive before the picture in every transition.",
+    "The dev figure boots in step 1 (defaults equal 'start'), so the 'uninteracted' state has never been screenshotted; the redesign must be checked on a figure whose defaults match no step."
+   ],
+   "answers": [
+    "First click: while the figure is free, the first press on ‹ or › only wakes the stepper (well appears, chips fade in, glyphs sharpen) and the figure does not move; the second press moves. When the figure already sits in a step (boot defaults, deep link, prose link) › has a defined 'next' and acts at once, and a pip press always acts at once. That keeps your complaint fixed (no surprise jump from nowhere) without making every arrow press a two-click chore.",
+    "Indicator: no extra word or dot. Two things are being indicated and the widget shows both structurally: who holds the widget (resting vs engaged) is the well plus chips plus --fg glyphs, and where the figure is (free vs held) is the counter text ('3 steps' vs '2 of 3 · quarter' with the name in --fg 600) plus the pips (all hollow vs one filled). Please confirm which of the two you meant by 'human overridden vs system controlled'; the design covers both, and the vocabulary names them separately.",
+    "Click in, set, traverse: click anywhere on the row to engage; set the state with a pip (direct) or with ›/‹ (from free, › enters at step 1 and ‹ at the last step); traverse with the arrows or the keys; Escape or a click elsewhere releases without changing the step.",
+    "Arrow keys: ArrowLeft/ArrowRight (plus Home/End) work whenever focus is inside the stepper, which is exactly the engaged mode; the end arrows use aria-disabled instead of disabled so focus is never lost at either end.",
+    "kbd hints: ← and → key-caps sit outside the arrows at the far edges of the row, absolutely positioned so they take no layout, fading in over 0.15 s when engaged and out on release; hidden on hover-less devices and under 40rem because they would promise a keyboard that is not there or overflow the gutter."
+   ]
+  },
+  {
+   "lens": "explainer-editor",
+   "diagnosis": [
+    "The counter changes kind, not just value: before the tour it is a count (\"3 states\") and after the first › it is a position (\"1 of 3 · start\"), so the first press reads as entering a mode rather than moving to a step; the reader had no picture of the positions before pressing.",
+    "The counter leaks the author's slug (\"start\", \"quarter\", \"sidereal\", and on the six-step dev figure \"s1\"), which is an id, not reader prose (stepper.js:36).",
+    "The step caption is set in the body serif at 0.95rem, one step below body size, so it reads as a stray sentence of prose inside the figure, while the muted sans figcaption beneath it reads as the real caption; two captions compete for one slot (css:69 vs css:143).",
+    "Any reader change drops the step and blanks the caption even when the step says nothing about what changed: toggling \"show the rim\" at step 2 clears activeState (figure.js:191 via toggle.js:7) although the state names only `a` and nothing the caption describes moved.",
+    "Play clears the step on its first tick (figure.js:300), and autoplay fires on mount (figure.js:355), so a figure that boots in step 1 loses its caption the instant it starts moving with no reader action, which is the reverse of what a caption should do while a figure animates.",
+    "Leaving a step forgets it: with activeState null, indexOf returns -1 and both chevrons resolve to step 1 (stepper.js:29-30), so a reader at step 2 who nudges the slider and presses › is thrown to the start of the tour instead of on to step 3.",
+    "The runtime presents the same states in three voices, tour (stepper), preset (a[data-state] in prose) and bookmark (#fig=state), with no rule telling an author which one a figure is, and the captions in the wild repeat the adjacent prose instead of saying what to look at.",
+    "Keyboard traversal breaks at the ends: `disabled` on the focused › (reached by Enter at step 2 → step 3) drops focus to the document, and the focus screenshot shows no ring at all because the harness focused ‹, which is disabled at step 1 and cannot take focus.",
+    "The live region announces the counter but not the caption, and sync rewrites `out.textContent` on every frame of the 600 ms ease (figure.js:240 → 138), which can repeat the announcement.",
+    "\"states\" is the spec's word and has no meaning to a reader; it must never appear in the counter."
+   ],
+   "answers": [
+    "First click: do not add an armed mode that a reader must enter before anything moves; the surprise was the counter turning from a count into a position, so show the positions before the press (hollow pips) and label › with its destination (\"Step 1 of 3\"); the first press then does exactly what it promises, and half the figures (any whose defaults equal a step, like the one in your screenshots) never have an uninteracted state at all.",
+    "Indicator: yes, but say it from the figure's side, not the agent's: at a step (filled pip, \"2 of 3\", caption) versus free (hollow pips with a trace on the last step, \"between steps\" or \"playing\", caption withdrawn); \"human overridden\" / \"your setting\" would be false whenever autoplay leaves the step, which happens on mount with no reader action.",
+    "Click in, set, traverse: clicking a pip sets the step, ‹ › then walk from it, and when you nudge a control away the trace remembers where you were so ‹ › continue from there instead of restarting at step 1 (today they restart, stepper.js:29-30); there is no separate mode to enter or leave, and the caption comes back only when the figure is truly on a step again.",
+    "Arrow keys: ← → (and Home / End) move one step whenever keyboard focus is inside the stepper row, counting from the current step or the trace; the slider keeps its own arrows because the handler is scoped to .x-stepper; use aria-disabled at the ends so focus is not dropped when › becomes inert.",
+    "kbd hints: two <kbd>←</kbd> <kbd>→</kbd> at the far edges of the row, visible only under :focus-visible inside the row, so a touch reader never sees them and a mouse reader sees them only after tabbing in; hide them below 26rem; if the JS budget is tight, render them as CSS pseudo-elements at zero JS.",
+    "Counter text: untoured shows nothing (the figcaption stands alone), at a step \"2 of 3\", free \"between steps\" or \"playing\"; never the slug and never the word \"states\"; move the counter into the caption line as a lead (\"2 of 3 · A quarter turn: …\") so the row is quiet navigation and the reader's eye returns to the figure."
+   ]
+  },
+  {
+   "lens": "first-time-reader",
+   "diagnosis": [
+    "Before I touch anything the row can read '3 states' with ‹ already greyed out, so the buttons say 'you are at the start' while the text says 'you are nowhere'; the two signals contradict and I cannot tell what › will do.",
+    "The first › from a free position eases the figure to step 1 regardless of where the figure is (stepper.js line 30: indexOf(null) = -1, so min(len-1, 0)), so after I drag the slider to 100° 'next' throws me backwards to 0°, which reads as a reset, not a step.",
+    "When the defaults already equal step 1 (dev figure, and every article figure that starts on a state) the row boots as '1 of 3 · start' (figure.js line 418), so I never meet the uninteracted state and the four-state model appears only after I move a control, where it looks like a glitch rather than a mode.",
+    "Moving any control, even the corner toggle 'show the rim' that no state mentions (figure.js lines 189-191 null activeState for every 'user' set), flips the row to '3 states' and deletes the caption (.x-caption:empty { display: none }), so the sentence I was reading vanishes and the figcaption jumps up about 1.5 lines with no word about why.",
+    "The middle of the row shows the author's state slug ('quarter', 's1', 'twelve-months', 'year-4' in the real articles), which looks like a label to me and reads as broken when it is a slug; the caption is the label I actually read.",
+    "Play blanks the row to '3 states' and hides the caption on every tick (advance() nulls activeState), and › while playing pauses and jumps to step 1, so Play and the steps feel like two rival controls over one dial rather than one thing.",
+    "Nothing on the row tells a keyboard reader that arrows do anything, and in buttons mode they do nothing (Tab, Tab, Enter), while the segmented mode already answers arrow keys through the native radio group, so the same gesture behaves differently in the two step modes.",
+    "At step 1 keyboard focus cannot land on ‹ (disabled), which is why preview/stepper/current-focus-crop.png is pixel-identical to the default: the dev harness focused '.x-stepper button' (the disabled ‹) and nothing happened, so there is no picture of the widget's focus state at all.",
+    "The two 44 px circles carry the same weight as Play/Restart, so the eye reads three equal buttons and the caption underneath, not 'a counter you page through'; the counter, the thing that says where you are, is the lightest element in the row.",
+    "Every step rewrites the URL (history.replaceState) but Back does not undo a step, and after I drag the slider the hash still names the step I left, so a shared link sends the next reader to a view I was no longer looking at."
+   ],
+   "answers": [
+    "First click: agreed it is wrong, but the reader's fix is not a mode switch; make › from a free position go to the first step ahead of where the figure is (‹ to the one behind, the counter tap to the nearest), so the first click is always a step forward from what I am looking at and never a reset to step 1, and when the defaults sit on step 1 nothing changes because the figure already boots on-step.",
+    "Indicator: yes, as 'on a step / off the steps' (a filled vs hollow lamp beside '2 of 3' vs '3 steps', with the caption greying instead of disappearing), not 'human overridden / system controlled'; the reader owns the figure in both footings and would not recognise either phrase.",
+    "Click into, set, traverse: from the reader's side 'click in' must be one tap that also lands on a step (tap the counter to snap to the nearest step, or tap an arrow), never a tap that only changes mode; a two-tap ritual costs a phone reader an extra tap for nothing, and on touch there is no keyboard to click in for.",
+    "Arrow keys: yes, tied to keyboard focus inside the row (Tab in, then ← → Home End), not to a clicked-in mode; focus is the clicked-in state, keyboard readers get it for free, and the segmented mode already has native arrow keys so the two modes finally agree.",
+    "kbd hints: yes, but only while the row has keyboard focus and only on devices with a keyboard (hover: hover and pointer: fine), with their width reserved so the row does not shift when they appear; on a phone they are chrome and should never render or reserve space."
+   ]
+  }
+ ],
+ "verdicts": [
+  {
+   "lens": "accessibility",
+   "ok": false,
+   "problems": [
+    "The one dim rule `.x-stepper button:disabled, button[aria-disabled=\"true\"] { opacity: .35 }` also dims the element's own `:focus-visible` outline, so the end paddle, which is now focusable, shows a 35 % focus ring (fails focus-visible contrast; never mattered before because `:disabled` buttons were unfocusable).",
+    "The enter button is a `.x-fig button` with only `min-height`, and the existing `@media (max-width: 40rem) { .x-fig button { min-height: 2.5rem } }` (dist/explainers.v1.css:204) shrinks it to 40 px on phones, contradicting the spec's \"every target is 44 px including the enter button\"; `.x-steps-seg label` is likewise 2.5rem today (line 130) and the spec relies on a change it does not name.",
+    "On entry the spec says \"the enter button hides so focus is handed to ›\": if `hidden` is applied before `.focus()`, focus drops to body for a tick (VoiceOver announces the loss), and in any order VoiceOver macOS/iOS routinely drops a polite live-region write that coincides with a focus move, so the entry announcement \"Step 1 of 3, start. <caption>\" is likely never heard on Safari.",
+    "`aria-keyshortcuts=\"ArrowLeft|ArrowRight\"` advertises keys that NVDA/JAWS browse mode (buttons do not switch to focus mode) and VoiceOver with Quick Nav on never deliver to the page's keydown handler, so AT users are told about a shortcut that does nothing for them; the attribute is also meant for shortcuts that work without focus, which these are not.",
+    "Segmented mode wires the same announcer, so every radio pick is spoken twice: the native \"north, radio button, checked, 2 of 3\" and then \"Step 2 of 3, north. North.\"",
+    "The readout mirror `.x-readouts[aria-live=polite]` (figure.js:44, rewritten 300 ms after each draw) also speaks after every goto, so a paddle press yields two polite announcements (\"Step 2 of 3, quarter. …\" then \"angle 90°\"); the spec's \"announcements fire once\" claim ignores this second region.",
+    "Escape calls `blur()` which sends focus to body (an APG focus-loss anti-pattern); Safari then restarts Tab from the document top, and the stated purpose (\"hand the arrows back to the page\") is empty because ↑ ↓ PageUp PageDown are never taken and ← → do not scroll a page vertically.",
+    "The spec claims the filled pip \"survives forced colors\", but `background: currentColor` is forced to Canvas under `forced-colors: active`, so held and free both render a hollow disc (the corner toggle has the same latent bug).",
+    "`hidden` on `.x-enter` / `.x-counter` is UA `display: none`, which any author `display: inline-flex` on those elements (likely, to align the ::before pip) overrides, so both faces render at once.",
+    "The counter and the announcer speak the raw state slug (\"s1\", \"year-4\", \"noon\") as reader-facing text; a screen reader says \"s one\" / \"year dash four\" for the dev page's own figures, and the spec defers the `label` key.",
+    "A deep link `#fig-x=state` (boot.js:66-74) scrolls and holds but never moves the sequential focus starting point (the hash matches no element id, so no native fragment focus), so a keyboard or screen-reader user who followed the link starts tabbing from the top of the document."
+   ],
+   "fixes": [
+    "Replace the shared opacity rule for the ends with a color dim that leaves the outline intact: `.x-stepper button[aria-disabled=\"true\"] { opacity: 1; color: color-mix(in srgb, currentColor 35%, transparent); border-color: color-mix(in srgb, var(--x-rule) 50%, transparent); cursor: default }` and keep `opacity: .35` only for `:disabled` (unfocusable) paddles.",
+    "Add `.x-stepper .x-enter, .x-steps-seg label { min-height: 2.75rem }` after the 40rem media block (or inside it), and change line 130's `min-height: 2.5rem` to `2.75rem` for `.x-steps-seg label` only.",
+    "In the enter handler run `next.focus({preventScroll:true})` first and set `enter.hidden = true` after; and add `aria-describedby=\"<fig>_steps_counter <fig>_steps_caption\"` (ids on `.x-counter` and `.x-caption`) to both paddles so the focus announcement on entry carries \"next step, button, 2 of 3 quarter, <caption>\" even when the live write is dropped.",
+    "Drop `aria-keyshortcuts` from both paddles (also saves ~60 B); the arrows stay as a sighted-keyboard convenience shown by the kbd hints, and the paddles' Enter/Space remain the AT path.",
+    "In segmented mode write only the caption to the announcer (`sr.textContent = caption`), or skip the write when the goto originated from a radio `change` event, so the native radio announcement is not repeated.",
+    "In `fig.draw()` skip the `readoutsEl` mirror rewrite while `running` is a goto transition (or set the mirror once in `onDone` after the announcer has spoken), so a step press produces exactly one live announcement.",
+    "Delete the Escape binding from the keyboard table and the row handler; Tab/Shift+Tab out and pointer-down elsewhere already disarm, and no key needs handing back.",
+    "Draw the filled pip with border thickness instead of a background: `.x-counter::before { border-width: .3em }` (a .6em box with a .3em border is a solid disc), which is preserved and recolored under forced colors; apply the same to `.x-toggle[aria-pressed=\"true\"]::before`.",
+    "Add `.x-stepper [hidden] { display: none !important }` to the stepper CSS block so the face toggle wins regardless of author display values.",
+    "Resolve `state.label ?? state.name` once in mountStepper and use it for the counter, announcer and segmented label text (~40 B), keeping `name` for goto, hash and events.",
+    "In boot.js `route()`, after `scrollIntoView`, set `fig.el.tabIndex = -1` (once) and call `fig.el.focus({preventScroll:true})` so Tab continues from the figure and the screen reader's reading cursor lands on it."
+   ]
+  },
+  {
+   "lens": "runtime-constraints",
+   "ok": false,
+   "problems": [
+    "The JS ceiling is 40,000 B gz (test/runtime.test.mjs:326 asserts `<= 40 * 1000`), not 40,960, and the bundle measures 38,777 B gz today, so the spec's '2.1 KB headroom' is really ~1.2 KB and the +0.9 KB estimate lands ~300 B under the test.",
+    "Play releases only in advance() (figure.js:300), which runs only while fig.visible and not env.pausedAll(); pressing Play while held under pause-all or with the figure off screen leaves the corner button reading Pause and the stepper still held indefinitely.",
+    "fig.play() at a non-looping maximum snaps the target to range[0] via assign(...,'play') (figure.js:268) before the first tick, so a reader at step N sees '3 of 3 · half' over a slider that has already jumped to 0 for at least one frame.",
+    "markMounted() autoplays when the scene attaches (figure.js:355); for a scene3d figure that is after route()'s deep-link goto, so autoplay's first tick releases the deep-linked hold, contradicting the 'Deep link at boot on a figure with autoplay' edge case.",
+    "fig.set(...,'user') cancels the running transition before any governed test (figure.js:190); if a non-governed toggle is pressed mid-ease and the hold is kept, the figure stops between steps while the counter and caption still promise the target.",
+    "The focus handoff is specified only for the enter-button click path, but sync() also hides .x-enter on prose-link, deep-link, hashchange and segmented gotos; in Safari a clicked link does not take focus, so an armed-free reader who clicks a prose link has focus dropped to body when the enter button goes hidden.",
+    "The 'governed' test as written (stateTargets per 'user' set, prefix-matched) runs on every slider input event and matches control `p` against a control `pa`; the drag path also sets `p.dragging` with 'user' at pointerdown, so a hold releases on grab, before the handle moves, which the spec does not say.",
+    "The concatenation build refuses duplicate top-level names across the bundle (tools/build-runtime.mjs bundle()), and lib/core/state.js already declares top-level `clamp` and `nearest`; the spec's estimate assumes free naming of helpers in stepper.js and state.js.",
+    "The spec's DESIGN.md edits list only the vocabulary table, but three passages become false: line 867 item 8 ('the stepper then shows N states'), the DOM sketch at lines 947-950 (`<output aria-live>` and `<button class=x-prev>`), and line 828 ('stepper buttons or radio row with aria-live output').",
+    "Dropping figure.js:418 leaves activeState() in lib/core/state.js with no runtime caller, but test/runtime.test.mjs:159-166 imports and asserts it; the spec is silent on keeping the export.",
+    "The release-path focus rescue is described under 'figure.js edits', but every release reaches the stepper only through syncControls() -> stepper.sync(null) (fig.set, advance, restart), so the rescue must live in sync(); the spec also omits preventScroll on that programmatic focus, so a Play tick could scroll the page.",
+    "The enter button's ease flag `!at` needs the same 1e-6 tolerance activeState() uses (state.js:57); a nearestState that returns only a name has no way to say 'exact', and an eased goto from equal values still delays the hash and x-fig:state by 600 ms."
+   ],
+   "fixes": [
+    "In size_estimate replace '40,960 ceiling (2.1 KB headroom)' with '40,000 ceiling (test/runtime.test.mjs:326), 38,777 B gz measured by `node tools/build-runtime.mjs`, ~1.2 KB headroom'; cap this change at +1.0 KB gz measured on the built bundle and note that per-step pips (~200 B) would then need a drop.",
+    "Move the release into fig.play(): add `fig.activeState = null;` (and the focus rescue via syncControls) at the top of fig.play() before the range reset, so the hold ends synchronously in the click handler; keep the line in advance() as belt-and-braces or delete it to save bytes; reword the 'playing' mode and the 'Press Play' interaction to 'released when Play is pressed'.",
+    "Same edit as above closes the range-reset frame: with activeState cleared before `assign(target.name, range[0], 'play')`, syncControls() in fig.play() shows the free face together with the snapped slider.",
+    "In markMounted() guard autoplay with the hold: `if (playSpec && playSpec.autoplay && !env.reduced && !fig.activeState) fig.play();` and state in the edge case that autoplay is skipped when the figure boots held (scene3d deep link included).",
+    "In fig.set(), scope the cancel to the release branch: `if (source === 'user' && governed(name)) { if (running) { running.cancel(); running = null; } fig.activeState = null; }` and keep the play-target pause outside it; add an interaction row 'non-governed control during an ease: the ease keeps running, the toggle just draws'.",
+    "Put both handoffs in stepper.sync(): before setting enter.hidden = true, `if (document.activeElement === enter) (nearestIsLast ? prev : next).focus({ preventScroll: true })`; before setting prev/next.disabled, `if (row.contains(document.activeElement)) { enter.hidden = false; enter.focus({ preventScroll: true }); }`; list prose link, deep link, hashchange and segmented as paths that reach it.",
+    "Compute the governed set once in goto(): `held = new Set(Object.keys(targets).map((k) => k.split('.')[0]))` (a closure var, cleared on release) and test `held.has(name.split('.')[0])` in fig.set; state explicitly that a drag handle's pointerdown (`p.dragging`) releases a hold on a governed drag.",
+    "Add to the spec's implementation notes: 'top-level names must be unique across ORDER (build refuses duplicates); state.js already owns `clamp` and `nearest`, so keep new helpers inside mountStepper/nearestState or give them unique names'.",
+    "Extend the DESIGN.md edit list to: rewrite line 867 item 8 ('play and manual input on a governed control release the hold; the stepper shows the free face, Step through N steps'), replace the DOM sketch at 947-950 with the spec's dom_sketch, and change line 828's 'aria-live output' to 'a visually hidden announcer'.",
+    "Say 'activeState() stays exported in lib/core/state.js (test/runtime.test.mjs:159-166 and the CLI may use it); only the call at figure.js:418 is removed, and the now-unused import is dropped from figure.js'.",
+    "Move the 'focus handoff hook' out of 'figure.js edits' into stepper.js sync() in size_estimate and the aria section, and add `preventScroll: true` to every programmatic focus() the spec names (entry handoff, release rescue, pointer arming).",
+    "Specify `nearestState(compiled, scope, eps = 1e-6)` returning `{ name, exact }` where exact means every measurable target is within eps (the activeState() rule), and have the enter button call `fig.goto(name, { ease: !exact })`."
+   ]
+  },
+  {
+   "lens": "design-language",
+   "ok": false,
+   "problems": [
+    "Vocabulary collision: \"held\" and \"release\" are already drag words in the house docs (DESIGN.md:988 \"while its handle is not held\"; DESIGN.md:220/850 momentum \"after release\", \"release velocity\"), and the spec itself trips on it in decisions[6] where \"landing on release (change event)\" means the pointer letting go of the knob, the opposite of the spec's release (leaving held).",
+    "Vocabulary collision: \"enter button\" is ambiguous with the Enter key in the same keyboard table (\"Enter / Space ... on the enter button\"), so a caption like \"press enter\" cannot be read unambiguously.",
+    "Vocabulary collision: the spec's mode text uses \"tick\" for Play's clock advance (\"Play's first tick\", \"not rewritten per tick\") while Slider anatomy owns \"tick\" as the grey bar at a stop; a design-language document must not reuse it.",
+    "The \"step\" row asserts that a slider's `step` key \"is called its increment in prose\", but no such rule exists in DESIGN.md (the Slider anatomy \"stop\" row still writes `(max - min) / step`), so the claim that the word is free is unrecorded.",
+    "The pip borrows the corner toggle's dot geometry, where a filled dot means pressed-press-again-to-unpress, but on the held face it sits on a non-pressable span (\"never by clicking the counter\"), so the one on/off idiom the spec claims now has two meanings in the same figure.",
+    "Layout is not stable across faces: the spec's own phone numbers (free row ~262 px, held row ~242 px) show the centered row changing width when the enter button swaps for the counter, so both paddles jump ~10 px at the moment focus is handed to ›, contradicting \"switching face never shifts the row\".",
+    "At 360 px the held row can overflow: counter max-width 14rem (224 px) + two 2.75rem paddles + two .75rem gaps = 336 px in a 328 px content column.",
+    "At phone width the existing `@media (max-width: 40rem) .x-fig button { min-height: 2.5rem }` rule shrinks the enter button to 40 px while the paddles keep 2.75rem, giving one row two button heights and breaking the spec's \"every target is the 2.75rem (44 px) house size including the enter button\".",
+    "Segmented mode raises `.x-steps-seg label` to 2.75rem but leaves `.x-ctl-segmented label` (styled by the same shared rule at CSS:130) at 2.5rem, so a figure with both radio rows shows two heights of the same pill idiom.",
+    "The spec says to add the vocabulary table \"beside Slider anatomy\" but does not name the DESIGN.md lines that become false: the DOM sketch at 947 (`<output aria-live>`), the Notice table at 525 (\"prev/next stepper\"), 828 (\"stepper buttons or radio row with aria-live output\"), 867 (\"the stepper then shows N states\") and the Figure object's activeState-at-boot rule.",
+    "The dev page lede (dev/stepper.html:40) calls the paddles \"arrows\", the word the spec bans for them, and its `&focus=1` selector still targets `.x-stepper button` first, which in the held face lands on ‹ rather than the enter button."
+   ],
+   "fixes": [
+    "Rename the modes: held → \"on a step\" / \"stepped\" (mode word `stepped`, `fig.activeState !== null`) and release → \"let go\" or \"unstep\", and reword decisions[6] to \"landing when the drag ends (change event)\" so pointer release keeps its drag meaning.",
+    "Rename \"enter button\" to \"start button\" (class `x-start`, vocabulary row \"start button: the free-face door, 'Step through 3 steps'\") and keep \"Enter / Space\" for the key alone.",
+    "Replace every \"tick\" in the modes and interactions with \"Play's first advance\" / \"per advance\" (matching `advance(dt)` in figure.js), leaving tick to the slider.",
+    "Add a row to the Slider anatomy table: \"increment | the `step` key of a continuous slider, the distance one arrow press moves the knob | `step` attribute on the input\", and rewrite the stop row as `(max - min) / increment <= 40`.",
+    "Either make the held-face slot a pressable pill too (button.x-counter that lets go of the step, completing the toggle idiom), or drop the pip and give the two faces a distinct glyph pair (e.g. a hollow ○ on the start button, and the digits themselves as the held marker) so the toggle's dot keeps one meaning.",
+    "Stack both faces in the center slot with `.x-slot { display: grid } .x-slot > * { grid-area: 1 / 1 }` and hide the inactive face with `visibility: hidden` instead of `hidden`, so the slot is always the width of the wider face and the paddles never move.",
+    "Replace `max-width: 14rem` with `.x-stepper-row { max-width: 100% } .x-counter { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis }` so the counter shrinks to the column instead of a fixed width.",
+    "Add `.x-stepper button { min-height: 2.75rem }` inside the 40rem block (or exclude `.x-stepper` from the shrink rule) so the enter/start button and the paddles share one height on phones.",
+    "Change the shared rule at CSS:130 to `min-height: 2.75rem` for both `.x-ctl-segmented label` and `.x-steps-seg label`, or leave both at 2.5rem and drop the segmented height change from the spec.",
+    "Add a \"DESIGN.md edits\" list to the spec naming lines 525, 828, 867, 947 and the Figure object section, with the replacement text for each, alongside the new vocabulary table.",
+    "Change dev/stepper.html:40 to \"with paddles\" and the focus selector to `.x-stepper .x-enter:not([hidden]), .x-stepper button:not(:disabled), .x-stepper input` (the spec's open question 6), so the dev page uses the same words as the spec."
+   ]
+  }
+ ]
+}

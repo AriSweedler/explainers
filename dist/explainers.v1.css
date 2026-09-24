@@ -68,7 +68,7 @@ cite { font-style: italic; }
 .x-fig[data-mounted] .x-poster { display: none; }
 .x-fig figcaption { margin-top: 0.75rem; font: 0.9rem/1.5 var(--x-sans); color: var(--x-muted); text-align: center; }
 .x-fig-error { font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color: light-dark(#a1120f, #ff8a80); background: light-dark(#fff1f0, #3a1412); padding: 0.6rem 0.8rem; border-radius: 6px; white-space: pre-wrap; }
-.x-readouts, .x-drag-proxy:not(:focus-visible), .x-ctl-segmented legend, .x-steps-seg legend { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.x-readouts, .x-sr, .x-drag-proxy:not(:focus-visible), .x-ctl-segmented legend, .x-steps-seg legend { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* corner buttons: 44 px targets over the canvas, never over the drawing's center */
 .x-corner { position: absolute; bottom: 0.5rem; display: flex; gap: 0.375rem; }
@@ -80,7 +80,7 @@ cite { font-style: italic; }
 .x-fig button:disabled { opacity: 0.35; cursor: default; }
 .x-play[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .x-toggle::before { content: ""; display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; border: 1.5px solid var(--token); margin-right: 0.5em; vertical-align: -0.05em; }
-.x-toggle[aria-pressed="true"]::before { background: var(--token); }
+.x-toggle[aria-pressed="true"]::before { border-width: 0.3em; }
 
 /* controls under the canvas, in spec order */
 .x-ctl { margin: 0.9rem auto 0; font: 0.9rem/1.3 var(--x-sans); }
@@ -126,22 +126,51 @@ cite { font-style: italic; }
 .x-ctl-slider input[type="range"]::-moz-range-thumb { width: 40px; height: 40px; border: 0; background: transparent; }
 .x-ctl-toggle { text-align: center; }
 .x-ctl-segmented { text-align: center; }
-.x-ctl-segmented fieldset, .x-steps-seg { position: relative; display: inline-flex; margin: 0; padding: 0; border: 1px solid var(--x-rule); border-radius: 999px; overflow: hidden; }
-.x-ctl-segmented label, .x-steps-seg label { position: relative; display: inline-flex; align-items: center; min-height: 2.5rem; padding: 0 1rem; cursor: pointer; }
+.x-ctl-segmented fieldset, .x-steps-seg { position: relative; display: inline-flex; margin: 0; padding: 0; border: 1px solid var(--x-rule); border-radius: 999px; overflow: visible; background: var(--bg); }
+.x-ctl-segmented label, .x-steps-seg label { position: relative; display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1rem; cursor: pointer; }
+.x-ctl-segmented label:first-of-type, .x-steps-seg label:first-of-type { border-radius: 999px 0 0 999px; }
+.x-ctl-segmented label:last-of-type, .x-steps-seg label:last-of-type { border-radius: 0 999px 999px 0; }
 .x-ctl-segmented label + label, .x-steps-seg label + label { border-left: 1px solid var(--x-rule); }
 .x-ctl-segmented input, .x-steps-seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.x-ctl-segmented label:has(input:checked) { background: var(--token, var(--x-accent)); color: var(--bg); }
+.x-ctl-segmented label:has(input:checked) { background: var(--token); color: var(--bg); }
 .x-steps-seg label:has(input:checked) { background: var(--fg); color: var(--bg); }
 .x-ctl-segmented label:has(input:focus-visible), .x-steps-seg label:has(input:focus-visible) { outline: 2px solid var(--x-accent); outline-offset: -2px; }
-.x-drag-proxy:focus-visible { position: static; width: auto; height: auto; margin: 0.75rem auto 0; clip: auto; display: block; }
-
-/* stepper */
+/* ---- Stepper anatomy: the design language (DESIGN.md "Stepper anatomy"; use these words everywhere) ----
+   stepper    the whole widget under the controls: the row and the caption
+   step       one of the N named states as the reader meets it ("2 of 3")
+   row        the one-line strip; its FACE is free or stepped (data-face); hover tints it: the row is one control
+   paddle     a ‹ › button that moves one step (never "arrow"); dimmed at the ends and in the free face, never removed
+   latch      the center button: free face = hollow PIP + INVITATION "Step through 3 steps"; stepped face = filled
+              pip + COUNTER "2 of 3 · quarter"; press = step in / step off. Both spans are stacked so the row's width
+              never changes between faces
+   pill       the radio-row form for five steps or fewer (.x-steps-seg); a radio is a step; same pip, caption, hints
+   key hints  the ← → <kbd> floating outside the row while it is ARMED (focus inside), fine pointers only
+   caption    the step's sentence under the row; the slot keeps one line so the figcaption never jumps
+   announcer  the visually hidden live text (.x-sr) that speaks a step change
+   modes      FREE (system-controlled: the figure follows its controls, Play or its defaults; every figure boots
+              free) and STEPPED (human-controlled: held at a step); STEP IN / STEP OFF are the transitions; ARMED is
+              orthogonal: keyboard focus inside the row */
 .x-stepper { margin: 1rem auto 0; text-align: center; }
-.x-stepper-row { display: inline-flex; align-items: center; gap: 0.75rem; }
+.x-stepper-row { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem; border-radius: 999px; transition: background-color 0.12s ease; }
+.x-stepper-row:hover, .x-stepper-row:focus-within { background: var(--x-panel); }
+.x-stepper-row[data-face="free"] { cursor: pointer; }
 .x-stepper .x-prev, .x-stepper .x-next { width: 2.75rem; height: 2.75rem; padding: 0; border-radius: 50%; font-size: 1.6rem; font-weight: 400; line-height: 1; }
-.x-stepper output { min-width: 11ch; font-size: 0.9rem; color: var(--x-muted); font-variant-numeric: tabular-nums; }
-.x-caption { margin: 0.6rem 0 0; font: 0.95rem/1.5 var(--x-serif); }
-.x-caption:empty { display: none; }
+.x-stepper [aria-disabled="true"] { color: var(--x-muted); opacity: 0.45; }
+.x-stepper-row[data-face="free"] .x-prev, .x-stepper-row[data-face="free"] .x-next { opacity: 0.35; }
+.x-latch { display: inline-grid; grid-template-columns: auto auto; align-items: center; column-gap: 0.5em; min-width: 12ch; font-size: 0.9rem; font-weight: 500; color: var(--x-muted); font-variant-numeric: tabular-nums; }
+.x-latch::before { content: ""; grid-column: 1; width: 0.7em; height: 0.7em; box-sizing: border-box; border-radius: 50%; border: 1.5px solid currentColor; }
+.x-latch > span { grid-column: 2; grid-row: 1; white-space: nowrap; }
+.x-latch[aria-pressed="true"] { color: var(--fg); }
+.x-latch[aria-pressed="true"]::before { border-width: 0.35em; }
+.x-stepper-row[data-face="free"] .x-counter, .x-stepper-row[data-face="stepped"] .x-invite { visibility: hidden; }
+.x-steps-seg::before { content: ""; align-self: center; width: 0.7em; height: 0.7em; margin-left: 0.9em; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--x-muted); }
+.x-steps-seg[data-face="stepped"]::before { border-width: 0.35em; border-color: var(--fg); }
+.x-steps-seg:hover, .x-steps-seg:focus-within { background: var(--x-panel); }
+.x-key { position: absolute; top: 50%; transform: translateY(-50%); font: 0.75rem/1 var(--x-sans); color: var(--x-muted); border: 1px solid var(--x-rule); border-bottom-width: 2px; border-radius: 4px; padding: 0.2em 0.45em; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity 0.12s ease; }
+.x-key:first-child { right: 100%; margin-right: 0.75rem; }
+.x-key:last-child { left: 100%; margin-left: 0.75rem; }
+@media (hover: hover) and (pointer: fine) { .x-stepper-row:focus-within .x-key { opacity: 1; } }
+.x-caption { margin: 0.6rem 0 0; min-height: 1.5em; font: 0.95rem/1.5 var(--x-serif); }
 
 /* scene3d: the WebGL canvas fills the box; a 2D overlay canvas (split panels, readouts, edge arrows)
    and the DOM labels sit over it and let pointers through; the corner buttons stay on top of both */
@@ -208,7 +237,7 @@ div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .x-ctl-slider .x-knob { transition: none; }
+  .x-ctl-slider .x-knob, .x-stepper-row, .x-key { transition: none; }
   html { scroll-behavior: auto; }
   .x-flash { animation: none; background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); }
 }

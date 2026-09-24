@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Stepper playground</title>
+<link rel="stylesheet" href="../dist/explainers.v1.css">
+<script defer src="../dist/explainers-runtime.v1.js"></script>
+<style>
+  :root { color-scheme: light dark; --c-earth: light-dark(#2f6fb0, #6fa8e6); --c-mark: light-dark(#b0264c, #ff6f8f); --c-muted: light-dark(#7a756e, #8a857e); }
+.x-sim-hover .x-stepper-row, .x-sim-hover .x-steps-seg { background: var(--x-panel) !important; }
+</style>
+<script>
+// dev only: ?scheme=dark, ?fig=<id>&state=<name> (goto without easing), &focus=1 (focus the stepper), &only=<id> (hide the other figures)
+(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('scheme') === 'dark') document.documentElement.style.colorScheme = 'dark';
+  window.addEventListener('DOMContentLoaded', () => {
+    Element.prototype.scrollIntoView = () => {};
+    if (q.get('only')) for (const s of document.querySelectorAll('main > section')) if (s.id !== q.get('only') + '-s') s.remove();
+    const figId = q.get('fig'); if (!figId) return;
+    let tries = 0;
+    const apply = () => {
+      const f = window.explainers && window.explainers.figures.get(figId);
+      if (!f || !f.mounted) { if (tries++ < 200) return setTimeout(apply, 50); }
+      if (!f) return;
+      if (q.get('state')) f.goto(q.get('state'), { ease: false });
+      if (q.get('sim')) f.el.querySelector('.x-stepper').classList.add('x-sim-' + q.get('sim'));
+      if (q.get('focus')) { const el = f.el.querySelector(q.get('focus') === 'next' ? '.x-stepper .x-next' : q.get('focus') === 'radio' ? '.x-stepper input' : '.x-stepper .x-latch, .x-stepper input'); if (el) el.focus(); }
+      document.documentElement.dataset.harness = 'done';
+    };
+    setTimeout(apply, 0);
+  });
+})();
+</script>
+</head>
+<body>
+<main>
+<h1>Stepper playground</h1>
+<p class="x-lede">Dev page for the stepper widget (not linked from the site). Six figures: 2, 3, 6 and 8 steps with arrows, a segmented row, and a discrete five-value slider with a five-step pill.</p>
+
+<section id="fig-three-s">
+<h2>Three steps, slider, play and a corner toggle (the common case)</h2>
+<p>The <span data-fig="fig-three" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-three" data-state="quarter">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-three" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3],"visible":"showRim"},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"},{"kind":"play","target":"a","rate":60,"loop":true,"autoplay":false},{"kind":"toggle","name":"showRim","label":["hide the rim","show the rim"],"default":true,"token":"mark","position":"corner"}]},"notice":{"steps":"buttons","point_at":["dot"],"states":[{"name":"start","a":0,"caption":"Start: the dot sits on the right."},{"name":"quarter","a":90,"caption":"A quarter turn: the dot is straight up."},{"name":"half","a":180,"caption":"Half a turn: the dot is on the left."}]}}</script>
+<figcaption>Drag the slider or press play.</figcaption>
+</figure>
+</section>
+<section id="fig-two-s">
+<h2>Two steps, no play</h2>
+<p>The <span data-fig="fig-two" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-two" data-state="west">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-two" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"}]},"notice":{"steps":"buttons","point_at":["dot"],"states":[{"name":"east","a":0,"caption":"East."},{"name":"west","a":180,"caption":"West."}]}}</script>
+<figcaption>Drag the slider or press play.</figcaption>
+</figure>
+</section>
+<section id="fig-six-s">
+<h2>Six steps</h2>
+<p>The <span data-fig="fig-six" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-six" data-state="s1">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-six" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"},{"kind":"play","target":"a","rate":60,"loop":true,"autoplay":false}]},"notice":{"steps":"buttons","point_at":["dot"],"states":[{"name":"s0","a":0,"caption":"Step 1: 0\u00b0 round the rim."},{"name":"s1","a":60,"caption":"Step 2: 60\u00b0 round the rim."},{"name":"s2","a":120,"caption":"Step 3: 120\u00b0 round the rim."},{"name":"s3","a":180,"caption":"Step 4: 180\u00b0 round the rim."},{"name":"s4","a":240,"caption":"Step 5: 240\u00b0 round the rim."},{"name":"s5","a":300,"caption":"Step 6: 300\u00b0 round the rim."}]}}</script>
+<figcaption>Drag the slider or press play.</figcaption>
+</figure>
+</section>
+<section id="fig-seg-s">
+<h2>Segmented steps (a radio row) for comparison</h2>
+<p>The <span data-fig="fig-seg" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-seg" data-state="north">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-seg" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"},{"kind":"play","target":"a","rate":60,"loop":true,"autoplay":false}]},"notice":{"steps":"segmented","point_at":["dot"],"states":[{"name":"east","a":0,"caption":"East."},{"name":"north","a":90,"caption":"North."},{"name":"west","a":180,"caption":"West."}]}}</script>
+<figcaption>Drag the slider or press play.</figcaption>
+</figure>
+</section>
+<section id="fig-discrete-s">
+<h2>Discrete slider (five values) with a five-step pill</h2>
+<p>The <span data-fig="fig-discrete" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-discrete" data-state="northeast">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-discrete" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle, in quarter turns","values":[0,45,90,135,180],"default":0,"token":"earth","format":"{a:.0f}\u00b0"}]},"notice":{"steps":"segmented","point_at":["dot"],"states":[{"name":"east","a":0,"caption":"East."},{"name":"northeast","a":45,"caption":"Northeast."},{"name":"north","a":90,"caption":"North."},{"name":"northwest","a":135,"caption":"Northwest."},{"name":"west","a":180,"caption":"West."}]}}</script>
+<figcaption>Drag the slider.</figcaption>
+</figure>
+</section>
+<section id="fig-eight-s">
+<h2>Eight steps: too many for a pill</h2>
+<p>The <span data-fig="fig-eight" data-ref="dot">blue dot</span> rides the rim; <a href="#fig-eight" data-state="s1">jump to step 2</a>.</p>
+<figure class="x-fig" id="fig-eight" data-aspect="1:1">
+<script type="application/json">{"shows":{"type":"scene2d","view":{"x":[-1.6,1.6],"y":[-1.6,1.6]},"layers":[{"id":"rim","kind":"circle","cx":0,"cy":0,"r":1,"stroke":"mark","dash":[3,3]},{"id":"dot","kind":"circle","cx":"cos(a*tau/360)","cy":"sin(a*tau/360)","r":0.1,"fill":"earth"}],"readouts":[{"id":"ang","at":[0.06,0.08],"text":"angle {a:.0f}\u00b0","token":"earth"}]},"manipulates":{"controls":[{"kind":"slider","name":"a","label":"angle","min":0,"max":360,"step":1,"default":0,"token":"earth","format":"{a:.0f}\u00b0"},{"kind":"play","target":"a","rate":60,"loop":true,"autoplay":false}]},"notice":{"steps":"buttons","point_at":["dot"],"states":[{"name":"s0","a":0,"caption":"Step 1: 0\u00b0 round the rim."},{"name":"s1","a":45,"caption":"Step 2: 45\u00b0 round the rim."},{"name":"s2","a":90,"caption":"Step 3: 90\u00b0 round the rim."},{"name":"s3","a":135,"caption":"Step 4: 135\u00b0 round the rim."},{"name":"s4","a":180,"caption":"Step 5: 180\u00b0 round the rim."},{"name":"s5","a":225,"caption":"Step 6: 225\u00b0 round the rim."},{"name":"s6","a":270,"caption":"Step 7: 270\u00b0 round the rim."},{"name":"s7","a":315,"caption":"Step 8: 315\u00b0 round the rim."}]}}</script>
+<figcaption>Drag the slider.</figcaption>
+</figure>
+</section>
+<details id="glossary" class="x-glossary"><summary>Glossary</summary><dl></dl></details>
+</main>
+</body>
+</html>
