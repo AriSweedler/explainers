@@ -2498,8 +2498,8 @@ caption.textContent = stepped ? states[i].caption : '';
 announce(stepped ? states[i].caption : '');
 };
 } else {
-const prev = h('button', { class: 'x-prev', type: 'button', 'aria-label': 'previous step', 'aria-describedby': caption.id }, '‹');
-const next = h('button', { class: 'x-next', type: 'button', 'aria-label': 'next step', 'aria-describedby': caption.id }, '›');
+const prev = h('button', { class: 'x-prev', type: 'button', 'aria-label': 'previous step' }, '‹');
+const next = h('button', { class: 'x-next', type: 'button', 'aria-label': 'next step' }, '›');
 const invite = h('span', { class: 'x-invite' }, `Step through ${n} step${n === 1 ? '' : 's'}`);
 const counter = h('span', { class: 'x-counter' });
 const latch = h('button', { class: 'x-latch', type: 'button', 'aria-pressed': 'false' }, invite, counter);
@@ -2570,8 +2570,9 @@ const fig = { id: el.id, el, compiled, scope, fmt: env.fmt, playing: false, acti
 const is3d = compiled.type === 'scene3d';
 const figcaption = el.querySelector(':scope > figcaption');
 const panel = h('div', { class: 'x-panel' });
-if (figcaption) el.insertBefore(panel, figcaption); else el.append(panel);
-const insert = (node) => panel.append(node);
+el.append(panel);
+if (figcaption) { figcaption.id ||= `${el.id}_cap`; el.setAttribute('aria-labelledby', figcaption.id); panel.append(figcaption); }
+const insert = (node) => (figcaption ? panel.insertBefore(node, figcaption) : panel.append(node));
 const box = h('div', { class: 'x-canvas-box' });
 const [aw, ah] = (el.dataset.aspect || '3:2').split(':').map(Number);
 box.style.aspectRatio = `${aw} / ${ah}`;
@@ -2611,9 +2612,7 @@ if (playUi) box.append(playUi.el);
 const stepper = spec.notice.steps !== 'none' && spec.notice.states.length ? mountStepper(fig, spec.notice) : null;
 if (stepper) {
 insert(stepper.el);
-const enterFromBackground = (e) => { if (!e.target.closest('button, input, label, a, .x-ctl, .x-stepper-row')) stepper.enter(); };
-panel.addEventListener('click', enterFromBackground);
-if (figcaption) figcaption.addEventListener('click', enterFromBackground);
+panel.addEventListener('click', (e) => { if (!e.target.closest('button, input, label, a, .x-ctl, .x-stepper-row')) stepper.enter(); });
 }
 let scene = null;
 let detachDrag = null;
@@ -2914,6 +2913,7 @@ if (detachDrag) detachDrag();
 if (scene && scene.dispose) scene.dispose();
 clearTimeout(mirrorTimer);
 if (poster) el.prepend(poster);
+if (figcaption) el.append(figcaption);
 for (const node of el.querySelectorAll(':scope > .x-canvas-box, :scope > .x-panel, :scope > .x-drag-proxy')) node.remove();
 delete el.dataset.face;
 delete el.dataset.mounted;
