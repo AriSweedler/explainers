@@ -59,7 +59,7 @@
 <p>The Moon goes around Earth in about a month. Ask how long that month is, though, and you have to say what you measure it against. Let's start a clock at new Moon and watch two rulers at once. The <span data-fig="fig-months" data-ref="star-line">dotted yellow line</span> points at a distant star that never moves; the <span data-fig="fig-months" data-ref="sun-line">orange arrow</span> points at the Sun and creeps along as Earth travels its own orbit. The <span data-fig="fig-months" data-ref="moon">grey Moon</span> runs around the <span data-fig="fig-months" data-ref="orbit">dashed orbit</span>, leaving a trail behind it.</p>
 
 <figure class="x-fig" id="fig-months" data-aspect="3:2">
-<svg class="x-poster" id="fig-months-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="41f9b954df3327187e7c0e963346f047725e954b"><style>#fig-months-poster:root{color-scheme:light dark}
+<svg class="x-poster" id="fig-months-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="90f34c396dce4d1aa2b9f5c22e6bb1bddce18689"><style>#fig-months-poster:root{color-scheme:light dark}
 #fig-months-poster{font:13px 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif}
 #fig-months-poster .f-earth{fill:var(--c-earth, light-dark(#2f6fb0, #6fa8e6))}
 #fig-months-poster .f-moon{fill:var(--c-moon, light-dark(#5d5d63, #b8b8c0))}
@@ -104,9 +104,9 @@
     "steps": "buttons",
     "point_at": ["star-line", "sun-line", "moon"],
     "states": [
-      { "name": "new-moon", "t": 0, "showSun": true, "caption": "New Moon: the Moon sits on both the star line and the Sun line." },
-      { "name": "sidereal", "t": 27.321661, "showSun": true, "caption": "One sidereal month: back on the star line, but the Sun line has moved on." },
-      { "name": "synodic",  "t": 29.530589, "showSun": true, "caption": "One synodic month: back on the Sun line. New Moon again." }
+      { "name": "new-moon", "label": "new Moon", "t": 0, "showSun": true, "caption": "New Moon: the Moon sits on both the star line and the Sun line." },
+      { "name": "sidereal", "label": "sidereal", "t": 27.321661, "showSun": true, "caption": "One sidereal month: back on the star line, but the Sun line has moved on." },
+      { "name": "synodic", "label": "synodic",  "t": 29.530589, "showSun": true, "caption": "One synodic month: back on the Sun line. New Moon again." }
     ]
   }
 }
@@ -127,7 +127,7 @@
 <p>The flat drawing hides one thing. The Moon's <span data-fig="fig-orbit3d" data-ref="orbit">grey orbit</span> is tilted about 5° to the <dfn id="t-ecliptic"><a href="#g-ecliptic">ecliptic</a></dfn>, the plane Earth travels in around the Sun, drawn here as a <span data-fig="fig-orbit3d" data-ref="ecliptic">faint disc</span>. The <span data-fig="fig-orbit3d" data-ref="sun-line">orange arrow</span> again points at the Sun, and the same slider moves the <span data-fig="fig-orbit3d" data-ref="moon">Moon</span> along its orbit; drag the picture to turn it.</p>
 
 <figure class="x-fig" id="fig-orbit3d" data-aspect="3:2">
-<svg class="x-poster" id="fig-orbit3d-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="3993308e4ca3551fb50b2e21cdb57e0fc078a41d"><style>#fig-orbit3d-poster:root{color-scheme:light dark}
+<svg class="x-poster" id="fig-orbit3d-poster" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 469" width="704" height="469" aria-hidden="true" data-poster="c89d6a81f1ab8eaff9949e767d9123b747fae007"><style>#fig-orbit3d-poster:root{color-scheme:light dark}
 #fig-orbit3d-poster{font:13px 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif}
 #fig-orbit3d-poster .f-earth{fill:var(--c-earth, light-dark(#2f6fb0, #6fa8e6))}
 #fig-orbit3d-poster .f-moon{fill:var(--c-moon, light-dark(#5d5d63, #b8b8c0))}
@@ -170,9 +170,9 @@
     "steps": "buttons",
     "point_at": ["orbit", "ecliptic", "sun-line", "moon"],
     "states": [
-      { "name": "new-moon", "t": 0, "showEcliptic": true, "camera": { "azimuth": 0.7, "polar": 1.05, "distance": 9 }, "caption": "New Moon: the Moon sits between Earth and the Sun." },
-      { "name": "above", "t": 7.4, "showEcliptic": true, "camera": { "azimuth": 0.7, "polar": 0.05, "distance": 11 }, "caption": "From above the ecliptic pole the orbit is the circle of the first figure." },
-      { "name": "edge", "t": 7.4, "showEcliptic": true, "camera": { "azimuth": 1.0, "polar": 1.5708, "distance": 9 }, "caption": "Edge-on: the orbit leans 5.1° out of the ecliptic, so the Moon spends most of the month above or below it." }
+      { "name": "new-moon", "label": "new Moon", "t": 0, "showEcliptic": true, "camera": { "azimuth": 0.7, "polar": 1.05, "distance": 9 }, "caption": "New Moon: the Moon sits between Earth and the Sun." },
+      { "name": "above", "label": "from above", "t": 7.4, "showEcliptic": true, "camera": { "azimuth": 0.7, "polar": 0.05, "distance": 11 }, "caption": "From above the ecliptic pole the orbit is the circle of the first figure." },
+      { "name": "edge", "label": "edge-on", "t": 7.4, "showEcliptic": true, "camera": { "azimuth": 1.0, "polar": 1.5708, "distance": 9 }, "caption": "Edge-on: the orbit leans 5.1° out of the ecliptic, so the Moon spends most of the month above or below it." }
     ]
   }
 }
