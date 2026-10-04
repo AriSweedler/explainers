@@ -143,6 +143,15 @@ cite { font-style: italic; }
 .x-stepper[data-face="near"] [aria-current] { background: color-mix(in srgb, var(--fg) 16%, var(--bg)); color: var(--fg); }
 .x-stepper[data-face="near"] [aria-current]::after { content: "*"; position: absolute; top: 0.3em; right: 0.4em; line-height: 1; }
 .x-ctl-segmented label:has(input:focus-visible), .x-steps-seg button:focus-visible { outline: 2px solid var(--x-accent); outline-offset: -2px; }
+/* CHIPS: one row that scrolls sideways inside the panel; the runtime sets .x-more-left/right while more hides past an edge (the mask fades it, over any background) */
+.x-ctl-chips { max-width: 100%; }
+.x-chips { --x-fade-l: 0px; --x-fade-r: 0px; display: flex; flex-wrap: nowrap; gap: 0.4rem; justify-content: safe center; padding: 0.3rem 0.5rem; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; scroll-padding: 0 0.5rem; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--x-rule) transparent; -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--x-fade-l), #000 calc(100% - var(--x-fade-r)), transparent); mask-image: linear-gradient(to right, transparent, #000 var(--x-fade-l), #000 calc(100% - var(--x-fade-r)), transparent); }
+.x-chips.x-more-left { --x-fade-l: 2rem; }
+.x-chips.x-more-right { --x-fade-r: 2rem; }
+.x-fig .x-chip { flex: none; scroll-snap-align: start; min-height: 2.25rem; padding: 0 0.85rem; color: var(--token); border-color: var(--token); background: none; backdrop-filter: none; }
+.x-chip[aria-pressed="true"] { background: var(--token); color: var(--bg); }
+.x-chip.x-shake { animation: x-shake 0.3s ease; }
+@keyframes x-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 /* ---- Stepper anatomy (DESIGN.md "Stepper anatomy" defines the words) ----
    The PANEL is everything under the canvas: it tints on hover, glows while ARMED (focus anywhere inside; a shadow, so
    no footprint changes) and shows the ← → KEY HINTS at its far edges. The STEPPER is a pure view of the controls
@@ -172,7 +181,7 @@ cite { font-style: italic; }
 .x-stepper > .x-stepper-row + .x-key { right: 0; }
 @media (hover: hover) and (pointer: fine) and (min-width: 40rem) { /* a narrower window has no room for the hints beside the pill */
   .x-panel:focus-within .x-key { opacity: 1; }
-  .x-panel:has(:is(.x-discrete, .x-ctl-segmented) input:focus, .x-drag-proxy:focus) .x-key { opacity: 0; } /* their arrows are their own */
+  .x-panel:has(:is(.x-discrete, .x-ctl-segmented) input:focus, .x-chip:focus, .x-drag-proxy:focus) .x-key { opacity: 0; } /* their arrows are their own */
   .x-steps-seg { max-width: calc(100% - 5rem); }
 }
 /* the caption slot keeps one line in both faces */
@@ -278,6 +287,8 @@ div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
   .x-ctl-slider, .x-ctl-slider.x-long { width: 100%; padding: 0 0.5rem; box-sizing: border-box; }
   .x-fig button, .x-ctl-segmented label { min-height: 2.5rem; padding: 0 0.8rem; }
   .x-ctl-segmented label, .x-steps-seg button { padding: 0 0.5rem; font-size: 0.9rem; } /* five short labels fit 360 px; longer ones get the ellipsis */
+  .x-chips { flex-wrap: nowrap; gap: 0.3rem; padding: 0.25rem 0.4rem; } /* chips stay one row and scroll; the fades say there is more */
+  .x-fig .x-chip { min-height: 2.25rem; padding: 0 0.7rem; font-size: 0.85rem; }
   .x-corner { bottom: 0.375rem; }
   .x-corner-left { left: 0.375rem; }
   .x-corner-right { right: 0.375rem; }
@@ -291,6 +302,8 @@ div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .x-ctl-slider .x-knob, .x-key, .x-panel, .x-timeline summary::after { transition: none; }
+  .x-chips { scroll-behavior: auto; }
+  .x-chip.x-shake { animation: none; }
   .x-panel:focus-within { animation: none; box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 55%, transparent), 0 0 14px 3px color-mix(in srgb, var(--x-accent) 28%, transparent); }
   html { scroll-behavior: auto; }
   .x-flash { animation: none; background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); }

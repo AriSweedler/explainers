@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Chips</title>
+<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="{{integrity:dist/explainers.v1.css}}">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js" integrity="{{integrity:dist/explainers-runtime.v1.js}}"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#ffffff, #111111);
+    --fg: light-dark(#111111, #eeeeee);
+    --c-ink: light-dark(#1f4e9c, #8ab4f8);
+    --c-mark: light-dark(#b3324a, #ee6c86);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>Chips</h1>
+<section id="one">
+<h2><a class="x-anchor" href="#one">One</a></h2>
+<p>Eleven <dfn id="t-conference"><a href="#g-conference">conferences</a></dfn> sit on a ring; press a chip to show or hide one. The <span data-fig="fig-conf" data-ref="sec">SEC dot</span> is pressed at the start.</p>
+<figure class="x-fig" id="fig-conf" data-aspect="3:2">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene2d",
+    "view": { "x": [-3, 3], "y": [-2, 2] },
+    "layers": [
+      { "id": "ring", "kind": "circle", "cx": 0, "cy": 0, "r": 1.5, "stroke": "mark", "dash": [3, 3] },
+      { "id": "sec", "kind": "circle", "cx": "1.5*cos(tau*0/11)", "cy": "1.5*sin(tau*0/11)", "r": 0.18, "fill": "ink", "visible": "p.sec" },
+      { "id": "big10", "kind": "circle", "cx": "1.5*cos(tau*1/11)", "cy": "1.5*sin(tau*1/11)", "r": 0.18, "fill": "ink", "visible": "p.big10" },
+      { "id": "acc", "kind": "circle", "cx": "1.5*cos(tau*2/11)", "cy": "1.5*sin(tau*2/11)", "r": 0.18, "fill": "ink", "visible": "p.acc" },
+      { "id": "big12", "kind": "circle", "cx": "1.5*cos(tau*3/11)", "cy": "1.5*sin(tau*3/11)", "r": 0.18, "fill": "ink", "visible": "p.big12" },
+      { "id": "pac", "kind": "circle", "cx": "1.5*cos(tau*4/11)", "cy": "1.5*sin(tau*4/11)", "r": 0.18, "fill": "mark", "visible": "p.pac" },
+      { "id": "aac", "kind": "circle", "cx": "1.5*cos(tau*5/11)", "cy": "1.5*sin(tau*5/11)", "r": 0.18, "fill": "mark", "visible": "p.aac" },
+      { "id": "mw", "kind": "circle", "cx": "1.5*cos(tau*6/11)", "cy": "1.5*sin(tau*6/11)", "r": 0.18, "fill": "mark", "visible": "p.mw" },
+      { "id": "sbc", "kind": "circle", "cx": "1.5*cos(tau*7/11)", "cy": "1.5*sin(tau*7/11)", "r": 0.18, "fill": "mark", "visible": "p.sbc" },
+      { "id": "mac", "kind": "circle", "cx": "1.5*cos(tau*8/11)", "cy": "1.5*sin(tau*8/11)", "r": 0.18, "fill": "mark", "visible": "p.mac" },
+      { "id": "cusa", "kind": "circle", "cx": "1.5*cos(tau*9/11)", "cy": "1.5*sin(tau*9/11)", "r": 0.18, "fill": "mark", "visible": "p.cusa" },
+      { "id": "ind", "kind": "circle", "cx": "1.5*cos(tau*10/11)", "cy": "1.5*sin(tau*10/11)", "r": 0.18, "fill": "mark", "visible": "p.ind" }
+    ],
+    "readouts": [
+      { "id": "shown", "at": [0, 0], "text": "{p.count:,d} of 11", "token": "ink" }
+    ]
+  },
+  "manipulates": {
+    "controls": [
+      {
+        "kind": "chips", "name": "p", "token": "ink", "default": ["sec"], "min": 1, "max": 11,
+        "options": [
+          { "key": "sec", "label": "SEC" },
+          { "key": "big10", "label": "Big Ten" },
+          { "key": "acc", "label": "ACC" },
+          { "key": "big12", "label": "Big 12" },
+          { "key": "pac", "label": "Pac-12" },
+          { "key": "aac", "label": "American" },
+          { "key": "mw", "label": "Mountain West" },
+          { "key": "sbc", "label": "Sun Belt" },
+          { "key": "mac", "label": "MAC" },
+          { "key": "cusa", "label": "Conference USA" },
+          { "key": "ind", "label": "Independents" }
+        ]
+      }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["sec"],
+    "states": [
+      { "name": "one", "caption": "One conference.", "p": ["sec"] },
+      { "name": "power", "caption": "The four power conferences.", "p": ["sec", "big10", "acc", "big12"] },
+      { "name": "all", "caption": "Every conference.", "p": ["sec", "big10", "acc", "big12", "pac", "aac", "mw", "sbc", "mac", "cusa", "ind"] }
+    ]
+  }
+}
+</script>
+<figcaption>Press chips to show conferences; the row scrolls.</figcaption>
+</figure>
+<p>At <a href="#fig-conf" data-state="power">the power four</a> the count reads 4; <a href="#fig-conf" data-state="all">all eleven</a> fills the ring.</p>
+</section>
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    <div class="row" id="g-conference">
+      <dt>conference <a class="x-back" href="#t-conference" aria-label="back to first use">↩</a></dt>
+      <dd>A group of teams that play one another every season.</dd>
+    </div>
+  </dl>
+</details>
+</main>
+</body>
+</html>

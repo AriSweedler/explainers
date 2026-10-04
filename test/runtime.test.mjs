@@ -13,7 +13,7 @@ import { validateSpec, scopeForState } from '../lib/spec.js';
 import { format, compileTemplate, renderTemplate } from '../lib/core/format.js';
 import { smoothstep, transition } from '../lib/core/ease.js';
 import { createClock } from '../lib/core/clock.js';
-import { coerce, snaps, hasStops, stateTargets, nearestState, controlOf, visibleIds } from '../lib/core/state.js';
+import { coerce, snaps, hasStops, stateTargets, nearestState, controlOf, visibleIds, chipsSelected } from '../lib/core/state.js';
 import { parseHash, formatHash, glossaryTarget, parsePairs, pairOf, withPair, plainTarget } from '../lib/core/deeplink.js';
 import { tabKeyIndex, tabFromHash } from '../lib/site/tabs.js';
 import { worldToPx, splitBoxes, dprFor } from '../lib/core/layout.js';
@@ -162,6 +162,14 @@ test('state: coerce validates against the control; snaps and hasStops are known'
   assert.equal(coerce({ kind: 'segmented', options: [{ value: 1 }, { value: 5 }] }, 4), 5);
   assert.equal(coerce({ kind: 'time', mode: 'scrub', window: '24h' }, 1e12), 86400e3);
   assert.equal(controlOf(c, 'nope'), null);
+  // chips: a set of option keys, returned distinct and in option order; unknown keys drop; snaps like a toggle
+  const chips = { kind: 'chips', name: 'p', options: [{ key: 'sec' }, { key: 'big10' }, { key: 'acc' }], default: ['sec'] };
+  assert.deepEqual(coerce(chips, ['acc', 'zz', 'sec', 'sec']), ['sec', 'acc']);
+  assert.deepEqual(coerce(chips, []), []);
+  assert.deepEqual(coerce(chips, 'big10'), ['big10'], 'a lone key reads as a one-element set');
+  assert.equal(snaps(chips), true);
+  assert.equal(hasStops(chips), false);
+  assert.deepEqual(chipsSelected(chips, new Map([['p.sec', 0], ['p.big10', 1], ['p.acc', 1], ['p.count', 2]])), ['big10', 'acc']);
 });
 
 test('state: stateTargets and nearestState(...).exact round-trip every named state', () => {
@@ -180,6 +188,19 @@ test('state: stateTargets and nearestState(...).exact round-trip every named sta
   const st = stateTargets(surface, 'a');
   assert.deepEqual(st.targets, { 'p.lat': 51.5, 'p.lon': -0.1 }, 'a surface drag is [lat, lon]');
   assert.deepEqual(st.camera, { azimuth: 1 }, 'the camera pose is returned apart, not as a control target');
+  // chips: a state's array fans out into the <name>.<key> flags (count follows in the figure); nearness is one unit per differing chip, equality by set
+  const chips = validateSpec({
+    shows: { type: 'scene2d', view: { x: [-2, 2], y: [-2, 2] }, layers: [{ id: 'a', kind: 'circle', cx: 0, cy: 0, r: 1, stroke: 'ink', visible: 'p.sec' }] },
+    manipulates: { controls: [{ kind: 'chips', name: 'p', options: [{ key: 'sec', label: 'SEC' }, { key: 'big10', label: 'Big Ten' }, { key: 'acc', label: 'ACC' }], default: ['sec'], token: 'ink' }] },
+    notice: { steps: 'buttons', states: [{ name: 'one', caption: '', p: ['sec'] }, { name: 'two', caption: '', p: ['acc', 'big10'] }] },
+  }, { figureId: 'fig-chips' });
+  assert.deepEqual(stateTargets(chips, 'two').targets, { 'p.sec': 0, 'p.big10': 1, 'p.acc': 1 });
+  assert.deepEqual(nearestState(chips, scopeForState(chips, 'two')), { i: 1, name: 'two', exact: true });
+  assert.deepEqual(nearestState(chips, scopeForState(chips, null, { p: ['big10', 'acc'] })), { i: 1, name: 'two', exact: true }, 'order does not matter: equality by set');
+  assert.deepEqual(nearestState(chips, scopeForState(chips, null)), { i: 0, name: 'one', exact: true });
+  assert.deepEqual(nearestState(chips, scopeForState(chips, null, { p: ['sec', 'acc'] })), { i: 0, name: 'one', exact: false }, 'one chip from "one", two from "two"');
+  assert.deepEqual(nearestState(chips, scopeForState(chips, null, { p: ['acc'] })), { i: 1, name: 'two', exact: false }, 'two chips from "one", one from "two"');
+  assert.ok(visibleIds(chips, scopeForState(chips, 'one')).has('a') && !visibleIds(chips, scopeForState(chips, 'two')).has('a'), 'visible: "p.sec" follows the chip');
 });
 
 // -------------------------------------------------------------- deep links
@@ -396,6 +417,9 @@ test('the concatenation build is valid JS, current in dist/, and under 44 KB gzi
   fs.rmSync(tmp, { recursive: true, force: true });
   for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'x-hover', 'hitHover', 'nearestHit', 'replaceState', ':scope > .x-poster']) assert.ok(out.includes(needle), needle);
   for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState', ':scope > .x-poster', "role: 'tablist'", 'x-tablist', 'revealTarget(', 'revealPanel(', 'box.offsetWidth']) assert.ok(out.includes(needle), needle);
+  // chips (no jsdom here, so the DOM is not mounted; these are the contract's needles in the bundle): the control's classes and id,
+  // the group and pressed state, the roving tabindex, the arrow/Home/End keys, scrollIntoView, the edge fades and the shake
+  for (const needle of ['x-ctl x-ctl-chips', '_ch${i}', "class: 'x-chips', role: 'group'", "class: 'x-chip'", 'aria-pressed', 'ArrowRight: at + 1, ArrowLeft: at - 1 + n, Home: 0, End: n - 1', "scrollIntoView({ block: 'nearest', inline: 'nearest' })", 'x-more-left', 'x-more-right', 'x-shake', '.x-discrete, .x-ctl-segmented, .x-ctl-chips', "case 'chips': m = mountChips(fig, c, counts.ch++)"]) assert.ok(out.includes(needle), needle);
   assert.doesNotMatch(out, /^\s*(import|export)\b/m);
   // the one dynamic import() loads the 3D chunk from lib/site/scene3d.js; every other module stays free of it
   const sections = out.split(/^\/\/ ---- (?=lib\/)/m).slice(1);
@@ -419,9 +443,15 @@ test('the stylesheet exists, is small, and styles the contract DOM', () => {
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
   for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[aria-current]', '.x-key', '[data-face="near"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-hover', '.x-hover[hidden]', '.x-hover img', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
   for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[aria-current]', '.x-key', '[data-face="near"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate', '.x-tabs:not([data-booted]) > section[data-tab]::before { content: attr(data-tab);', '.x-tablist', '.x-tab[aria-selected="true"]', '.x-timeline::before', '.x-timeline > li::before', '.x-timeline summary time', '.x-timeline details[open] > summary::after', '.x-timeline summary::after { transition: none; }']) assert.ok(css.includes(sel), sel);
+  // chips: one scrolling row (no wrap, snap, thin scrollbar), a mask fade per edge the runtime toggles, token-colored pressed/outlined states, the shake
+  for (const sel of ['.x-ctl-chips', '.x-chips {', 'flex-wrap: nowrap', 'overflow-x: auto', 'scroll-snap-type: x', 'scrollbar-width: thin', 'mask-image: linear-gradient(to right, transparent, #000 var(--x-fade-l)', '.x-chips.x-more-left', '.x-chips.x-more-right', '.x-fig .x-chip {', '.x-chip[aria-pressed="true"] { background: var(--token); color: var(--bg); }', '.x-chip.x-shake', '@keyframes x-shake', '.x-chip:focus']) assert.ok(css.includes(sel), sel);
   // the components read with JavaScript off and at phone width: labels from data-tab, <details> untouched, both inside the 40rem query
   const phone = css.slice(css.indexOf('@media (max-width: 40rem)'));
   for (const sel of ['.x-tab {', '.x-timeline > li {', '.x-tabs:not([data-booted]) > section[data-tab]::before']) assert.ok(phone.includes(sel), `phone: ${sel}`);
+  // at phone width the chips keep to one row that scrolls, and reduced motion stops the smooth scroll and the shake
+  assert.match(phone.slice(0, phone.indexOf('prefers-reduced-motion')), /\.x-chips \{[^}]*flex-wrap: nowrap/, 'phone: chips stay one row');
+  const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+  assert.ok(reduced.includes('.x-chips { scroll-behavior: auto; }') && reduced.includes('.x-chip.x-shake { animation: none; }'), 'reduced motion: chips');
   // no timeline rule hides content (<details> alone decides); only the native disclosure marker is hidden
   for (const m of css.matchAll(/(\.x-timeline[^{]*)\{[^}]*display:\s*none/g)) assert.match(m[1], /::-webkit-details-marker/, `hides content: ${m[1].trim()}`);
   assert.doesNotMatch(css, /\.x-tabs[^{]*\{[^}]*display:\s*none/, 'tabs hide panels with the hidden attribute, not a class');

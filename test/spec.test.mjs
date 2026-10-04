@@ -418,7 +418,7 @@ test('layer hover and logo: a template and a relative path on any layer; wrong t
 
 test('vocabulary constants match the design', () => {
   assert.deepEqual([...FIGURE_TYPES], ['scene2d', 'scene3d', 'plot', 'timeline']);
-  assert.deepEqual([...CONTROL_KINDS], ['slider', 'time', 'drag', 'toggle', 'segmented', 'play']);
+  assert.deepEqual([...CONTROL_KINDS], ['slider', 'time', 'drag', 'toggle', 'segmented', 'chips', 'play']);
   assert.deepEqual([...LAYER_KINDS], ['circle', 'ellipse', 'line', 'ray', 'segment', 'arc', 'polygon', 'path', 'arrow', 'region', 'text', 'bars', 'image']);
   assert.deepEqual([...OBJECT_KINDS], ['globe', 'sphere', 'ring', 'disc', 'body', 'arrow', 'part', 'label']);
   assert.deepEqual(Object.keys(SCHEMA.figure), ['shows', 'manipulates', 'notice']);
@@ -475,4 +475,66 @@ test('nearestState: segmented strings, drag components and camera-only states', 
   assert.deepEqual(nearestState(drag, dragScope(0.2, 0)), { i: 0, name: 'a', exact: false });
   const cam = { figureId: 'fig-c', controls: [], spec: { notice: { states: [{ name: 'front', camera: { azimuth: 0 } }] } } };
   assert.deepEqual(nearestState(cam, { get: () => 0 }), { i: 0, name: 'front', exact: false }, 'a camera-only state is never exact');
+});
+
+// chips: a multi-select control whose scope entries are <name>.<key> (0|1)
+// and <name>.count; states carry an array of keys.
+const chipsSpec = () => ({
+  shows: {
+    type: 'scene2d',
+    view: { x: [-2, 2], y: [-2, 2] },
+    layers: [
+      { id: 'a', kind: 'circle', cx: -1, cy: 0, r: 0.3, fill: 'sun', visible: 'p.sec' },
+      { id: 'b', kind: 'circle', cx: 1, cy: 0, r: 0.3, fill: 'moon', visible: 'p.big10' },
+      { id: 'c', kind: 'circle', cx: 0, cy: 1, r: 0.3, fill: 'star', visible: 'p.acc' },
+    ],
+    readouts: [{ id: 'n', at: [0, -1.5], text: '{p.count:,d} shown', token: 'sun' }],
+  },
+  manipulates: { controls: [{ kind: 'chips', name: 'p', options: [{ key: 'sec', label: 'SEC' }, { key: 'big10', label: 'Big Ten' }, { key: 'acc', label: 'ACC' }], default: ['sec'], token: 'sun', max: 2 }] },
+  notice: { steps: 'buttons', states: [{ name: 'one', caption: 'One.', p: ['sec'] }, { name: 'two', caption: 'Two.', p: ['big10', 'acc'] }] },
+});
+const chipsMutate = (fn) => { const s = chipsSpec(); fn(s); return s; };
+
+test('chips: accepted spec exposes <name>.<key> and <name>.count; defaults and states fan out into the scope', () => {
+  const c = ok(chipsSpec());
+  assert.deepEqual(c.exposedNames, ['p.sec', 'p.big10', 'p.acc', 'p.count']);
+  assert.deepEqual([...c.defaults], [['p.sec', 1], ['p.big10', 0], ['p.acc', 0], ['p.count', 1]]);
+  assert.deepEqual([...scopeForState(c, 'two')], [['p.sec', 0], ['p.big10', 1], ['p.acc', 1], ['p.count', 2]]);
+  assert.deepEqual([...scopeForState(c, null, { p: ['acc'] })], [['p.sec', 0], ['p.big10', 0], ['p.acc', 1], ['p.count', 1]], 'an override may be the array too');
+  for (const name of [null, 'one', 'two']) evaluateAll(c, scopeForState(c, name));
+  assert.equal(SCHEMA.controls.chips.min.req, false, 'min and max are optional');
+  assert.deepEqual(Object.keys(SCHEMA.controls.chips), ['name', 'options', 'default', 'token', 'min', 'max']);
+  const md = describeVocabulary();
+  assert.ok(md.includes('#### control: chips') && md.includes('chips: an array of option keys'));
+  // min may be 0 (nothing pressed is allowed); max defaults to every option
+  ok(chipsMutate((s) => { s.manipulates.controls[0].min = 0; delete s.manipulates.controls[0].max; s.notice.states[0].p = []; }));
+});
+
+test('chips: duplicate keys, a bad default, min/max violations, and state arrays are refused with the existing codes', () => {
+  const C = (fn) => chipsMutate(fn);
+  expectCode(C((s) => { s.manipulates.controls[0].options[1].key = 'sec'; }), 'SPEC_DUP_ID', /options$/);
+  expectCode(C((s) => { s.manipulates.controls[0].options[0].key = 'big-ten'; }), 'SPEC_BAD_TYPE', /options\[0\]\.key/, 'keys are identifiers');
+  expectCode(C((s) => { s.manipulates.controls[0].options = [{ key: 'sec', label: 'SEC' }]; s.manipulates.controls[0].max = 1; }), 'SPEC_RANGE', /options/, 'at least two options');
+  expectCode(C((s) => { s.manipulates.controls[0].default = []; }), 'SPEC_RANGE', /default/, 'an empty default');
+  expectCode(C((s) => { s.manipulates.controls[0].default = ['nope']; }), 'SPEC_RANGE', /default\[0\]/);
+  expectCode(C((s) => { s.manipulates.controls[0].default = ['sec', 'sec']; }), 'SPEC_DUP_ID', /default/);
+  expectCode(C((s) => { s.manipulates.controls[0].default = ['sec', 'big10', 'acc']; }), 'SPEC_RANGE', /default/, 'more than max');
+  expectCode(C((s) => { s.manipulates.controls[0].default = 'sec'; }), 'SPEC_BAD_TYPE', /default/);
+  expectCode(C((s) => { s.manipulates.controls[0].min = 3; }), 'SPEC_RANGE', /min/, 'min above max');
+  expectCode(C((s) => { s.manipulates.controls[0].min = -1; }), 'SPEC_RANGE', /min/);
+  expectCode(C((s) => { s.manipulates.controls[0].min = 1.5; }), 'SPEC_RANGE', /min/, 'integers only');
+  expectCode(C((s) => { s.manipulates.controls[0].max = 4; }), 'SPEC_RANGE', /max/, 'max above the option count');
+  expectCode(C((s) => { s.manipulates.controls[0].max = 0; }), 'SPEC_RANGE', /max/);
+  expectCode(C((s) => { s.manipulates.controls[0].colour = 'sun'; }), 'SPEC_UNKNOWN_KEY', /colour/);
+  expectCode(C((s) => { delete s.manipulates.controls[0].default; }), 'SPEC_MISSING_KEY', /default/);
+  // states
+  expectCode(C((s) => { s.notice.states[0].p = 'sec'; }), 'SPEC_BAD_TYPE', /states\[0\]\.p$/, 'a state value must be an array');
+  expectCode(C((s) => { s.notice.states[0].p = ['sec', 'xx']; }), 'SPEC_STATE_OUT_OF_RANGE', /states\[0\]\.p\[1\]/);
+  expectCode(C((s) => { s.notice.states[0].p = ['sec', 'big10', 'acc']; }), 'SPEC_STATE_OUT_OF_RANGE', /states\[0\]\.p$/, 'more than max');
+  expectCode(C((s) => { s.notice.states[0].p = []; }), 'SPEC_STATE_OUT_OF_RANGE', /states\[0\]\.p$/, 'fewer than min');
+  expectCode(C((s) => { s.notice.states[0].p = ['sec', 'sec']; }), 'SPEC_DUP_ID', /states\[0\]\.p$/);
+  expectCode(C((s) => { s.notice.states[0].q = ['sec']; }), 'SPEC_STATE_UNKNOWN_CONTROL', /states\[0\]\.q/);
+  // the scope entries are the only names expressions may use
+  expectCode(C((s) => { s.shows.layers[0].visible = 'p'; }), 'SPEC_UNKNOWN_IDENT', /visible/, 'the bare name is not in the scope');
+  expectCode(C((s) => { s.shows.layers[0].visible = 'p.pac'; }), 'SPEC_UNKNOWN_IDENT', /visible/);
 });
