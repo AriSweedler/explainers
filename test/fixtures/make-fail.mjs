@@ -50,7 +50,7 @@ const FIXTURES = [
   ['HTML_INCLUDE_MISSING', 'runtime include removed', r('<script defer src="../../dist/explainers-runtime.v1.js" integrity="{{integrity:dist/explainers-runtime.v1.js}}"></script>\n', '')],
   ['HTML_MAIN_MISSING', 'no <main>', (h) => replaceOnce(replaceOnce(h, '<main>', '<div>'), '</main>', '</div>')],
   ['PALETTE_MISSING', 'no --c- tokens', (h) => replaceOnce(replaceOnce(h, '    --c-ink: light-dark(#1f4e9c, #8ab4f8);\n', ''), '    --c-mark: light-dark(#b3324a, #ee6c86);\n', '')],
-  ['PALETTE_TOO_MANY', 'seven tokens', after('--c-mark: light-dark(#b3324a, #ee6c86);', '\n    --c-a: light-dark(#111, #eee); --c-b: light-dark(#111, #eee); --c-c: light-dark(#111, #eee); --c-d: light-dark(#111, #eee); --c-e: light-dark(#111, #eee);')],
+  ['PALETTE_TOO_MANY', 'thirteen tokens', after('--c-mark: light-dark(#b3324a, #ee6c86);', '\n    ' + 'abcdefghijk'.split('').map((n) => `--c-${n}: light-dark(#111, #eee);`).join(' '))],
   ['PALETTE_CONTRAST', 'near-white token on a white background', r('--c-ink: light-dark(#1f4e9c, #8ab4f8)', '--c-ink: light-dark(#eeeeee, #8ab4f8)')],
   ['REF_FIG_UNKNOWN', 'data-fig names a figure that is not on the page', r('data-fig="fig-dot" data-ref="dot"', 'data-fig="fig-nope" data-ref="dot"')],
   ['REF_ID_UNKNOWN', 'data-ref names nothing in the figure', r('data-ref="dot"', 'data-ref="nope"')],

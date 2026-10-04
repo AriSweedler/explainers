@@ -388,6 +388,34 @@ test('every layer kind validates with its required geometry', () => {
   expectCode(mutate((x) => { x.shows.layers.push({ id: 'p', kind: 'polygon', points: [[0, 0], [1, 1]] }); }), 'SPEC_RANGE', /points/);
 });
 
+test('layer hover and logo: a template and a relative path on any layer; wrong types, bad formats and unknown keys are refused', () => {
+  const withHover = mutate((s) => { s.shows.layers[6].hover = 'Moon, day {t:.1f}'; s.shows.layers[6].logo = 'assets/moon.svg'; });
+  const c = ok(withHover);
+  assert.ok(c.expressions.some((e) => e.path === 'shows.layers[6].hover' && e.src === 't'), 'the hover template joins the expression list');
+  assert.ok(ok(mutate((s) => { s.shows.layers[0].hover = 'the orbit'; })), 'a literal template with no placeholder');
+  assert.ok(ok(mutate((s) => { s.shows.layers[2].hover = '{deg(tau*t/T_sid):deg}'; })), 'hover on a line-like layer');
+  assert.ok(ok(mutate((s) => { s.shows.layers[6].hover = 'moon'; s.shows.layers[6].logo = '../shared/moon@2x.png'; })), 'any relative path');
+  for (const [k, v] of Object.entries(SCHEMA.layerCommon)) if (k === 'hover' || k === 'logo') assert.equal(v.req, false, `${k} is optional`);
+  assert.equal(SCHEMA.layerCommon.hover.type, 'template');
+  assert.equal(SCHEMA.layerCommon.logo.type, 'relpath');
+  expectCode(mutate((s) => { s.shows.layers[6].hover = 5; }), 'SPEC_BAD_TYPE', /layers\[6\]\.hover/);
+  expectCode(mutate((s) => { s.shows.layers[6].hover = ['a']; }), 'SPEC_BAD_TYPE', /hover/);
+  expectCode(mutate((s) => { s.shows.layers[6].hover = 'day {t}'; }), 'SPEC_BAD_FORMAT', /hover/);
+  expectCode(mutate((s) => { s.shows.layers[6].hover = 'day {tt:.1f}'; }), 'SPEC_UNKNOWN_IDENT', /hover/);
+  expectCode(mutate((s) => { s.shows.layers[6].hover = 'x'; s.shows.layers[6].logo = 5; }), 'SPEC_BAD_TYPE', /logo/);
+  expectCode(mutate((s) => { s.shows.layers[6].hover = 'x'; s.shows.layers[6].logo = '/assets/moon.svg'; }), 'SPEC_BAD_TYPE', /logo/, 'absolute paths are refused');
+  expectCode(mutate((s) => { s.shows.layers[6].hover = 'x'; s.shows.layers[6].logo = 'https://example.com/m.svg'; }), 'SPEC_BAD_TYPE', /logo/);
+  expectCode(mutate((s) => { s.shows.layers[6].logo = 'assets/moon.svg'; }), 'SPEC_MISSING_KEY', /layers\[6\]\.hover/, 'a logo without hover text');
+  expectCode(mutate((s) => { s.shows.layers[6].hovr = 'x'; }), 'SPEC_UNKNOWN_KEY', /layers\[6\]\.hovr/);
+  expectCode(mutate((s) => { s.shows.layers[6].tooltip = 'x'; }), 'SPEC_UNKNOWN_KEY', /tooltip/);
+  expectCode(mutate((s) => { s.shows.readouts[0].hover = 'x'; }), 'SPEC_UNKNOWN_KEY', /readouts\[0\]\.hover/, 'hover is a layer key, not a readout key');
+  // the hover template is evaluated with the rest, so a non-finite value is caught at the states check
+  const inf = ok(mutate((s) => { s.shows.layers[6].hover = '{R/(t-t):.1f}'; }));
+  assert.throws(() => evaluateAll(inf, scopeForState(inf, null)), (e) => e.code === 'SPEC_NOT_FINITE' && e.path === 'shows.layers[6].hover');
+  const md = describeVocabulary();
+  assert.ok(md.includes('| `hover` | template |') && md.includes('| `logo` | relative path |'));
+});
+
 test('vocabulary constants match the design', () => {
   assert.deepEqual([...FIGURE_TYPES], ['scene2d', 'scene3d', 'plot', 'timeline']);
   assert.deepEqual([...CONTROL_KINDS], ['slider', 'time', 'drag', 'toggle', 'segmented', 'play']);

@@ -16,7 +16,8 @@ import { createClock } from '../lib/core/clock.js';
 import { coerce, snaps, hasStops, stateTargets, nearestState, controlOf, visibleIds } from '../lib/core/state.js';
 import { parseHash, formatHash, glossaryTarget } from '../lib/core/deeplink.js';
 import { worldToPx, splitBoxes, dprFor } from '../lib/core/layout.js';
-import { constrainPoint } from '../lib/core/drag.js';
+import { constrainPoint, nearestHit } from '../lib/core/drag.js';
+import { compileLayer } from '../lib/scene2d/layers.js';
 import { niceTicks, tickLabel } from '../lib/scene2d/plot.js';
 import { getter } from '../lib/scene2d/getters.js';
 import { fitBox } from '../lib/scene2d/label.js';
@@ -275,6 +276,28 @@ test('drag constraints project points', () => {
   assert.deepEqual(constrainPoint('segment:[[0,0],[2,0]]', [9, 5], { view, start: [0, 0] }), [2, 0]);
 });
 
+// There is no jsdom (or any DOM) in the toolchain, so the hover label's DOM
+// is not mounted here; its pure parts are: the hit rule and the compiled
+// template a layer with `hover` carries. The bundle and stylesheet needles
+// are checked in the build tests below.
+test('hover labels: the nearest covering target wins, a circle is hit inside its drawn radius, nothing hits outside', () => {
+  const targets = [
+    { id: 'big', x: 100, y: 100, r: 40 },   // a circle of r 40 px
+    { id: 'dot', x: 120, y: 100, r: 12 },   // a point, the 12 px minimum
+    { id: 'far', x: 300, y: 300, r: 12 },
+  ];
+  assert.equal(nearestHit(targets, { x: 100, y: 100 }).id, 'big');
+  assert.equal(nearestHit(targets, { x: 118, y: 100 }).id, 'dot', 'inside both: the nearer center wins');
+  assert.equal(nearestHit(targets, { x: 70, y: 100 }).id, 'big', 'inside the big circle only');
+  assert.equal(nearestHit(targets, { x: 140, y: 100 }).id, 'big', '20 px from the dot is outside its 12 px, inside the circle');
+  assert.equal(nearestHit(targets, { x: 300, y: 312 }).id, 'far', 'on the rim counts');
+  assert.equal(nearestHit(targets, { x: 300, y: 313 }), null);
+  assert.equal(nearestHit([], { x: 0, y: 0 }), null);
+  const L = compileLayer({ id: 'moon', kind: 'circle', cx: 0, cy: 0, r: 0.2, fill: 'moon', hover: 'Moon, day {t:.1f}', logo: 'assets/moon.svg' });
+  assert.equal(renderTemplate(L.g.hover, new Map([['t', 12.345]])), 'Moon, day 12.3');
+  assert.equal(compileLayer({ id: 'orbit', kind: 'circle', cx: 0, cy: 0, r: 3 }).g.hover, undefined, 'no hover: nothing compiled');
+});
+
 test('plot ticks are nice numbers that cover the axis', () => {
   assert.deepEqual(niceTicks(0, 10, 5).ticks, [0, 2, 4, 6, 8, 10]);
   assert.deepEqual(niceTicks(0, 1, 4).ticks, [0, 0.2, 0.4, 0.6, 0.8, 1]);
@@ -323,7 +346,7 @@ test('the concatenation build is valid JS, current in dist/, and under 42 KB gzi
   assert.equal(load.status, 0, load.stderr);
   assert.equal(load.stdout.trim(), 'undefined', 'without a document the runtime does not boot');
   fs.rmSync(tmp, { recursive: true, force: true });
-  for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState', ':scope > .x-poster']) assert.ok(out.includes(needle), needle);
+  for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'x-hover', 'hitHover', 'nearestHit', 'replaceState', ':scope > .x-poster']) assert.ok(out.includes(needle), needle);
   assert.doesNotMatch(out, /^\s*(import|export)\b/m);
   // the one dynamic import() loads the 3D chunk from lib/site/scene3d.js; every other module stays free of it
   const sections = out.split(/^\/\/ ---- (?=lib\/)/m).slice(1);
@@ -345,7 +368,7 @@ test('transformModule refuses a dynamic import() anywhere but the scene3d loader
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
   const css = fs.readFileSync(path.join(root, 'dist/explainers.v1.css'), 'utf8');
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
-  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[aria-current]', '.x-key', '[data-face="near"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[aria-current]', '.x-key', '[data-face="near"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-hover', '.x-hover[hidden]', '.x-hover img', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
 });
 
 test('dist/integrity.json holds a current sha384 for the runtime, the stylesheet and the 3D chunk; the template carries the two include placeholders', () => {

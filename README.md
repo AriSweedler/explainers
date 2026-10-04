@@ -57,7 +57,7 @@ DESIGN.md                            the contract: vocabulary (generated), gramm
 
 ## Author an article
 
-1. Copy `template/article.html` to `articles/<slug>/index.html` and fill the `{{...}}` placeholders. Declare at most 6 palette tokens as `--c-<name>: light-dark(#light, #dark)` in the `:root` rule.
+1. Copy `template/article.html` to `articles/<slug>/index.html` and fill the `{{...}}` placeholders. Declare at most 12 palette tokens as `--c-<name>: light-dark(#light, #dark)` in the `:root` rule (six is plenty for most articles; the room above is for categorical maps).
 2. Write sections. Each interactive figure is
 
    ```html
@@ -68,6 +68,7 @@ DESIGN.md                            the contract: vocabulary (generated), gramm
    ```
 
    Numeric properties are numbers or expression strings (`"R*cos(tau*t/T_sid)"`); colors are palette token names.
+   A layer may carry `"hover": "{expr:fmt} text"` (a template like `text`) to show a label beside the pointer while it rests on the point (a tap on touch), and `"logo": "assets/x.svg"` for a 20 px image beside that label.
 3. Point prose at the figure: `<span data-fig="fig-x" data-ref="layer-id">the red line</span>`; jump to a state: `<a href="#fig-x" data-state="name">27.32 days</a>`.
 4. Mark a term's first use `<dfn id="t-slug"><a href="#g-slug">term</a></dfn>`, later uses `<a class="term" href="#g-slug">term</a>`, and add its row to the glossary `<details>` at the end of `<main>`.
 5. Write math as LaTeX in `<span class="x-tex">` / `<div class="x-tex">`, coloring symbols with `\tok{token}{...}`.

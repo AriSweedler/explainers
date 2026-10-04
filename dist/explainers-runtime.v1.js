@@ -280,7 +280,7 @@ sci: 'scientific notation, 3 significant digits',
 'unit:mi': 'length in mi, shown in km under body.x-imperial',
 });
 const FORMAT_RE = /^(\.\df|,d|deg|dhm|hms|date|time|datetime|sci|unit:(km|mi))$/;
-const MAX_TOKENS = 6;
+const MAX_TOKENS = 12;
 const MODELS = Object.freeze({
 kepler: {
 doc: 'position on a Kepler ellipse for a mean anomaly',
@@ -340,6 +340,8 @@ arrow: f(en('start', 'end', 'both'), 'arrowhead placement on line-like layers'),
 visible: f('flag', 'boolean or expression; nonzero draws the layer (default true)'),
 highlight: f('boolean', 'draw thicker with a halo (default false)'),
 label: f('string', 'short in-canvas label drawn beside the shape'),
+hover: f('template', 'tooltip text with {expr:fmt} placeholders, shown while the pointer rests on the layer (a tap on touch); circles hit within max(r, 12 px) of the center, other kinds within 12 px of their anchor'),
+logo: f('relpath', 'relative image path shown 20 px tall beside the hover text (needs hover)'),
 };
 SCHEMA.layers = {
 circle: { cx: f('expr', 'center x', REQ), cy: f('expr', 'center y', REQ), r: f('expr', 'radius', REQ) },
@@ -812,6 +814,7 @@ function checkLayer(value, path, ctx) {
 const kind = discriminated(value, 'kind', SCHEMA.layers, SCHEMA.layerCommon, path, ctx, 'layer kind');
 declareId(ctx, value.id, join(path, 'id'), `${kind} layer`);
 if (kind === 'region' && !('fill' in value)) ctx.fail('SPEC_MISSING_KEY', join(path, 'fill'), 'a region needs a fill token');
+if ('logo' in value && !('hover' in value)) ctx.fail('SPEC_MISSING_KEY', join(path, 'hover'), 'a logo needs the hover text it sits beside');
 }
 function checkObject3d(value, path, ctx) {
 const kind = discriminated(value, 'kind', SCHEMA.objects, SCHEMA.objectCommon, path, ctx, 'object kind');
@@ -1331,7 +1334,7 @@ return { main, panels: out };
 }
 
 // ---- lib/core/drag.js
-function attachDrag(el, { hit, onStart, onMove, onEnd, onHover }) {
+function attachDrag(el, { hit, onStart, onMove, onEnd, onHover, onTap }) {
 let active = null;
 const local = (e) => {
 const r = el.getBoundingClientRect();
@@ -1341,16 +1344,19 @@ function down(e) {
 if (e.button !== 0 && e.pointerType !== 'touch') return;
 const p = local(e);
 const h = hit(p, e.pointerType === 'touch');
-if (h == null) return;
+if (h == null) { if (onTap && e.pointerType === 'touch') onTap(p); return; }
 active = { h, id: e.pointerId };
 if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
 e.preventDefault();
 onStart(h, p);
 }
 function move(e) {
-if (!active) { if (onHover) onHover(hit(local(e), false) != null); return; }
+if (!active) { if (onHover) { const p = local(e); onHover(hit(p, false) != null, p); } return; }
 if (e.pointerId !== active.id) return;
 onMove(active.h, local(e));
+}
+function leave() {
+if (!active && onHover) onHover(false, null);
 }
 function up(e) {
 if (!active || e.pointerId !== active.id) return;
@@ -1360,14 +1366,24 @@ onEnd(h);
 }
 el.addEventListener('pointerdown', down);
 el.addEventListener('pointermove', move);
+el.addEventListener('pointerleave', leave);
 el.addEventListener('pointerup', up);
 el.addEventListener('pointercancel', up);
 return () => {
 el.removeEventListener('pointerdown', down);
 el.removeEventListener('pointermove', move);
+el.removeEventListener('pointerleave', leave);
 el.removeEventListener('pointerup', up);
 el.removeEventListener('pointercancel', up);
 };
+}
+function nearestHit(targets, p) {
+let best = null, bestD = Infinity;
+for (const t of targets) {
+const d = Math.hypot(p.x - t.x, p.y - t.y);
+if (d <= t.r && d < bestD) { best = t; bestD = d; }
+}
+return best;
 }
 function constrainPoint(constrain, [x, y], { view, start }) {
 if (constrain === 'free') return [x, y];
@@ -1721,6 +1737,7 @@ if (spec.points) g.points = spec.points.map(pointGetter);
 if (spec.rect) g.rect = spec.rect.map(getter);
 if (spec.rows) g.rows = spec.rows.map((r) => ({ from: getter(r.from), to: getter(r.to), token: r.token, label: r.label }));
 if (spec.kind === 'text') g.parts = compileTemplate(spec.text);
+if (spec.hover) g.hover = compileTemplate(spec.hover); // the tooltip text, rendered per hit
 return {
 id: spec.id, kind: spec.kind, spec, g,
 visible: 'visible' in spec ? getter(spec.visible) : null,
@@ -2147,6 +2164,8 @@ const strip = Math.max(0, ...obstacles.map((o) => b.y + b.height - o.y));
 return strip ? { ...b, height: Math.max(b.height - strip, b.height * 0.6) } : b;
 };
 let mainMap = null, lastScope = null;
+const HOVER_PX = 12;
+let hoverTargets = []; // { id, x, y, r, L } for every drawn layer with a hover template, refreshed each draw
 function colors() {
 const bg = env.tokens.get('--bg'), fg = env.tokens.get('--fg');
 return { bg, fg, grid: withAlpha(fg, 0.1), axis: withAlpha(fg, 0.45), muted: withAlpha(fg, 0.65) };
@@ -2157,8 +2176,11 @@ Object.assign(penv, { m, view: panel.view, placed: [] });
 const anchors = new Map();
 const pathOf = (id) => geometryOf(panel.byId.get(id), scope, m).path;
 for (const L of panel.layers) {
-if (isShown(L, scope)) anchors.set(L.id, drawLayer(ctx, L, scope, penv, pathOf).anchor);
-else if (L.kind !== 'region') anchors.set(L.id, geometryOf(L, scope, m).anchor);
+if (isShown(L, scope)) {
+const anchor = drawLayer(ctx, L, scope, penv, pathOf).anchor;
+anchors.set(L.id, anchor);
+if (L.g.hover) hoverTargets.push({ id: L.id, x: anchor[0], y: anchor[1], r: Math.max(L.kind === 'circle' ? L.lastRadius || 0 : 0, HOVER_PX), L });
+} else if (L.kind !== 'region') anchors.set(L.id, geometryOf(L, scope, m).anchor);
 }
 for (const R of panel.readouts) drawReadout(ctx, R, scope, penv, anchors);
 return m;
@@ -2206,6 +2228,7 @@ if (model) applyModel(model.spec, model.params, scope);
 const ctx = canvas.getContext('2d');
 ctx.setTransform(env.dpr, 0, 0, env.dpr, 0, 0);
 ctx.clearRect(0, 0, box.width, box.height);
+hoverTargets = [];
 mainMap = paintPanel(ctx, main, boxes.main, scope, false);
 splits.forEach((s, i) => paintPanel(ctx, s.panel, boxes.panels[i], scope, boxes.panels[i].inset));
 if (mainMap && env.drags.length) drawDrags(ctx, mainMap, scope);
@@ -2219,6 +2242,14 @@ if (Math.hypot(p.x - x, p.y - y) <= (d.control.hit ?? (coarse ? 30 : 22))) retur
 return null;
 },
 toWorld(p) { return mainMap ? [mainMap.wx(p.x), mainMap.wy(p.y)] : [0, 0]; },
+hitHover(p) { const t = nearestHit(hoverTargets, p); return t ? t.id : null; },
+hoverInfo(id) {
+const t = hoverTargets.find((x) => x.id === id);
+if (!t || !lastScope) return null;
+const logo = t.L.spec.logo ? new URL(t.L.spec.logo, env.baseUrl).href : null;
+return { id, x: t.x, y: t.y, r: t.r, text: renderTemplate(t.L.g.hover, lastScope, env.fmt), logo };
+},
+hasHover: [...layers.values()].some((L) => !!L.g.hover),
 readoutText() { return readouts.map((R) => R.last).filter(Boolean).join(' · '); },
 };
 }
@@ -2549,7 +2580,8 @@ el.style.setProperty('--x-ar', aw / ah);
 const canvas = h('canvas');
 const cornerRight = h('div', { class: 'x-corner x-corner-right' });
 const readoutsEl = h('div', { class: 'x-readouts', 'aria-live': 'polite' });
-box.append(canvas, cornerRight, readoutsEl);
+const hoverEl = h('div', { class: 'x-hover', hidden: true });
+box.append(canvas, cornerRight, readoutsEl, hoverEl);
 const poster = el.querySelector(':scope > .x-poster');
 if (poster) canvas.after(poster);
 el.insertBefore(box, panel);
@@ -2584,18 +2616,51 @@ if (stepper) insert(stepper.el);
 let scene = null;
 let detachDrag = null;
 let pendingCamera = null;   // a state's camera pose asked for before the chunk was ready
+let hoverId = null, hoverPinned = false, hoverPt = null; // the hover label: which layer, pinned by a tap, last pointer point
+const HOVER_GAP_PX = 12;
+function setHover(id) { hoverId = id; renderHover(); }
+function renderHover() {
+const info = hoverId && scene && scene.hoverInfo ? scene.hoverInfo(hoverId) : null;
+if (!info) { hoverId = hoverPinned ? hoverId : null; hoverEl.hidden = true; hoverEl.replaceChildren(); return; }
+const nodes = [];
+if (info.logo) nodes.push(h('img', { src: info.logo, alt: '', height: 20 }));
+nodes.push(h('span', {}, info.text));
+hoverEl.replaceChildren(...nodes);
+hoverEl.hidden = false;
+const at = hoverPinned || !hoverPt ? { x: info.x, y: info.y } : hoverPt;
+const gap = hoverPinned ? info.r + 4 : HOVER_GAP_PX;
+const W = box.clientWidth, H = box.clientHeight, w = hoverEl.offsetWidth, hgt = hoverEl.offsetHeight;
+let left = at.x + gap, top = at.y + gap;
+if (left + w > W - 4) left = Math.max(4, at.x - gap - w);
+if (top + hgt > H - 4) top = Math.max(4, at.y - gap - hgt);
+hoverEl.style.left = `${Math.round(left)}px`;
+hoverEl.style.top = `${Math.round(top)}px`;
+}
 let sceneRequested = false;
 function attachScene(s) {
 scene = s;
 fig.view = scene.view || null;
-if (drags.length) {
-canvas.style.touchAction = 'none';
+const hoverable = !!(scene.hasHover && scene.hitHover);
+if (drags.length || hoverable) {
+if (drags.length) canvas.style.touchAction = 'none';
 detachDrag = attachDrag(canvas, {
-hit: (p) => scene.hitDrag(p, env.coarse),
-onStart(name) { fig.set(`${name}.dragging`, 1, 'user'); canvas.classList.add('x-dragging'); },
+hit: (p) => (drags.length ? scene.hitDrag(p, env.coarse) : null),
+onStart(name) { fig.set(`${name}.dragging`, 1, 'user'); canvas.classList.add('x-dragging'); if (!hoverPinned) setHover(null); },
 onMove(name, p) { const v = scene.dragValue ? scene.dragValue(name, p) : scene.toWorld(p); if (v) fig.set(name, v, 'user'); },
 onEnd(name) { fig.set(`${name}.dragging`, 0, 'user'); canvas.classList.remove('x-dragging'); },
-onHover(over) { canvas.classList.toggle('x-can-drag', over); },
+onHover(over, p) {
+canvas.classList.toggle('x-can-drag', over);
+if (!hoverable || hoverPinned) return;
+hoverPt = p;
+setHover(p ? scene.hitHover(p) : null);
+},
+onTap(p) {
+if (!hoverable) return;
+const id = scene.hitHover(p);
+hoverPinned = !!id;
+hoverPt = p;
+setHover(id);
+},
 });
 for (const d of drags) for (const id of d.control.preview || []) { const L = scene.layers.get(id); if (L) L.previewOf = d.name; }
 }
@@ -2812,6 +2877,7 @@ dirty = false;
 if (!scene || !fig.visible) return;
 if (!boxPx) layout();
 scene.draw(scope);
+if (hoverId) renderHover();
 clearTimeout(mirrorTimer);
 mirrorTimer = setTimeout(() => { readoutsEl.textContent = scene.readoutText(); }, MIRROR_DELAY_MS);
 };
