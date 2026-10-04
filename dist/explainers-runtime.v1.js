@@ -1489,13 +1489,46 @@ return out;
 }
 
 // ---- lib/core/deeplink.js
-const FIG_RE = /^#(fig-[a-z0-9][a-z0-9-]*)(?:=([A-Za-z_][A-Za-z0-9_-]*))?$/;
-function parseHash(hash) {
-const m = FIG_RE.exec(hash || '');
-if (!m) return null;
-return { figId: m[1], state: m[2] || null };
+const KEY_RE = /^[A-Za-z_][\w-]*$/;
+const VALUE_RE = /^[A-Za-z0-9_][\w-]*$/;
+const FIG_KEY_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
+const STATE_RE = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+function parsePairs(hash) {
+const body = (hash || '').replace(/^#/, '');
+if (!body.includes('=')) return [];
+const out = [];
+for (const part of body.split('&')) {
+const i = part.indexOf('=');
+if (i < 0) continue;
+const key = part.slice(0, i), value = part.slice(i + 1);
+if (KEY_RE.test(key) && VALUE_RE.test(value) && !out.some(([k]) => k === key)) out.push([key, value]);
 }
-const formatHash = (figId, state) => `#${figId}=${state}`;
+return out;
+}
+function pairOf(hash, key) {
+const p = parsePairs(hash).find(([k]) => k === key);
+return p ? p[1] : null;
+}
+function withPair(hash, key, value, { drop = () => false } = {}) {
+const pairs = parsePairs(hash).filter(([k]) => k === key || !drop(k));
+const at = pairs.findIndex(([k]) => k === key);
+if (at >= 0) pairs[at] = [key, value]; else pairs.push([key, value]);
+return `#${pairs.map(([k, v]) => `${k}=${v}`).join('&')}`;
+}
+function plainTarget(hash) {
+const body = (hash || '').replace(/^#/, '');
+return body && !body.includes('=') && !body.includes('&') ? body : null;
+}
+function parseHash(hash) {
+const pairs = parsePairs(hash);
+if (!pairs.length) {
+const id = plainTarget(hash);
+return id && FIG_KEY_RE.test(id) ? { figId: id, state: null } : null;
+}
+const fig = pairs.find(([k]) => FIG_KEY_RE.test(k));
+return fig && STATE_RE.test(fig[1]) ? { figId: fig[0], state: fig[1] } : null;
+}
+const formatHash = (figId, state, base = '') => withPair(base, figId, state, { drop: (k) => FIG_KEY_RE.test(k) });
 function glossaryTarget(hash) {
 if (!hash) return null;
 if (hash.startsWith('#g-') && hash.length > 3) return { kind: 'row', slug: hash.slice(3), id: hash.slice(1) };
@@ -2619,7 +2652,7 @@ baseUrl: document.baseURI, box, requestDraw: () => requestDraw(),
 lib: { createScene2d, splitBoxes, worldToPx, fitCanvas, getter, compileTemplate, renderTemplate, compileReadout, drawReadout, applyModel },
 });
 attachScene(s);
-if (fig.visible) { layout(); fig.draw(); markMounted(); }
+if (fig.visible && layout()) { fig.draw(); markMounted(); }
 }).catch((e) => { if (!disposed) fallback(e && e.message ? e.message : String(e)); });
 }
 let running = null;       // the active transition
@@ -2728,7 +2761,7 @@ onDone() {
 running = null;
 for (const [id, f] of fades) scene.layers.get(id).alpha = f.to;
 if (scene) for (const L of scene.layers.values()) L.override = hide.has(L.id) ? 0 : show.has(L.id) ? 1 : null;
-if (history.replaceState) history.replaceState(null, '', formatHash(fig.id, stateName));
+if (history.replaceState) history.replaceState(null, '', formatHash(fig.id, stateName, location.hash)); // keeps the tab pairs
 emit(el, 'x-fig:state', { id: fig.id, state: stateName });
 updateTicking();
 },
@@ -2804,13 +2837,15 @@ out.push({ x: r.left - r0.left - CORNER_PAD_PX, y: r.top - r0.top - CORNER_PAD_P
 return out;
 }
 function layout() {
+if (!box.offsetWidth) { boxPx = null; return false; }
 boxPx = fitCanvas(canvas, box, env.dpr);
 if (scene) scene.layout(boxPx, cornerRects());
+return true;
 }
 fig.draw = () => {
 dirty = false;
 if (!scene || !fig.visible) return;
-if (!boxPx) layout();
+if (!boxPx && !layout()) return;
 scene.draw(scope);
 clearTimeout(mirrorTimer);
 mirrorTimer = setTimeout(() => { readoutsEl.textContent = scene.readoutText(); }, MIRROR_DELAY_MS);
@@ -2827,9 +2862,9 @@ fig.setVisible = (flag) => {
 if (flag === fig.visible) return;
 fig.visible = flag;
 if (flag) {
-layout();
+const sized = layout();
 if (is3d && !scene) requestScene3d();
-if (scene) { fig.draw(); markMounted(); }
+if (scene && sized) { fig.draw(); markMounted(); }
 } else {
 if (!is3d) canvas.width = canvas.height = 0; // release the backing store off screen
 boxPx = null;
@@ -2838,7 +2873,7 @@ updateTicking();
 };
 let ro = null;
 if (typeof ResizeObserver !== 'undefined') {
-ro = new ResizeObserver(() => { if (fig.visible) { layout(); fig.draw(); } });
+ro = new ResizeObserver(() => { if (fig.visible && layout() && scene) { fig.draw(); markMounted(); } });
 new ResizeObserver(() => el.style.setProperty('--x-panel-h', `${panel.offsetHeight}px`)).observe(panel);
 ro.observe(box);
 for (const g of box.querySelectorAll(':scope > .x-corner')) ro.observe(g);
@@ -2916,10 +2951,109 @@ doc.addEventListener('scroll', hide, { passive: true });
 return tip;
 }
 
+// ---- lib/site/tabs.js
+const panelGroup = new WeakMap(); // section -> group
+function tabKeyIndex(key, current, count) {
+switch (key) {
+case 'ArrowRight': case 'ArrowDown': return (current + 1) % count;
+case 'ArrowLeft': case 'ArrowUp': return (current - 1 + count) % count;
+case 'Home': return 0;
+case 'End': return count - 1;
+default: return -1;
+}
+}
+function tabFromHash(hash, id, count) {
+const v = pairOf(hash, id);
+const n = v && /^\d+$/.test(v) ? Number(v) : 0;
+return n >= 1 && n <= count ? n - 1 : 0;
+}
+function mountTabs(doc, win) {
+const groups = new Map();
+for (const root of doc.querySelectorAll('.x-tabs')) {
+const panels = [...root.children].filter((c) => c.tagName === 'SECTION' && c.hasAttribute('data-tab'));
+if (!root.id || !panels.length || root.hasAttribute('data-booted')) continue;
+const group = { id: root.id, root, panels, tabs: [], current: -1 };
+const list = h('div', { class: 'x-tablist', role: 'tablist', 'aria-label': root.getAttribute('aria-label') });
+panels.forEach((p, i) => {
+if (!p.id) p.id = `${root.id}-${i + 1}`;
+const tab = h('button', { type: 'button', class: 'x-tab', role: 'tab', id: `${p.id}-tab`, 'aria-controls': p.id, 'aria-selected': 'false', tabindex: '-1' }, p.dataset.tab);
+p.setAttribute('role', 'tabpanel');
+p.setAttribute('aria-labelledby', tab.id);
+p.tabIndex = 0;
+list.append(tab);
+group.tabs.push(tab);
+panelGroup.set(p, group);
+});
+group.select = (i, { write = false, focus = false } = {}) => {
+if (i < 0 || i >= panels.length) return false;
+const changed = i !== group.current;
+group.current = i;
+panels.forEach((p, k) => { p.hidden = k !== i; });
+group.tabs.forEach((t, k) => { t.setAttribute('aria-selected', String(k === i)); t.tabIndex = k === i ? 0 : -1; });
+if (focus) group.tabs[i].focus();
+if (write && win.history && win.history.replaceState) win.history.replaceState(null, '', withPair(win.location.hash, root.id, String(i + 1)));
+return changed;
+};
+list.addEventListener('click', (e) => {
+const tab = e.target.closest && e.target.closest('[role="tab"]');
+if (tab) group.select(group.tabs.indexOf(tab), { write: true });
+});
+list.addEventListener('keydown', (e) => {
+const next = tabKeyIndex(e.key, group.current, panels.length);
+if (next < 0) return;
+e.preventDefault();
+group.select(next, { write: true, focus: true });
+});
+root.prepend(list);
+root.dataset.booted = '';
+group.select(tabFromHash(win.location.hash, root.id, panels.length));
+groups.set(root.id, group);
+}
+return {
+groups,
+fromHash(key, value) {
+const g = groups.get(key);
+if (!g) return false;
+g.select(tabFromHash(`#${key}=${value}`, key, g.panels.length));
+return true;
+},
+};
+}
+function revealPanel(section) {
+const g = panelGroup.get(section);
+if (!g) return false;
+return g.select(g.panels.indexOf(section));
+}
+
+// ---- lib/site/reveal.js
+function revealTarget(el) {
+let changed = false;
+for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+if (n.tagName === 'DETAILS' && !n.open) { n.open = true; changed = true; }
+if (n.hasAttribute('data-tab') && revealPanel(n)) changed = true;
+}
+return changed;
+}
+function hashTarget(doc, hash) {
+const id = plainTarget(hash);
+if (id) return doc.getElementById(id);
+const link = parseHash(hash);
+return link ? doc.getElementById(link.figId) : null;
+}
+function mountReveal(doc, tabs) {
+doc.addEventListener('click', (e) => {
+const a = e.target.closest && e.target.closest('a[href^="#"]');
+if (!a) return;
+const hash = a.getAttribute('href');
+for (const [k, v] of parsePairs(hash)) tabs.fromHash(k, v); // a link to a tab, or to a figure pose in one
+const el = hashTarget(doc, hash);
+if (el) revealTarget(el);
+});
+}
+
 // ---- lib/site/glossary.js
 const FLASH_MS = 1600;
 function mountGlossary(doc, win) {
-const details = doc.getElementById('glossary');
 let timer = null;
 function flash(el) {
 el.classList.remove('x-flash');
@@ -2931,7 +3065,7 @@ timer = setTimeout(() => el.classList.remove('x-flash'), FLASH_MS);
 function reveal(target, scroll) {
 const el = doc.getElementById(target.id);
 if (!el) return;
-if (target.kind === 'row' && details) details.open = true;
+revealTarget(el); // the glossary <details> for a row; a tab panel or timeline entry for a first use
 if (scroll) el.scrollIntoView({ block: 'center' });
 flash(el);
 }
@@ -3048,17 +3182,31 @@ const fig = createFigure(el, compiled, env);
 figures.set(el.id, fig);
 observe(el, { rootMargin: compiled.type === 'scene3d' ? '400px' : '100px', onEnter: () => fig.setVisible(true), onLeave: () => fig.setVisible(false) });
 }
+const tabs = mountTabs(doc, win);
+mountReveal(doc, tabs);
 mountProseHooks(doc, figures, { clock });
 mountTerms(doc, { hover: hoverCapable(win) });
 mountGlossary(doc, win);
 colorTex(doc, names);
 const route = () => {
-const link = parseHash(win.location.hash);
+const hash = win.location.hash;
+let scrollTo = null;
+for (const [key, value] of parsePairs(hash)) if (tabs.fromHash(key, value) && !scrollTo) scrollTo = tabs.groups.get(key).root;
+const link = parseHash(hash);
 const fig = link && figures.get(link.figId);
-if (!fig) return;
+if (fig) {
+revealTarget(fig.el);
 fig.setVisible(true);
 if (link.state && fig.compiled.states.includes(link.state)) fig.goto(link.state, { ease: false });
 fig.el.scrollIntoView({ block: 'start' });
+return;
+}
+const id = plainTarget(hash);
+if (id && !glossaryTarget(hash)) {
+const el = doc.getElementById(id);
+if (el && revealTarget(el)) scrollTo = el;
+}
+if (scrollTo) scrollTo.scrollIntoView({ block: 'start' });
 };
 route();
 win.addEventListener('hashchange', route);

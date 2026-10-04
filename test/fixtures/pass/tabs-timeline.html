@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Tabs and a timeline</title>
+<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="{{integrity:dist/explainers.v1.css}}">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js" integrity="{{integrity:dist/explainers-runtime.v1.js}}"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#ffffff, #111111);
+    --fg: light-dark(#111111, #eeeeee);
+    --c-ink: light-dark(#1f4e9c, #8ab4f8);
+    --c-mark: light-dark(#b3324a, #ee6c86);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>Tabs and a timeline</h1>
+<p>Two views of the same circle, one per tab, and a short history under the figures. Switch with <a href="#views=2">the second tab</a>.</p>
+
+<div class="x-tabs" id="views">
+<section data-tab="Angle" id="views-1">
+<p>The <span data-fig="fig-angle" data-ref="dot">blue dot</span> rides a circle of <dfn id="t-radius"><a href="#g-radius">radius</a></dfn>, the distance from the center to the rim.</p>
+<figure class="x-fig" id="fig-angle" data-aspect="1:1">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene2d",
+    "view": { "x": [-2, 2], "y": [-2, 2] },
+    "layers": [
+      { "id": "rim", "kind": "circle", "cx": 0, "cy": 0, "r": 1, "stroke": "mark", "dash": [3, 3] },
+      { "id": "dot", "kind": "circle", "cx": "cos(a)", "cy": "sin(a)", "r": 0.1, "fill": "ink" }
+    ]
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "a", "label": "angle", "min": 0, "max": 6.283, "default": 0, "token": "ink", "format": "{deg(a):deg}" }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["dot"],
+    "states": [
+      { "name": "quarter", "a": 1.5708, "caption": "A quarter turn." }
+    ]
+  }
+}
+</script>
+<figcaption>Drag the slider.</figcaption>
+</figure>
+<p>At <a href="#fig-angle" data-state="quarter">a quarter turn</a> the dot sits straight up, one <a class="term" href="#g-radius">radius</a> above the center.</p>
+</section>
+<section data-tab="Height" id="views-2">
+<p>The same turn read as a height: the <span data-fig="fig-height" data-ref="bar">red bar</span> is the dot's <dfn id="t-sine"><a href="#g-sine">sine</a></dfn>, its height above the center line.</p>
+<figure class="x-fig" id="fig-height" data-aspect="3:2">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene2d",
+    "view": { "x": [-3, 3], "y": [-2, 2] },
+    "layers": [
+      { "id": "axis", "kind": "line", "from": [-3, 0], "to": [3, 0], "stroke": "ink", "dash": [3, 3] },
+      { "id": "bar", "kind": "segment", "from": [0, 0], "to": [0, "sin(a)"], "stroke": "mark", "width": 4 }
+    ]
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "a", "label": "angle", "min": 0, "max": 6.283, "default": 0.7854, "token": "ink", "format": "{deg(a):deg}" }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["bar"],
+    "states": [
+      { "name": "top", "a": 1.5708, "caption": "The bar is as tall as the radius." }
+    ]
+  }
+}
+</script>
+<figcaption>The bar follows the slider.</figcaption>
+</figure>
+<p>At <a href="#fig-height" data-state="top">the top</a> the bar is one <a class="term" href="#g-radius">radius</a> tall.</p>
+</section>
+</div>
+
+<section id="history">
+<h2><a class="x-anchor" href="#history">History</a></h2>
+<ol class="x-timeline">
+<li><details><summary><time datetime="1984-06-27">1984</time> The first drawing of the circle.</summary>
+<p>One line in a notebook, no <a class="term" href="#g-sine">sine</a> yet.</p>
+</details></li>
+<li><details><summary><time datetime="1991-03-02">1991</time> The <a class="term" href="#g-radius">radius</a> gets a <dfn id="t-tick"><a href="#g-tick">tick</a></dfn>, a mark at every quarter turn.</summary>
+<p>The <span data-fig="fig-ticks" data-ref="ticks">four ticks</span> sit where the dot pauses.</p>
+<figure class="x-fig" id="fig-ticks" data-aspect="3:2">
+<script type="application/json">
+{
+  "shows": {
+    "type": "scene2d",
+    "view": { "x": [-3, 3], "y": [-2, 2] },
+    "layers": [
+      { "id": "rim", "kind": "circle", "cx": 0, "cy": 0, "r": 1.5, "stroke": "ink" },
+      { "id": "ticks", "kind": "polygon", "points": [[1.5, 0], [0, 1.5], [-1.5, 0], [0, -1.5]], "stroke": "mark", "dash": [2, 4] },
+      { "id": "dot", "kind": "circle", "cx": "1.5*cos(a)", "cy": "1.5*sin(a)", "r": 0.12, "fill": "mark" }
+    ]
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "a", "label": "angle", "values": [0, 1.5708, 3.1416, 4.7124], "default": 0, "token": "mark", "format": "{deg(a):deg}" }
+    ]
+  },
+  "notice": {
+    "steps": "none",
+    "point_at": ["ticks"],
+    "states": []
+  }
+}
+</script>
+<figcaption>Step the slider from tick to tick.</figcaption>
+</figure>
+</details></li>
+</ol>
+</section>
+
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    <div class="row" id="g-radius">
+      <dt>radius <a class="x-back" href="#t-radius" aria-label="back to first use">↩</a></dt>
+      <dd>The distance from the center of a circle to its rim.</dd>
+    </div>
+    <div class="row" id="g-sine">
+      <dt>sine <a class="x-back" href="#t-sine" aria-label="back to first use">↩</a></dt>
+      <dd>The height of a point on the unit circle above the center line.</dd>
+    </div>
+    <div class="row" id="g-tick">
+      <dt>tick <a class="x-back" href="#t-tick" aria-label="back to first use">↩</a></dt>
+      <dd>A mark on the rim at every quarter turn.</dd>
+    </div>
+  </dl>
+</details>
+</main>
+</body>
+</html>

@@ -88,6 +88,9 @@ const WARNINGS = [
   ['poster_stale', 'a poster whose data-poster hash no longer matches the spec', after('<figure class="x-fig" id="fig-dot" data-aspect="1:1">', '\n<svg class="x-poster" id="fig-dot-poster" aria-hidden="true" data-poster="0000000000000000000000000000000000000000"></svg>'), 'poster is stale; run: explainers build'],
   ['integrity_unresolved', 'an unbuilt article: the template placeholder is still in place', (h) => h, 'integrity not resolved yet on the runtime <script>; run: explainers build'],
   ['og_image_missing', 'the head names the link-preview card but nobody rendered it', before('<title>Minimal</title>', '<meta property="og:image" content="https://example.test/minimal/assets/og.png">\n'), 'og:image assets/og.png not found; run: node tools/og-image.mjs'],
+  ['tabs_without_id', 'a tabs group the runtime cannot enhance or deep-link', before('<details id="glossary"', '<div class="x-tabs">\n<section data-tab="A"><p>a</p></section>\n<section data-tab="B"><p>b</p></section>\n</div>\n'), '<div class="x-tabs"> has no id; the runtime leaves it stacked'],
+  ['tabs_child_not_panel', 'a child of the tabs group that is not a <section data-tab>', before('<details id="glossary"', '<div class="x-tabs" id="views">\n<section data-tab="A"><p>a</p></section>\n<p>stray</p>\n</div>\n'), '<p> inside <div class="x-tabs" id="views"> is not a <section data-tab="Label">'],
+  ['timeline_without_details', 'a timeline entry that cannot expand', before('<details id="glossary"', '<ol class="x-timeline">\n<li><time datetime="1984-06-27">1984</time> no details</li>\n</ol>\n'), '<ol class="x-timeline"> entry without <details><summary>; it cannot expand'],
 ];
 
 fs.rmSync(outDir, { recursive: true, force: true });

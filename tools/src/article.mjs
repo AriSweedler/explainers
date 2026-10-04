@@ -154,6 +154,30 @@ function checkDfnSections({ file, doc }, problems) {
   }
 }
 
+// Warnings: the two page-level components are ordinary HTML (every figure,
+// glossary and poster check walks the whole tree, so a figure inside a tab
+// panel or a <details> body is checked like any other), but the runtime only
+// enhances the shape it knows, and a hash key must not read as a figure's or
+// a glossary slug's.
+function checkComponents({ file, doc }, problems) {
+  for (const tabs of elements(doc, (n) => hasClass(n, 'x-tabs'))) {
+    const id = attr(tabs, 'id');
+    if (!id) problems.warn(file, line(tabs), null, '<div class="x-tabs"> has no id; the runtime leaves it stacked (the tab is remembered as #<id>=<n>)');
+    else if (/^(fig|g|t)-/.test(id)) problems.warn(file, line(tabs), null, `<div class="x-tabs" id="${id}">: an id starting with fig-, g- or t- reads as a figure or glossary deep link; choose another`);
+    for (const child of elementChildren(tabs)) {
+      if (child.tagName !== 'section' || !attr(child, 'data-tab')) problems.warn(file, line(child), null, `<${child.tagName}> inside <div class="x-tabs" id="${id || ''}"> is not a <section data-tab="Label">; the runtime shows it in no tab`);
+    }
+  }
+  for (const tl of elements(doc, (n) => n.tagName === 'ol' && hasClass(n, 'x-timeline'))) {
+    for (const li of elementChildren(tl)) {
+      const details = elementChildren(li).find((n) => n.tagName === 'details');
+      const summary = details && elementChildren(details).find((n) => n.tagName === 'summary');
+      if (!details || !summary) { problems.warn(file, line(li), null, '<ol class="x-timeline"> entry without <details><summary>; it cannot expand'); continue; }
+      if (!byTag(summary, 'time').some((t) => attr(t, 'datetime'))) problems.warn(file, line(summary), null, 'timeline <summary> without <time datetime="...">');
+    }
+  }
+}
+
 // Warning: a scene3d figure needs the lazy chunk next to the runtime include
 // (a dynamic import(), so no integrity attribute names it; this is the deploy check).
 function checkChunk({ file, doc }, figures, repoRoot, problems) {
@@ -178,6 +202,7 @@ export function validateArticle(article, { repoRoot, budget, problems }) {
   checkUrls(article, problems);
   checkGlossary(article.doc, article.file, problems);
   checkDfnSections(article, problems);
+  checkComponents(article, problems);
   checkTex(article.doc, article.html, article.file, new Set(palette.names), problems);
   const valid = validFigures(figures);
   checkChunk(article, valid, repoRoot, problems);

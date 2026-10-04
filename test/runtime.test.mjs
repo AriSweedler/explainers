@@ -14,7 +14,8 @@ import { format, compileTemplate, renderTemplate } from '../lib/core/format.js';
 import { smoothstep, transition } from '../lib/core/ease.js';
 import { createClock } from '../lib/core/clock.js';
 import { coerce, snaps, hasStops, stateTargets, nearestState, controlOf, visibleIds } from '../lib/core/state.js';
-import { parseHash, formatHash, glossaryTarget } from '../lib/core/deeplink.js';
+import { parseHash, formatHash, glossaryTarget, parsePairs, pairOf, withPair, plainTarget } from '../lib/core/deeplink.js';
+import { tabKeyIndex, tabFromHash } from '../lib/site/tabs.js';
 import { worldToPx, splitBoxes, dprFor } from '../lib/core/layout.js';
 import { constrainPoint } from '../lib/core/drag.js';
 import { niceTicks, tickLabel } from '../lib/scene2d/plot.js';
@@ -224,6 +225,53 @@ test('deep links: #fig-x=state, #fig-x, glossary rows and first uses', () => {
   assert.equal(glossaryTarget('#fig-months'), null);
 });
 
+test('hash grammar: key=value pairs joined by & round-trip; one figure pair, one pair per tabs group; plain ids stay plain', () => {
+  // single pair, as before
+  assert.deepEqual(parsePairs('#fig-months=sidereal'), [['fig-months', 'sidereal']]);
+  assert.equal(withPair('', 'fig-months', 'sidereal'), '#fig-months=sidereal');
+  assert.equal(formatHash('fig-months', 'synodic'), '#fig-months=synodic');
+  // several pairs, any order; the figure link is found among them
+  const both = '#views=2&fig-months=sidereal';
+  assert.deepEqual(parsePairs(both), [['views', '2'], ['fig-months', 'sidereal']]);
+  assert.deepEqual(parseHash(both), { figId: 'fig-months', state: 'sidereal' });
+  assert.deepEqual(parseHash('#fig-months=sidereal&views=2'), { figId: 'fig-months', state: 'sidereal' });
+  assert.equal(parseHash('#views=2'), null, 'tab pairs alone are not a figure link');
+  assert.equal(pairOf(both, 'views'), '2');
+  assert.equal(pairOf(both, 'nope'), null);
+  // round trip: rewriting a pair keeps its position and the other pairs
+  assert.equal(withPair(both, 'views', '1'), '#views=1&fig-months=sidereal');
+  assert.equal(withPair(both, 'eras', '3'), '#views=2&fig-months=sidereal&eras=3');
+  assert.equal(parsePairs(withPair(withPair('#a=1', 'b', '2'), 'a', '9')).map((p) => p.join('=')).join('&'), 'a=9&b=2');
+  // goto writes the figure pair into the hash the page has: tab pairs stay, another figure's pair goes
+  assert.equal(formatHash('fig-months', 'synodic', both), '#views=2&fig-months=synodic');
+  assert.equal(formatHash('fig-orbit', 'top', both), '#views=2&fig-orbit=top', 'a hash lands on one figure');
+  assert.equal(formatHash('fig-months', 'synodic', '#two-months'), '#fig-months=synodic', 'a plain fragment has been landed on; it is consumed');
+  // plain fragments: ids, never pairs
+  assert.equal(plainTarget('#two-months'), 'two-months');
+  assert.equal(plainTarget('#g-radius'), 'g-radius');
+  assert.equal(plainTarget(both), null);
+  assert.equal(plainTarget('#'), null);
+  assert.deepEqual(parsePairs('#two-months'), []);
+  // rejects: a bad value drops that pair; a stray part is skipped
+  assert.deepEqual(parsePairs('#fig-months=bad state&views=2'), [['views', '2']]);
+  assert.equal(parseHash('#fig-months=bad state'), null);
+  assert.deepEqual(parsePairs('#views=2&junk&fig-x=s'), [['views', '2'], ['fig-x', 's']]);
+  assert.deepEqual(parsePairs('#views=2&views=3'), [['views', '2']], 'the first of a duplicated key wins');
+  // tabs: the 1-based pair selects within range, else the first tab
+  assert.equal(tabFromHash(both, 'views', 3), 1);
+  assert.equal(tabFromHash('#views=9', 'views', 3), 0);
+  assert.equal(tabFromHash('#views=0', 'views', 3), 0);
+  assert.equal(tabFromHash('#fig-months=sidereal', 'views', 3), 0);
+  assert.equal(tabFromHash('#views=x', 'views', 3), 0);
+  // arrow keys wrap; Home/End jump; other keys do nothing
+  assert.equal(tabKeyIndex('ArrowRight', 2, 3), 0);
+  assert.equal(tabKeyIndex('ArrowLeft', 0, 3), 2);
+  assert.equal(tabKeyIndex('ArrowDown', 0, 3), 1);
+  assert.equal(tabKeyIndex('Home', 2, 3), 0);
+  assert.equal(tabKeyIndex('End', 0, 3), 2);
+  assert.equal(tabKeyIndex('Enter', 0, 3), -1);
+});
+
 // ---------------------------------------------------------------- layout
 
 test('layout: uniform world->px mapping with y up, DPR choice, split boxes', () => {
@@ -323,7 +371,7 @@ test('the concatenation build is valid JS, current in dist/, and under 42 KB gzi
   assert.equal(load.status, 0, load.stderr);
   assert.equal(load.stdout.trim(), 'undefined', 'without a document the runtime does not boot');
   fs.rmSync(tmp, { recursive: true, force: true });
-  for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState', ':scope > .x-poster']) assert.ok(out.includes(needle), needle);
+  for (const needle of ['x-fig:mount', 'x-fig:set', 'x-fig:state', 'x-fig:play', 'validateSpec', '_steps', 'x-tip', 'replaceState', ':scope > .x-poster', "role: 'tablist'", 'x-tablist', 'revealTarget(', 'revealPanel(', 'box.offsetWidth']) assert.ok(out.includes(needle), needle);
   assert.doesNotMatch(out, /^\s*(import|export)\b/m);
   // the one dynamic import() loads the 3D chunk from lib/site/scene3d.js; every other module stays free of it
   const sections = out.split(/^\/\/ ---- (?=lib\/)/m).slice(1);
@@ -345,7 +393,13 @@ test('transformModule refuses a dynamic import() anywhere but the scene3d loader
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
   const css = fs.readFileSync(path.join(root, 'dist/explainers.v1.css'), 'utf8');
   assert.ok(gzipSize(css) <= 8 * 1000, `css is ${gzipSize(css)} bytes gzipped`);
-  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[aria-current]', '.x-key', '[data-face="near"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate']) assert.ok(css.includes(sel), sel);
+  for (const sel of ['.x-canvas-box', '.x-ctl-slider', '.x-knob', '.x-socket', '.x-tick', ':has(input:hover) .x-knob', '.x-panel', '.x-stepper-row', '.x-counter', '[aria-current]', '.x-key', '[data-face="near"]', '.x-sr', '.x-toggle', '.x-play', '.x-stepper', '#x-tip', '.x-glossary', '.x-tex', '.x-ref', 'a.term', 'dfn', 'light-dark(', 'prefers-reduced-motion', '::-webkit-slider-thumb', '.x-fig:has(> .x-poster):not([data-booted])::before', '.x-canvas-box > .x-poster', '.x-fig[data-mounted] .x-poster { display: none; }', '.x-3d-label', '.x-3d-overlay', '.x-3d-fallback', '.x-3d-notice', '.x-geolocate', '.x-tabs:not([data-booted]) > section[data-tab]::before { content: attr(data-tab);', '.x-tablist', '.x-tab[aria-selected="true"]', '.x-timeline::before', '.x-timeline > li::before', '.x-timeline summary time', '.x-timeline details[open] > summary::after', '.x-timeline summary::after { transition: none; }']) assert.ok(css.includes(sel), sel);
+  // the components read with JavaScript off and at phone width: labels from data-tab, <details> untouched, both inside the 40rem query
+  const phone = css.slice(css.indexOf('@media (max-width: 40rem)'));
+  for (const sel of ['.x-tab {', '.x-timeline > li {', '.x-tabs:not([data-booted]) > section[data-tab]::before']) assert.ok(phone.includes(sel), `phone: ${sel}`);
+  // no timeline rule hides content (<details> alone decides); only the native disclosure marker is hidden
+  for (const m of css.matchAll(/(\.x-timeline[^{]*)\{[^}]*display:\s*none/g)) assert.match(m[1], /::-webkit-details-marker/, `hides content: ${m[1].trim()}`);
+  assert.doesNotMatch(css, /\.x-tabs[^{]*\{[^}]*display:\s*none/, 'tabs hide panels with the hidden attribute, not a class');
 });
 
 test('dist/integrity.json holds a current sha384 for the runtime, the stylesheet and the 3D chunk; the template carries the two include placeholders', () => {
