@@ -705,7 +705,7 @@ articles/moon/index.html:212: SPEC_UNKNOWN_IDENT fig-months: shows.layers[6].cx:
 | `TEX_RENDER_ERROR` | KaTeX output contains its error color (#cc0000): an untrusted or rejected command |
 | `TEX_STALE` | an .x-tex element has data-tex but its rendered content does not match a fresh render |
 | `INTEGRITY_MISSING` | the runtime <script> or the stylesheet <link> has no integrity attribute (run: explainers build) |
-| `INTEGRITY_STALE` | an integrity attribute does not match dist/integrity.json (run: explainers build) |
+| `INTEGRITY_STALE` | an integrity attribute, or the ?v= on its include URL, does not match dist/integrity.json (run: explainers build) |
 | `BUDGET_OVER` | gzip bytes of HTML + runtime + CSS + KaTeX CSS exceed --budget |
 <!-- /generated:errors -->
 

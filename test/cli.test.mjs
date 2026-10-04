@@ -86,8 +86,9 @@ test('build renders KaTeX, inserts the poster, resolves integrity, is idempotent
   assert.match(built, /<figure class="x-fig" id="fig-months" data-aspect="3:2">\n<svg class="x-poster" id="fig-months-poster" [^>]*data-poster="[0-9a-f]{40}">[\s\S]*<\/svg>\n<script type="application\/json">/, 'the poster is the first child, before the JSON block');
   assert.equal((built.match(/Not to scale\./g) || []).length, 1, 'the caption already said it; not repeated');
   const integrity = JSON.parse(fs.readFileSync(path.join(root, 'dist/integrity.json'), 'utf8'));
-  assert.ok(built.includes(`<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="${integrity['dist/explainers.v1.css']}">`));
-  assert.ok(built.includes(`<script defer src="../../dist/explainers-runtime.v1.js" integrity="${integrity['dist/explainers-runtime.v1.js']}"></script>`));
+  const ver = (h) => h.replace(/^sha\d+-/, '').slice(0, 10).replace(/\+/g, '-').replace(/\//g, '_'); // cache-busting ?v= from the hash
+  assert.ok(built.includes(`<link rel="stylesheet" href="../../dist/explainers.v1.css?v=${ver(integrity['dist/explainers.v1.css'])}" integrity="${integrity['dist/explainers.v1.css']}">`));
+  assert.ok(built.includes(`<script defer src="../../dist/explainers-runtime.v1.js?v=${ver(integrity['dist/explainers-runtime.v1.js'])}" integrity="${integrity['dist/explainers-runtime.v1.js']}"></script>`));
   assert.doesNotMatch(built, /\{\{integrity:/, 'placeholders resolved');
   const second = run(['build', file]);
   assert.equal(second.code, 0, second.err);
@@ -104,6 +105,13 @@ test('build renders KaTeX, inserts the poster, resolves integrity, is idempotent
   assert.match(sv.err, /INTEGRITY_STALE -: the stylesheet <link> has integrity="sha384-A+" but dist\/integrity\.json says sha384-/);
   assert.equal(run(['build', file]).code, 0);
   assert.equal(fs.readFileSync(file, 'utf8'), built, 'build refreshes a stale attribute');
+  // a URL without the matching ?v= (a cached old asset would pair with this HTML) is refused by validate and repaired by build
+  fs.writeFileSync(file, built.replace(/\.css\?v=[^"]*"/, '.css"'));
+  const uv = run(['validate', file]);
+  assert.equal(uv.code, 1);
+  assert.match(uv.err, /INTEGRITY_STALE -: the stylesheet <link> URL has no \?v= but its integrity implies \?v=/);
+  assert.equal(run(['build', file]).code, 0);
+  assert.equal(fs.readFileSync(file, 'utf8'), built, 'build restores the ?v=');
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 

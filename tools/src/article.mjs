@@ -75,11 +75,11 @@ function checkStructure({ file, doc }, problems) {
   let runtime = false;
   for (const s of byTag(doc, 'script')) {
     const src = attr(s, 'src');
-    if (src && /(^|\/)dist\/explainers-runtime\.v\d+\.js$/.test(src)) { runtime = true; continue; }
+    if (src && /(^|\/)dist\/explainers-runtime\.v\d+\.js(\?[^#]*)?$/.test(src)) { runtime = true; continue; }
     if (attr(s, 'type') === 'application/json' && s.parentNode?.tagName === 'figure' && hasClass(s.parentNode, 'x-fig')) continue;
     problems.error(file, line(s), 'HTML_SCRIPT_FORBIDDEN', null, 'only the runtime include and figure JSON blocks may be <script> elements');
   }
-  const css = byTag(doc, 'link').some((l) => attr(l, 'rel') === 'stylesheet' && /(^|\/)dist\/explainers\.v\d+\.css$/.test(attr(l, 'href') || ''));
+  const css = byTag(doc, 'link').some((l) => attr(l, 'rel') === 'stylesheet' && /(^|\/)dist\/explainers\.v\d+\.css(\?[^#]*)?$/.test(attr(l, 'href') || ''));
   if (!runtime) problems.error(file, 0, 'HTML_INCLUDE_MISSING', null, 'missing <script defer src="../../dist/explainers-runtime.v1.js">');
   if (!css) problems.error(file, 0, 'HTML_INCLUDE_MISSING', null, 'missing <link rel="stylesheet" href="../../dist/explainers.v1.css">');
 }
@@ -182,9 +182,9 @@ function checkComponents({ file, doc }, problems) {
 // (a dynamic import(), so no integrity attribute names it; this is the deploy check).
 function checkChunk({ file, doc }, figures, repoRoot, problems) {
   if (![...figures.values()].some((c) => c && c.type === 'scene3d')) return;
-  const runtime = byTag(doc, 'script').map((s) => attr(s, 'src')).find((src) => src && /(^|\/)dist\/explainers-runtime\.v\d+\.js$/.test(src));
+  const runtime = byTag(doc, 'script').map((s) => attr(s, 'src')).find((src) => src && /(^|\/)dist\/explainers-runtime\.v\d+\.js(\?[^#]*)?$/.test(src));
   if (!runtime) return;
-  const dir = path.dirname(runtime);
+  const dir = path.dirname(runtime.replace(/[?#].*$/, ''));
   const local = path.resolve(path.dirname(file), dir, CHUNK_NAME);
   const fromRoot = path.join(repoRoot, 'dist', CHUNK_NAME); // fixtures outside articles/ measure the repo's dist/
   if (!fs.existsSync(local) && !fs.existsSync(fromRoot)) problems.warn(file, 0, null, `scene3d figure(s) but the lazy chunk ${path.posix.join(dir, CHUNK_NAME)} is not found beside the runtime; run: node tools/build-3d.mjs`);
