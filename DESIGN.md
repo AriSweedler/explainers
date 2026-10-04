@@ -449,7 +449,7 @@ Keys common to every object:
 
 ### Controls (`manipulates.controls[]`)
 
-Control kinds: `slider`, `time`, `drag`, `toggle`, `segmented`, `play`. Every control has `kind`. Names join the expression scope as listed.
+Control kinds: `slider`, `time`, `drag`, `toggle`, `segmented`, `chips`, `play`. Every control has `kind`. Names join the expression scope as listed.
 
 #### control: slider
 
@@ -511,6 +511,17 @@ Control kinds: `slider`, `time`, `drag`, `toggle`, `segmented`, `play`. Every co
 | `default` | number | yes | initial value; one of the options |
 | `token` | token | yes | palette token name (--c-<name>) |
 
+#### control: chips
+
+| key | type | required | meaning |
+|---|---|---|---|
+| `name` | identifier | yes | exposes <name>.<key> (0 or 1) per option and <name>.count |
+| `options` | array of object (below) (min 2) | yes | one chip each; the row scrolls when they overflow |
+| `default` | array of identifier (an option key) (min 1) | yes | initially pressed keys |
+| `token` | token | yes | palette token name (--c-<name>) |
+| `min` | number |  | fewest pressed chips (integer, default 1) |
+| `max` | number |  | most pressed chips (integer, default: all) |
+
 #### control: play
 
 | key | type | required | meaning |
@@ -541,7 +552,7 @@ Fixed keys:
 | `drag` | map of identifier -> [number, number] |  | drag control name -> [x, y] |
 | `visible` | object (below) |  | visibility overrides |
 
-Every other key is a control name with a value in that control's range (slider/time: number; toggle: boolean; segmented: an option value). Drag positions go under `drag`.
+Every other key is a control name with a value in that control's range (slider/time: number; toggle: boolean; segmented: an option value; chips: an array of option keys, distinct, their count within min/max). Drag positions go under `drag`.
 
 ### Formats (in `{expr:fmt}` placeholders)
 
@@ -956,6 +967,9 @@ Animation: there is no implicit clock variable. The only animated quantities are
     <label>days since new Moon <div class="x-track"><i class="x-socket" style="--at: 0%"></i><i class="x-tick" style="--at: 0%"></i>…<i class="x-knob"></i></div> <input type="range" min max step value aria-valuetext> <output>0.00 days</output></label>   <!-- sockets and ticks only on discrete controls; the knob is always last -->
   </div>
   <div class="x-ctl x-ctl-segmented" id="fig-x_seg0"><fieldset role="radiogroup">…</fieldset></div>
+  <div class="x-ctl x-ctl-chips" id="fig-x_ch0" style="--token: var(--c-ink)">   <!-- CHIPS: a multi-select row that scrolls sideways inside the panel; .x-more-left / .x-more-right fade the edge with more behind it -->
+    <div class="x-chips x-more-right" role="group" aria-label="p"><button class="x-chip" type="button" value="sec" aria-pressed="true" tabindex="0">SEC</button><button class="x-chip" type="button" value="big10" aria-pressed="false" tabindex="-1">Big Ten</button>…</div>   <!-- roving tabindex: ← → Home End move focus and scroll it into view; Space/Enter toggle; a refused toggle (min/max) shakes -->
+  </div>
   <button class="x-drag-proxy" id="fig-x_drag_p" role="slider" aria-label="p">…</button>   <!-- keyboard nudging; its arrows are its own -->
     <!-- paddle form (more than five steps), FREE and NEAR after a drag to 50° -->
     <div class="x-stepper" id="fig-x_steps" data-face="free" data-near tabindex="-1">
@@ -986,7 +1000,7 @@ Animation: there is no implicit clock variable. The only animated quantities are
 </figure>
 ```
 
-Ids: `<fig>_sl<i>` for slider and time controls, `<fig>_seg<i>`, `<fig>_tg<i>`, `<fig>_drag_<name>`, `<fig>_steps`, `i` counting within the kind in spec order. Controls mount under the canvas in spec order, then the stepper. Play and toggle (`position: corner`) are absolutely positioned over the canvas box; nothing overlaps the drawing.
+Ids: `<fig>_sl<i>` for slider and time controls, `<fig>_seg<i>`, `<fig>_ch<i>`, `<fig>_tg<i>`, `<fig>_drag_<name>`, `<fig>_steps`, `i` counting within the kind in spec order. Controls mount under the canvas in spec order, then the stepper. Play and toggle (`position: corner`) are absolutely positioned over the canvas box; nothing overlaps the drawing.
 
 #### Slider anatomy (design language)
 
@@ -1025,7 +1039,7 @@ The words for the stepper under a figure's controls, in code, comments, docs, ca
 | nearest | the engine's one nearness rule: numeric targets by \|Δ\|/range with direction; a toggle or segmented control a unit of distance, no direction; drag components counted; the camera ignored; ties to the earlier step; with `dir`, the nearest step ahead/behind, else that end | `nearestState(compiled, scope, eps, dir) → { i, name, exact }` in `lib/core/state.js` |
 | enter | a click on the panel background, the counter, the caption slot or the figcaption: jump to the shown step (no motion when stepped, the nearest step when near) and focus the clicked button or the stepper root, which arms the panel | the panel's one click handler |
 | step in / step off | there is no remembered mode: the stepper is a pure view of the controls, so the reader steps in by putting the controls exactly on a step (any way above) and steps off by moving them away; Play sweeps through the steps with asterisks between them | `nearestState(compiled, scope)` at every sync |
-| armed | focus anywhere inside the panel: the glow and the key hints show; unmodified ← → are the stepper's keys from every focused thing except a discrete slider, a segmented control or a drag proxy (their arrows walk their own stops or nudge the handle); a click on the panel, a paddle, a segment or a prose `data-state` link arms it | `.x-panel:focus-within`; the panel's one keydown handler |
+| armed | focus anywhere inside the panel: the glow and the key hints show; unmodified ← → are the stepper's keys from every focused thing except a discrete slider, a segmented control, a chips row or a drag proxy (their arrows walk their own stops, move between chips or nudge the handle); a click on the panel, a paddle, a segment or a prose `data-state` link arms it | `.x-panel:focus-within`; the panel's one keydown handler |
 | glow | the armed indicator: a 1 px accent border with a diffuse halo around the whole panel, breathing (static under reduced motion); a shadow, so no footprint changes; the house keyboard-only `:focus-visible` ring stays on buttons (never after a click) | `.x-panel:focus-within`, `@keyframes x-glow` |
 | key hints | the ← → `<kbd>` at the panel's far edges, level with the row, while armed; fine pointers at 40rem and wider only (the pill leaves them 2.5rem a side there; a narrower window has no room); decorative; never inside the row | `kbd.x-key[aria-hidden]`, first and third children of `.x-stepper` |
 | caption slot | one line under the row that never collapses: stepped → the step's caption (serif); near → the footnote (muted sans) | `p.x-caption` (`<fig>_steps_cap`) |
@@ -1110,3 +1124,4 @@ World units are the spec's; y is up; the camera pose is `{ azimuth, polar, dista
 34. **The stepper stores one name and derives the rest.** Every other candidate (a governed set, a landing rule for discrete sliders, a latch with step-off) was a second copy of a fact the scope already holds, and each copy contradicted the others; `nearestState` answers "which step, and exactly?" at every sync instead. The boot face stays free even on step 1 because the owner asked for the uninteracted state, and the asterisk carries the human/system reading everywhere else. Two of the owner's asks contradict each other and are resolved here: "the arrows are not available until the first click" is read as the arrow *keys* (armed = focus), since the same owner wants the paddles live and directional from free ("the whole stepper enters", "left and right bring you to the nearest state"); and "enters the first step" is read as "enters the shown step", since "it should not immediately start at the start" forbids step 1 after a drag.
 35. **Tabs are plain sections the runtime hides, and the hash is a list of pairs.** `<div class="x-tabs" id="<slug>">` of `<section data-tab="Label">`: with JavaScript off the sections stack and CSS prints the label from `data-tab` (`::before`), so the author writes the label once and no `<h2>` duplicates it when the tablist appears; the runtime hides panels with the `hidden` attribute (no layout, so a hidden panel's figures stay unmounted and release their canvases through the existing `IntersectionObserver`, and mount at their real width when the panel shows). The tab is remembered as `#<slug>=<n>`, which forced the fragment grammar from one `fig-x=state` pair to `key=value` pairs joined by `&`: a hash is either one plain `#id` or a pair list, a single pair reads exactly as before, a pair list holds one `fig-` pair (a link lands on one figure; `goto` replaces any other figure's pair and keeps the tab pairs) and one pair per tabs group, and a pair the grammar rejects is dropped rather than failing the hash. Only a reader's choice writes the tab pair; a tab switched by reveal (a link into it) writes nothing, since the hash already names the target.
 36. **A timeline is `<ol class="x-timeline">` of `<details>`, and revealing is one generic walk.** `<details>` already gives the open/close, the keyboard and the no-JavaScript reading, so the runtime adds nothing to the entries; the stylesheet draws the rail, the dots and the one-line summary. What the glossary did for `#g-*` (open the `<details>` before the browser scrolls) is generalized into `revealTarget(el)`: walk the ancestors, open each closed `<details>`, select each unshown tab panel; it runs on every `a[href^="#"]` click before the browser's own navigation, and boot's hash routing and `glossary.js` call it too. Figures inside a `<details>` mount by the same mechanism as in a tab (the body gets layout, the observers fire); `figure.js` additionally refuses to size a box with no `offsetWidth` and leaves it to the `ResizeObserver`, so no figure is ever laid out at zero width. No expand-all control: the entries are the reader's to open.
+37. **`chips` beside `segmented`, not instead of it.** A segmented row is a radio group: one value, few options, one pill whose width is the sum of its labels, and with eleven options that pill spilled past the reading column. Chips are the other shape: many options, several pressed at once (within `min`/`max`, default 1 to all), and a row that scrolls sideways inside the panel (one line, scroll-snap, a thin scrollbar, a fade on the edge with more behind it) so the figure never grows wider than its column. The scope stays flat and numeric: `<name>.<key>` is 0 or 1 per option and `<name>.count` the number pressed (registered the way a drag registers `<name>.x`), so a layer's `visible: "p.sec"` and a readout's `{p.count:,d}` need no new grammar; a state carries `"<name>": ["key", …]` (an array, validated against the keys and the count), the nearness rule counts one unit per chip that differs (equality by set), and a `goto` snaps every flag at the midpoint like a toggle. Keyboard: ← → move between chips (wrapping) and scroll the focused one into view, Home/End jump, Space/Enter toggle, one chip tabbable at a time; the stepper leaves ← → to a focused chip as it does to a segmented control. A refused toggle (it would cross `min` or `max`) shakes the chip and changes nothing; there is no alert.

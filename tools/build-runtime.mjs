@@ -44,6 +44,7 @@ export const ORDER = [
   'lib/controls/drag.js',
   'lib/controls/toggle.js',
   'lib/controls/segmented.js',
+  'lib/controls/chips.js',
   'lib/controls/play.js',
   'lib/controls/stepper.js',
   'lib/site/scene3d.js',

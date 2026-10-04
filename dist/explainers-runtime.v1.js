@@ -263,7 +263,7 @@ this.detail = detail;
 }
 const ERROR_CATALOGUE = Object.freeze({});
 const FIGURE_TYPES = Object.freeze(['scene2d', 'scene3d', 'plot', 'timeline']);
-const CONTROL_KINDS = Object.freeze(['slider', 'time', 'drag', 'toggle', 'segmented', 'play']);
+const CONTROL_KINDS = Object.freeze(['slider', 'time', 'drag', 'toggle', 'segmented', 'chips', 'play']);
 const LAYER_KINDS = Object.freeze(['circle', 'ellipse', 'line', 'ray', 'segment', 'arc', 'polygon', 'path', 'arrow', 'region', 'text', 'bars', 'image']);
 const OBJECT_KINDS = Object.freeze(['globe', 'sphere', 'ring', 'disc', 'body', 'arrow', 'part', 'label']);
 const FORMATS = Object.freeze({
@@ -582,6 +582,14 @@ options: f(arr(obj({ value: f('number', 'value exposed to expressions', REQ), la
 default: f('number', 'initial value; one of the options', REQ),
 token: f('token', TOKEN_DOC, REQ),
 },
+chips: {
+name: f('name', 'exposes <name>.<key> (0 or 1) per option and <name>.count', REQ),
+options: f(arr(obj({ key: f('key', '<name>.<key> is 1 while pressed', REQ), label: f('string', 'chip label', REQ) }), 2), 'one chip each; the row scrolls when they overflow', REQ),
+default: f(arr('key', 1), 'initially pressed keys', REQ),
+token: f('token', TOKEN_DOC, REQ),
+min: f('number', 'fewest pressed chips (integer, default 1)'),
+max: f('number', 'most pressed chips (integer, default: all)'),
+},
 play: {
 target: f('ref:control', 'slider or time control to advance', REQ),
 rate: f('number', 'target units per second (> 0)', REQ),
@@ -739,6 +747,9 @@ case 'name':
 if (typeof value !== 'string' || !NAME_RE.test(value)) ctx.fail('SPEC_BAD_TYPE', path, `expected an identifier matching ${NAME_RE}`);
 if (value in FUNCTIONS) ctx.fail('SPEC_DUP_ID', path, `"${value}" is a built-in function name`);
 return;
+case 'key':
+if (typeof value !== 'string' || !NAME_RE.test(value)) ctx.fail('SPEC_BAD_TYPE', path, `expected an identifier matching ${NAME_RE}`);
+return;
 case 'point': return checkPoint(value, 2, path, ctx);
 case 'point3': return checkPoint(value, 3, path, ctx);
 case 'rect': return checkPoint(value, 4, path, ctx);
@@ -861,11 +872,39 @@ if (new Set(vals).size !== vals.length) ctx.fail('SPEC_DUP_ID', p('options'), 'o
 if (!vals.includes(value.default)) ctx.fail('SPEC_RANGE', p('default'), 'default must be one of the option values');
 break;
 }
+case 'chips': {
+const keys = value.options.map((o) => o.key);
+if (new Set(keys).size !== keys.length) ctx.fail('SPEC_DUP_ID', p('options'), 'option keys must be unique');
+const min = value.min ?? 1, max = value.max ?? keys.length;
+if (!Number.isInteger(min) || min < 0) ctx.fail('SPEC_RANGE', p('min'), 'min must be an integer >= 0');
+if (!Number.isInteger(max) || max < 1) ctx.fail('SPEC_RANGE', p('max'), 'max must be an integer >= 1');
+if (min > max) ctx.fail('SPEC_RANGE', p('min'), `min ${min} is above max ${max}`);
+if (max > keys.length) ctx.fail('SPEC_RANGE', p('max'), `max ${max} is above the ${keys.length} options`);
+checkChipKeys(value, value.default, p('default'), ctx);
+break;
+}
 case 'play':
 if (value.rate <= 0) ctx.fail('SPEC_RANGE', p('rate'), 'rate must be > 0');
 break;
 default: break;
 }
+}
+function checkChipKeys(control, keys, path, ctx, outOfRange = 'SPEC_RANGE') {
+if (!Array.isArray(keys)) ctx.fail('SPEC_BAD_TYPE', path, 'expected an array of option keys');
+const known = control.options.map((o) => o.key);
+for (const [i, k] of keys.entries()) if (!known.includes(k)) ctx.fail(outOfRange, join(path, i), `${JSON.stringify(k)} is not an option key of "${control.name}"`);
+if (new Set(keys).size !== keys.length) ctx.fail('SPEC_DUP_ID', path, 'a key is listed twice');
+const min = control.min ?? 1, max = control.max ?? known.length;
+if (keys.length < min || keys.length > max) ctx.fail(outOfRange, path, `${keys.length} key(s) pressed; "${control.name}" allows ${min} to ${max}`);
+}
+function chipsScope(control, keys, into = null) {
+const on = new Set(keys);
+const out = {};
+let n = 0;
+for (const o of control.options) n += out[`${control.name}.${o.key}`] = on.has(o.key) ? 1 : 0;
+out[`${control.name}.count`] = n;
+if (into) for (const [k, v] of Object.entries(out)) into.set(k, v);
+return out;
 }
 function checkStateShape(value, path, ctx) {
 if (!isPlainObject(value)) ctx.fail('SPEC_BAD_TYPE', path, 'expected an object');
@@ -891,6 +930,7 @@ return control.constrain.startsWith('surface:')
 ? [`${control.name}.lat`, `${control.name}.lon`, `${control.name}.dragging`]
 : [`${control.name}.x`, `${control.name}.y`, `${control.name}.dragging`];
 case 'time': return control.mode === 'speed' ? [control.name, `${control.name}.rate`] : [control.name];
+case 'chips': return Object.keys(chipsScope(control, control.default));
 case 'play': return [];
 default: return [control.name];
 }
@@ -911,6 +951,7 @@ else { d[`${control.name}.x`] = a; d[`${control.name}.y`] = b; }
 d[`${control.name}.dragging`] = 0;
 break;
 }
+case 'chips': Object.assign(d, chipsScope(control, control.default)); break;
 default: break;
 }
 return d;
@@ -1028,6 +1069,9 @@ return;
 case 'segmented':
 if (!c.options.some((o) => o.value === v)) ctx.fail('SPEC_STATE_OUT_OF_RANGE', path, `${JSON.stringify(v)} is not an option of "${c.name}"`);
 return;
+case 'chips':
+checkChipKeys(c, v, path, ctx, 'SPEC_STATE_OUT_OF_RANGE');
+return;
 case 'drag':
 ctx.fail('SPEC_STATE_UNKNOWN_CONTROL', path, `drag positions go under "drag": {"${c.name}": [x, y]}`);
 return;
@@ -1065,7 +1109,7 @@ const st = compiled.spec.notice.states.find((s) => s.name === stateName);
 if (!st) throw new FigSpecError('SPEC_UNKNOWN_REF', compiled.figureId, 'notice.states', `no state "${stateName}"`);
 for (const [k, v] of Object.entries(st)) {
 if (k in SCHEMA.stateFixed) continue;
-scope.set(k, typeof v === 'boolean' ? (v ? 1 : 0) : v);
+setScoped(compiled, scope, k, v);
 }
 for (const [k, [a, b]] of Object.entries(st.drag || {})) {
 const c = compiled.controls.find((x) => x.name === k);
@@ -1074,8 +1118,13 @@ scope.set(`${k}.${surface ? 'lat' : 'x'}`, a);
 scope.set(`${k}.${surface ? 'lon' : 'y'}`, b);
 }
 }
-for (const [k, v] of Object.entries(overrides)) scope.set(k, v);
+for (const [k, v] of Object.entries(overrides)) setScoped(compiled, scope, k, v);
 return scope;
+}
+function setScoped(compiled, scope, k, v) {
+const c = compiled.controls.find((x) => x.name === k);
+if (c && c.kind === 'chips' && Array.isArray(v)) chipsScope(c, v, scope);
+else scope.set(k, typeof v === 'boolean' ? (v ? 1 : 0) : v);
 }
 function evaluateAll(compiled, scope) {
 const results = new Map();
@@ -1414,10 +1463,13 @@ return compiled.controls.find((c) => c.name === name) || null;
 function snaps(control) {
 switch (control.kind) {
 case 'slider': return 'values' in control;
-case 'toggle': case 'segmented': return true;
+case 'toggle': case 'segmented': case 'chips': return true;
 case 'time': return control.mode === 'speed';
 default: return false;
 }
+}
+function chipsSelected(control, scope) {
+return control.options.map((o) => o.key).filter((k) => scope.get(`${control.name}.${k}`) === 1);
 }
 function hasStops(c) {
 return 'values' in c || (c.kind === 'time' ? c.mode === 'speed' : c.kind === 'slider' && (c.max - c.min) / c.step <= 40);
@@ -1429,6 +1481,10 @@ if ('values' in control) return nearest(control.values, Number(value));
 return clamp(Number(value), control.min, control.max);
 case 'toggle': return value ? 1 : 0;
 case 'segmented': return control.options.some((o) => o.value === value) ? value : nearest(control.options.map((o) => o.value), Number(value));
+case 'chips': {
+const asked = new Set(Array.isArray(value) ? value : [value]);
+return control.options.map((o) => o.key).filter((k) => asked.has(k));
+}
 case 'time':
 if (control.mode === 'scrub') return clamp(Number(value), 0, windowToMs(control.window));
 return Number(value);
@@ -1441,6 +1497,11 @@ if (!st) throw new Error(`no state "${stateName}" in ${compiled.figureId}`);
 const targets = {};
 for (const [k, v] of Object.entries(st)) {
 if (['name', 'caption', 'label', 'camera', 'drag', 'visible'].includes(k)) continue;
+const c = compiled.controls ? compiled.controls.find((x) => x.name === k) : null;
+if (c && c.kind === 'chips') {
+for (const [kk, vv] of Object.entries(chipsScope(c, v))) if (!kk.endsWith('.count')) targets[kk] = vv;
+continue;
+}
 targets[k] = typeof v === 'boolean' ? (v ? 1 : 0) : v;
 }
 for (const [k, [a, b]] of Object.entries(st.drag || {})) {
@@ -1456,7 +1517,7 @@ function nearestState(compiled, scope, eps = 1e-6, dir = 0) {
 let steps = targetsOf.get(compiled);
 if (!steps) targetsOf.set(compiled, steps = compiled.spec.notice.states.map((st) => ({ name: st.name, entries: Object.entries(stateTargets(compiled, st.name).targets).map(([k, v]) => {
 const c = controlOf(compiled, k.split('.')[0]);
-return { k, v, unit: !!c && (c.kind === 'toggle' || c.kind === 'segmented'), span: c && 'values' in c ? Math.abs(c.values.at(-1) - c.values[0]) || 1 : (c && c.max - c.min) || 1 };
+return { k, v, unit: !!c && (c.kind === 'toggle' || c.kind === 'segmented' || c.kind === 'chips'), span: c && 'values' in c ? Math.abs(c.values.at(-1) - c.values[0]) || 1 : (c && c.max - c.min) || 1 };
 }) })));
 let best = null, bestD = 0, end = null;
 steps.forEach(({ name, entries }, i) => {
@@ -2494,6 +2555,52 @@ inputs.forEach((input, k) => { input.checked = control.options[k].value === v; }
 };
 }
 
+// ---- lib/controls/chips.js
+function mountChips(fig, control, i) {
+const lo = control.min ?? 1, hi = control.max ?? control.options.length;
+const row = h('div', { class: 'x-chips', role: 'group', 'aria-label': control.name });
+const chips = control.options.map((o, k) => h('button', { class: 'x-chip', type: 'button', value: o.key, 'aria-pressed': 'false', tabindex: k ? '-1' : '0' }, o.label));
+row.append(...chips);
+const wrap = h('div', { class: 'x-ctl x-ctl-chips', id: `${fig.id}_ch${i}` }, row);
+wrap.style.setProperty('--token', `var(--c-${control.token})`);
+const rove = (k) => chips.forEach((b, j) => b.setAttribute('tabindex', j === k ? '0' : '-1'));
+row.addEventListener('click', (e) => {
+const b = e.target.closest('.x-chip');
+if (!b) return;
+const cur = chipsSelected(control, fig.scope), on = cur.includes(b.value);
+if (on ? cur.length <= lo : cur.length >= hi) {
+b.classList.remove('x-shake');
+void b.offsetWidth;
+b.classList.add('x-shake');
+return;
+}
+fig.set(control.name, on ? cur.filter((k) => k !== b.value) : [...cur, b.value], 'user');
+});
+row.addEventListener('keydown', (e) => {
+const at = chips.indexOf(e.target), n = chips.length;
+const to = { ArrowRight: at + 1, ArrowLeft: at - 1 + n, Home: 0, End: n - 1 }[e.key];
+if (at < 0 || to === undefined || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+e.preventDefault();
+const b = chips[to % n];
+rove(to % n);
+b.focus({ preventScroll: true });
+b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+});
+const edges = () => {
+row.classList.toggle('x-more-left', row.scrollLeft > 1);
+row.classList.toggle('x-more-right', row.scrollLeft < row.scrollWidth - row.clientWidth - 1);
+};
+row.addEventListener('scroll', edges, { passive: true });
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(edges).observe(row);
+return {
+el: wrap, name: control.name,
+sync(scope) {
+control.options.forEach((o, k) => chips[k].setAttribute('aria-pressed', String(scope.get(`${control.name}.${o.key}`) === 1)));
+edges();
+},
+};
+}
+
 // ---- lib/controls/play.js
 function mountPlay(fig) {
 const play = h('button', { class: 'x-play', type: 'button', 'aria-pressed': 'false' }, 'Play');
@@ -2537,7 +2644,7 @@ if (!b) jump(at.name); else if (b.value) jump(b.value); else go(b === prev ? -1 
 });
 panel.addEventListener('keydown', (e) => {
 const d = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
-if (!d || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.target.closest('.x-discrete, .x-ctl-segmented')) return;
+if (!d || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.target.closest('.x-discrete, .x-ctl-segmented, .x-ctl-chips')) return;
 e.preventDefault();
 go(d);
 });
@@ -2620,7 +2727,7 @@ if (poster) canvas.after(poster);
 el.insertBefore(box, panel);
 el.dataset.booted = '';
 const mounted = [];
-const counts = { sl: 0, tg: 0, seg: 0 }; // slider and time share the _sl<i> ids
+const counts = { sl: 0, tg: 0, seg: 0, ch: 0 }; // slider and time share the _sl<i> ids
 const drags = [];
 for (const c of controls) {
 let m = null;
@@ -2630,6 +2737,7 @@ case 'time': m = mountTime(fig, c, counts.sl++); break;
 case 'drag': m = mountDragPoint(fig, c); drags.push({ name: c.name, control: c }); break;
 case 'toggle': m = mountToggle(fig, c, counts.tg++); break;
 case 'segmented': m = mountSegmented(fig, c, counts.seg++); break;
+case 'chips': m = mountChips(fig, c, counts.ch++); break;
 default: break;
 }
 if (!m) continue;
@@ -2761,6 +2869,14 @@ scope.set(`${key}.x`, x);
 scope.set(`${key}.y`, y);
 v = [x, y];
 }
+} else if (c && c.kind === 'chips') {
+if (dot < 0) {
+v = coerce(c, value);
+if (v.length < (c.min ?? 1) || v.length > (c.max ?? c.options.length)) v = chipsSelected(c, scope);
+} else {
+scope.set(key, v = value ? 1 : 0);
+}
+chipsScope(c, Array.isArray(v) ? v : chipsSelected(c, scope), scope);
 } else {
 if (c && dot < 0) v = coerce(c, value);
 scope.set(key, v);
@@ -2790,7 +2906,7 @@ if (running) running.cancel();
 const from = {}, discrete = new Set();
 for (const k of Object.keys(targets)) {
 from[k] = scope.get(k);
-const c = controlOf(compiled, k);
+const c = controlOf(compiled, k.split('.')[0]);
 if (c && snaps(c)) discrete.add(k);
 }
 if (camera) {
