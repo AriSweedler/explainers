@@ -149,6 +149,41 @@ test('build appends the caveat sentence once, and externalizes posters above 8 K
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+test('tabs and timeline: figures inside a tab panel and a <details> body get posters, pass the ref and glossary checks, and build validates clean', () => {
+  const rel = 'test/fixtures/pass/tabs-timeline.html';
+  assert.ok(passFiles.includes(rel), 'the fixture is a pass fixture');
+  const v0 = run(['validate', rel]);
+  assert.equal(v0.code, 0, v0.err);
+  assert.match(v0.out, /3 figure\(s\) checked/);
+  assert.doesNotMatch(v0.err, /point_at|data-ref|GLOSSARY|x-tabs|x-timeline/, `only the unbuilt warnings\n${v0.err}`);
+  const s = run(['states', rel]);
+  assert.match(s.out, /fig-angle \(scene2d\): 1 state\(s\): quarter/);
+  assert.match(s.out, /fig-height \(scene2d\): 1 state\(s\): top/);
+  assert.match(s.out, /fig-ticks \(scene2d\): 0 state\(s\)/);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-tabs-'));
+  const file = path.join(tmp, 'index.html');
+  fs.copyFileSync(path.join(root, rel), file);
+  const b = run(['build', file]);
+  assert.equal(b.code, 0, b.err);
+  assert.match(b.out, /3 poster\(s\) written/);
+  const built = fs.readFileSync(file, 'utf8');
+  // the poster is the figure's first child wherever the figure sits: the second (hidden at boot) tab panel, the <details> body
+  assert.match(built, /<section data-tab="Height" id="views-2">[\s\S]*?<figure class="x-fig" id="fig-height" data-aspect="3:2">\n<svg class="x-poster" id="fig-height-poster"/);
+  assert.match(built, /<details><summary><time datetime="1991-03-02">[\s\S]*?<figure class="x-fig" id="fig-ticks" data-aspect="3:2">\n<svg class="x-poster" id="fig-ticks-poster"/);
+  const v1 = run(['validate', file]);
+  assert.equal(v1.code, 0, v1.err);
+  assert.doesNotMatch(v1.err, /warning/, `built: no warnings\n${v1.err}`);
+  assert.equal(run(['build', file]).code, 0);
+  assert.equal(fs.readFileSync(file, 'utf8'), built, 'idempotent');
+  // the glossary still has to close <main>: tabs around it fail GLOSSARY_NOT_LAST
+  const wrapped = built.replace('<details id="glossary"', '<div class="x-tabs" id="tail"><section data-tab="End">\n<details id="glossary"').replace('</details>\n</main>', '</details>\n</section></div>\n</main>');
+  fs.writeFileSync(file, wrapped);
+  const bad = run(['validate', file]);
+  assert.equal(bad.code, 1);
+  assert.match(bad.err, /GLOSSARY_NOT_LAST -: the glossary must be the last element inside <main>/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 test('scene3d: validate warns about a missing fallback poster file; build writes it as the first frame and validates clean', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-3d-'));
   const file = path.join(tmp, 'index.html');

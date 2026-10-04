@@ -1,7 +1,9 @@
 /* dist/explainers.v1.css — v1. Shared by every article: token defaults, the
    reading column, the .x-fig aspect box, sliders, corner buttons, stepper,
-   the glossary tooltip and <details>, math overflow, prose refs. The article's
-   own inline :root (later in the cascade) overrides --bg / --fg / --c-*. */
+   tabs, the timeline, the glossary tooltip and <details>, math overflow,
+   prose refs. The article's own inline :root (later in the cascade) overrides
+   --bg / --fg / --c-*. This file is the source (no build step writes it);
+   tools/build-runtime.mjs re-hashes it into dist/integrity.json. */
 
 :root {
   color-scheme: light dark;
@@ -226,6 +228,40 @@ a[data-state] { text-decoration-style: dotted; }
 .x-flash { animation: x-flash 1.6s ease-out; }
 @keyframes x-flash { 0%, 30% { background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); } 100% { background-color: transparent; } }
 
+/* ------------------------------------------------------------- tabs */
+/* <div class="x-tabs" id="slug"> of <section data-tab="Label" id="slug-n">. Without the runtime the sections stack and
+   each label is printed from data-tab as a heading; the runtime (data-booted) prepends the tablist and hides every
+   panel but one with the hidden attribute, so a hidden panel's figures have no layout until it shows. */
+.x-tabs { margin: 2.25rem 0; }
+.x-tabs:not([data-booted]) > section[data-tab]::before { content: attr(data-tab); display: block; font: 600 1.6rem/1.15 var(--x-sans); letter-spacing: -0.01em; margin: 3rem 0 0.75rem; }
+.x-tablist { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 1.25rem; padding: 0 0 0.5rem; border-bottom: 1px solid var(--x-rule); }
+.x-tab { font: 600 0.95rem/1 var(--x-sans); color: var(--x-muted); background: none; border: 0; border-radius: 999px; min-height: 2.5rem; padding: 0 1rem; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.x-tab:hover { color: var(--fg); background: var(--x-panel); }
+.x-tab[aria-selected="true"] { color: var(--bg); background: var(--fg); }
+.x-tab:focus-visible { outline: 2px solid var(--x-accent); outline-offset: 2px; }
+.x-tabs > [role="tabpanel"]:focus-visible { outline: 2px solid var(--x-accent); outline-offset: 6px; border-radius: 4px; }
+.x-tabs > [role="tabpanel"] > :first-child { margin-top: 0; }
+
+/* --------------------------------------------------------- timeline */
+/* <ol class="x-timeline"><li><details><summary><time datetime>1984</time> one line</summary> body (prose, a figure)
+   </details></li>: a rail with a dot per entry, the summary one compact line, the open body indented under it.
+   <details> does the opening; the runtime only reveals an entry an in-page link targets. */
+.x-timeline { list-style: none; margin: 2rem 0; padding: 0; position: relative; }
+.x-timeline::before { content: ""; position: absolute; top: 0.6rem; bottom: 0.6rem; left: 5px; width: 2px; border-radius: 1px; background: var(--x-rule); }
+.x-timeline > li { position: relative; margin: 0 0 0.25rem; padding: 0 0 0 1.75rem; }
+.x-timeline > li::before { content: ""; position: absolute; left: 0; top: 0.65rem; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: var(--bg); border: 2px solid var(--x-muted); }
+.x-timeline > li:has(> details[open])::before { background: var(--x-accent); border-color: var(--x-accent); }
+.x-timeline summary { list-style: none; display: flex; gap: 0.75rem; align-items: baseline; margin: 0 -0.5rem; padding: 0.3rem 0.5rem; border-radius: 6px; font: 0.95rem/1.5 var(--x-sans); cursor: pointer; }
+.x-timeline summary::-webkit-details-marker { display: none; }
+.x-timeline summary:hover { background: var(--x-panel); }
+.x-timeline summary:focus-visible { outline: 2px solid var(--x-accent); outline-offset: 2px; }
+.x-timeline summary time { flex: none; min-width: 4ch; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--x-muted); }
+.x-timeline summary::after { content: "›"; margin-left: auto; padding-left: 0.5rem; color: var(--x-muted); font-size: 1.2em; line-height: 1; transition: transform 0.15s ease; }
+.x-timeline details[open] > summary::after { transform: rotate(90deg); }
+.x-timeline details > :not(summary) { margin-left: 1rem; }
+.x-timeline details > p { margin: 0.5rem 0 0.75rem 1rem; }
+.x-timeline details > .x-fig { margin: 1.25rem 0 1.25rem 1rem; }
+
 /* math */
 .x-tex { overflow-x: auto; overflow-y: hidden; padding: 0.15rem 0; -webkit-overflow-scrolling: touch; }
 div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
@@ -245,10 +281,16 @@ div.x-tex { margin: 1.25rem 0; text-align: center; font-size: 1.15rem; }
   .x-corner { bottom: 0.375rem; }
   .x-corner-left { left: 0.375rem; }
   .x-corner-right { right: 0.375rem; }
+  .x-tabs:not([data-booted]) > section[data-tab]::before { font-size: 1.35rem; margin-top: 2.25rem; }
+  .x-tab { min-height: 2.25rem; padding: 0 0.75rem; font-size: 0.9rem; }
+  .x-timeline > li { padding-left: 1.5rem; }
+  .x-timeline summary { gap: 0.5rem; font-size: 0.9rem; }
+  .x-timeline details > :not(summary), .x-timeline details > p { margin-left: 0; }
+  .x-timeline details > .x-fig { margin-left: -0.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .x-ctl-slider .x-knob, .x-key, .x-panel { transition: none; }
+  .x-ctl-slider .x-knob, .x-key, .x-panel, .x-timeline summary::after { transition: none; }
   .x-panel:focus-within { animation: none; box-shadow: 0 0 0 1px color-mix(in srgb, var(--x-accent) 55%, transparent), 0 0 14px 3px color-mix(in srgb, var(--x-accent) 28%, transparent); }
   html { scroll-behavior: auto; }
   .x-flash { animation: none; background-color: color-mix(in srgb, var(--x-accent) 22%, transparent); }

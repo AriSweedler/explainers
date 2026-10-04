@@ -49,6 +49,8 @@ export const ORDER = [
   'lib/site/scene3d.js',
   'lib/site/figure.js',
   'lib/site/term.js',
+  'lib/site/tabs.js',
+  'lib/site/reveal.js',
   'lib/site/glossary.js',
   'lib/site/hooks.js',
   'lib/site/boot.js',
