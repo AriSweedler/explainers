@@ -1,0 +1,63 @@
+{
+  "levels": [
+    {
+      "k": 0,
+      "triangles": 56,
+      "gaussians": 56,
+      "psnr_mesh": 18.44,
+      "psnr_splats": 21.68
+    },
+    {
+      "k": 1,
+      "triangles": 240,
+      "gaussians": 240,
+      "psnr_mesh": 21.97,
+      "psnr_splats": 22.86
+    },
+    {
+      "k": 2,
+      "triangles": 992,
+      "gaussians": 992,
+      "psnr_mesh": 27.66,
+      "psnr_splats": 24.14
+    },
+    {
+      "k": 3,
+      "triangles": 4032,
+      "gaussians": 4032,
+      "psnr_mesh": 34.06,
+      "psnr_splats": 24.94
+    },
+    {
+      "k": 4,
+      "triangles": 16256,
+      "gaussians": 16256,
+      "psnr_mesh": 99,
+      "psnr_splats": 24.73
+    }
+  ],
+  "camera": {
+    "distance": 2.7,
+    "azimuth": 0.6,
+    "polar": 1.15,
+    "fov_deg": 40,
+    "convention": "three-spherical"
+  },
+  "light": [
+    0.3980148760839956,
+    0.6965260331469922,
+    0.5970223141259934
+  ],
+  "ambient": 0.25,
+  "image": [
+    320,
+    200
+  ],
+  "ewa_lowpass_px2": 0.3,
+  "scale": 0.4715058919744526,
+  "center": [
+    0.1376236081123352,
+    0,
+    0
+  ]
+}
