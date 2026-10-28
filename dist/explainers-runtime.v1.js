@@ -262,7 +262,7 @@ this.detail = detail;
 }
 }
 const ERROR_CATALOGUE = Object.freeze({});
-const FIGURE_TYPES = Object.freeze(['scene2d', 'scene3d', 'plot', 'timeline']);
+const FIGURE_TYPES = Object.freeze(['scene2d', 'scene3d', 'plot', 'timeline', 'splat3d']);
 const CONTROL_KINDS = Object.freeze(['slider', 'time', 'drag', 'toggle', 'segmented', 'chips', 'play']);
 const LAYER_KINDS = Object.freeze(['circle', 'ellipse', 'line', 'ray', 'segment', 'arc', 'polygon', 'path', 'arrow', 'region', 'text', 'bars', 'image']);
 const OBJECT_KINDS = Object.freeze(['globe', 'sphere', 'ring', 'disc', 'body', 'arrow', 'part', 'label']);
@@ -448,6 +448,22 @@ lock: f('ref:object', 'panorama: object to track'),
 edgeArrows: f('boolean', 'panorama: arrows toward off-screen objects'),
 };
 SCHEMA.light = { direction: f('point3', 'light direction vector', REQ), ambient: f('number', 'ambient intensity 0..1', REQ) };
+SCHEMA.splatCamera = {
+distance: f('number', 'camera distance', REQ),
+azimuth: f('number', 'initial azimuth (radians)', REQ),
+polar: f('number', 'initial polar angle (radians)', REQ),
+spin: f('number', 'turntable rate in radians per second while the spin control is on (default 0.4)'),
+};
+SCHEMA.splatLevel = {
+value: f('number', 'the budget this level stands for; the slider that drives the figure takes these values', REQ),
+mesh: f('string', 'asset name of the XMSH mesh', REQ),
+splats: f('string', 'asset name of the XSPL Gaussian set', REQ),
+triangles: f('number', 'triangle count of the mesh', REQ),
+gaussians: f('number', 'Gaussian count of the set', REQ),
+psnr_mesh: f('number', 'measured PSNR of the mesh render against the reference, dB'),
+psnr_splats: f('number', 'measured PSNR of the splat render against the reference, dB'),
+};
+SCHEMA.splatTokens = { mesh: f('token', `${TOKEN_DOC} of the mesh`, REQ), splats: f('token', `${TOKEN_DOC} of the Gaussians`, REQ), truth: f('token', `${TOKEN_DOC} of the reference outline`, REQ) };
 SCHEMA.fallback = { poster: f('relpath', 'static image shown without WebGL2', REQ), notice: f('string', 'one-line notice shown with the poster', REQ) };
 SCHEMA.cut = { plane: f('plane', "'x' | 'y' | 'z' or [nx, ny, nz]", REQ), offset: f('expr', 'plane offset along its normal', REQ) };
 SCHEMA.explode = { axis: f('plane', "'x' | 'y' | 'z' or [nx, ny, nz]", REQ), offset: f('expr', 'displacement along the axis', REQ) };
@@ -531,6 +547,19 @@ objects: f(arr('object', 1), 'scene objects', REQ),
 assets: f(map('relpath'), 'asset name -> relative path (textures get @1x/@2x suffixes)'),
 fallback: f(obj(SCHEMA.fallback), 'what to show without WebGL2', REQ),
 split: f(arr(obj(SCHEMA.panel)), '2D companion panels sharing this figure state'),
+...SHOWS_SHARED,
+},
+splat3d: {
+type: f(en('splat3d'), 'figure type', REQ),
+assets: f(map('relpath'), 'asset name -> relative path (.bin meshes in XMSH, Gaussian sets in XSPL)', REQ),
+levels: f(arr(obj(SCHEMA.splatLevel), 1), 'one entry per budget, ascending by value', REQ),
+budget: f('name', 'the slider (values = the levels\' values) that picks the level', REQ),
+spinControl: f('name', 'the toggle that turns the turntable'),
+outlineControl: f('name', 'the toggle that shows the reference wireframe on both halves'),
+camera: f(obj(SCHEMA.splatCamera), 'turntable camera', REQ),
+light: f(obj(SCHEMA.light), 'directional + ambient light, shared by the mesh shading and the baked splat shade', REQ),
+tokens: f(obj(SCHEMA.splatTokens), 'palette tokens of the three drawn things', REQ),
+fallback: f(obj(SCHEMA.fallback), 'what to show without WebGPU (poster: a PNG or SVG the build inserts as the first frame)', REQ),
 ...SHOWS_SHARED,
 },
 };
@@ -979,6 +1008,25 @@ const controls = spec.manipulates.controls;
 const constants = shows.constants || {};
 const cat = { layers: new Map(), objects: new Map(), other: [] };
 collectShows(shows, cat);
+if (shows.type === 'splat3d') {
+for (const id of ['mesh', 'splats', 'truth']) { cat.objects.set(id, { id, kind: 'splat3d' }); declareId(ctx, id, `shows.tokens.${id}`, 'object'); }
+const byName = new Map(spec.manipulates.controls.map((c) => [c.name, c]));
+for (const [i, L] of shows.levels.entries()) {
+for (const k of ['mesh', 'splats']) if (!(L[k] in shows.assets)) ctx.fail('SPEC_MISSING_KEY', `shows.levels[${i}].${k}`, `no asset named "${L[k]}"`);
+if (i > 0 && !(L.value > shows.levels[i - 1].value)) ctx.fail('SPEC_RANGE', `shows.levels[${i}].value`, 'levels must ascend by value');
+}
+const budget = byName.get(shows.budget);
+if (!budget || budget.kind !== 'slider' || !Array.isArray(budget.values)) ctx.fail('SPEC_CONFLICT', 'shows.budget', `"${shows.budget}" must be a slider with values`);
+else {
+const want = shows.levels.map((L) => L.value);
+if (JSON.stringify(budget.values) !== JSON.stringify(want)) ctx.fail('SPEC_CONFLICT', 'shows.budget', `the budget slider's values must be the levels' values [${want.join(', ')}]`);
+}
+for (const k of ['spinControl', 'outlineControl']) {
+if (shows[k] === undefined) continue;
+const c = byName.get(shows[k]);
+if (!c || c.kind !== 'toggle') ctx.fail('SPEC_CONFLICT', `shows.${k}`, `"${shows[k]}" must be a toggle`);
+}
+}
 for (const { id, path } of cat.other) declareId(ctx, id, path, 'series/guide/bar/readout');
 for (const name of Object.keys(constants)) declareId(ctx, name, `shows.constants.${name}`, 'constant');
 const scope = new Map();
@@ -1040,7 +1088,7 @@ notice.states.forEach((st, i) => {
 const path = `notice.states[${i}]`;
 if (seen.has(st.name)) ctx.fail('SPEC_DUP_ID', `${path}.name`, `state "${st.name}" declared twice`);
 seen.add(st.name);
-if (st.camera && shows.type !== 'scene3d') ctx.fail('SPEC_CONFLICT', `${path}.camera`, 'camera applies to scene3d figures only');
+if (st.camera && shows.type !== 'scene3d' && shows.type !== 'splat3d') ctx.fail('SPEC_CONFLICT', `${path}.camera`, 'camera applies to scene3d and splat3d figures only');
 for (const [k, v] of Object.entries(st)) {
 if (k in SCHEMA.stateFixed) continue;
 const c = controlByName.get(k);
@@ -2705,6 +2753,34 @@ box.append(wrap);
 return wrap;
 }
 
+// ---- lib/site/gpu.js
+const GPU_CHUNK_NAME = 'explainers-gpu.v1.js';
+const RUNTIME_SRC_GPU = typeof document !== 'undefined' && document.currentScript && document.currentScript.src ? document.currentScript.src : '';
+function gpuChunkUrl(runtimeSrc = RUNTIME_SRC_GPU, base = typeof document !== 'undefined' ? document.baseURI : 'http://localhost/') {
+return new URL(GPU_CHUNK_NAME, runtimeSrc || base).href;
+}
+let gpuChunkPromise = null;
+function loadSplat3d() {
+if (!gpuChunkPromise) gpuChunkPromise = Promise.resolve(gpuChunkUrl()).then((url) => import(/* the lazy GPU chunk, same origin */ url));
+return gpuChunkPromise;
+}
+function hasWebGPU(nav = typeof navigator !== 'undefined' ? navigator : null) {
+return !!(nav && nav.gpu && typeof nav.gpu.requestAdapter === 'function');
+}
+function mountSplat3dFallback(box, shows, { hasPoster = false, reason = '' } = {}) {
+const wrap = h('div', { class: 'x-3d-fallback' });
+if (!hasPoster && shows.fallback && shows.fallback.poster) {
+const img = h('img', { class: 'x-3d-poster', src: shows.fallback.poster, alt: '' });
+img.addEventListener('error', () => img.remove());
+wrap.append(img);
+}
+const noGpu = !reason || reason === 'no WebGPU';
+const text = noGpu ? ((shows.fallback && shows.fallback.notice) || 'This figure needs WebGPU; its first frame is shown.') : 'This figure could not start; its first frame is shown.';
+wrap.append(h('p', { class: 'x-3d-notice', title: reason || null }, text));
+box.append(wrap);
+return wrap;
+}
+
 // ---- lib/site/figure.js
 const MIRROR_DELAY_MS = 300;
 const CORNER_PAD_PX = 8; // gap between the corner buttons and anything drawn
@@ -2714,7 +2790,8 @@ const spec = compiled.spec;
 const controls = spec.manipulates.controls;
 const scope = new Map(compiled.defaults);
 const fig = { id: el.id, el, compiled, scope, fmt: env.fmt, playing: false, activeState: null, visible: false, mounted: false, visibleIds: new Set() };
-const is3d = compiled.type === 'scene3d';
+const isGpu = compiled.type === 'splat3d';
+const is3d = compiled.type === 'scene3d' || isGpu; // both mount through a lazy chunk and keep the poster until the first frame
 const figcaption = el.querySelector(':scope > figcaption');
 const panel = h('div', { class: 'x-panel' });
 el.append(panel);
@@ -2822,6 +2899,7 @@ fig.view = scene ? scene.view : null;
 function requestScene3d() {
 if (sceneRequested) return;
 sceneRequested = true;
+if (isGpu) { requestSplat3d(); return; }
 const fallback = (reason) => { mountScene3dFallback(box, spec.shows, { hasPoster: !!poster, reason }); el.dataset.fallback = ''; };
 if (!hasWebGL2(window)) { fallback('no WebGL2'); return; }
 loadScene3d().then((mod) => {
@@ -2831,6 +2909,19 @@ tokens: env.tokens, dpr: env.dpr, font: env.font, fmt: env.fmt, drags, reduced: 
 baseUrl: document.baseURI, box, requestDraw: () => requestDraw(),
 lib: { createScene2d, splitBoxes, worldToPx, fitCanvas, getter, compileTemplate, renderTemplate, compileReadout, drawReadout, applyModel },
 });
+attachScene(s);
+if (fig.visible && layout()) { fig.draw(); markMounted(); }
+}).catch((e) => { if (!disposed) fallback(e && e.message ? e.message : String(e)); });
+}
+function requestSplat3d() {
+const fallback = (reason) => { mountSplat3dFallback(box, spec.shows, { hasPoster: !!poster, reason }); el.dataset.fallback = ''; };
+if (!hasWebGPU()) { fallback('no WebGPU'); return; }
+loadSplat3d().then((mod) => mod.mountSplat3d(canvas, compiled, {
+tokens: env.tokens, dpr: env.dpr, font: env.font, fmt: env.fmt, reduced: env.reduced, coarse: env.coarse,
+baseUrl: document.baseURI, box, requestDraw: () => requestDraw(),
+lib: { fitCanvas, compileTemplate, renderTemplate, compileReadout, drawReadout, worldToPx },
+})).then((s) => {
+if (disposed) { if (s && s.dispose) s.dispose(); return; }
 attachScene(s);
 if (fig.visible && layout()) { fig.draw(); markMounted(); }
 }).catch((e) => { if (!disposed) fallback(e && e.message ? e.message : String(e)); });
@@ -3075,7 +3166,8 @@ if (c) return { token: c.token || null, dashed: false };
 const R = scene && scene.readouts.find((r) => r.id === refId);
 if (R) return { token: R.spec.token, dashed: false };
 if (is3d) {
-const o = spec.shows.objects.find((x) => x.id === refId);
+const o = (spec.shows.objects || []).find((x) => x.id === refId);
+if (isGpu && spec.shows.tokens[refId]) return { token: spec.shows.tokens[refId], dashed: refId === 'truth' };
 if (o) return { token: o.color || null, dashed: false };
 }
 return { token: null, dashed: false };
@@ -3369,7 +3461,7 @@ const compiled = compileFigure(el, names);
 if (!compiled) continue;
 const fig = createFigure(el, compiled, env);
 figures.set(el.id, fig);
-observe(el, { rootMargin: compiled.type === 'scene3d' ? '400px' : '100px', onEnter: () => fig.setVisible(true), onLeave: () => fig.setVisible(false) });
+observe(el, { rootMargin: compiled.type === 'scene3d' || compiled.type === 'splat3d' ? '400px' : '100px', onEnter: () => fig.setVisible(true), onLeave: () => fig.setVisible(false) });
 }
 const tabs = mountTabs(doc, win);
 mountReveal(doc, tabs);

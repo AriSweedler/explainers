@@ -14,6 +14,7 @@ import { checkOgImage } from './og.mjs';
 import path from 'node:path';
 
 const CHUNK_NAME = 'explainers-3d.v1.js';
+const GPU_CHUNK_NAME = 'explainers-gpu.v1.js'; // lib/site/gpu.js GPU_CHUNK_NAME
 
 const ALLOWED_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
 const FIG_ID_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
@@ -181,13 +182,19 @@ function checkComponents({ file, doc }, problems) {
 // Warning: a scene3d figure needs the lazy chunk next to the runtime include
 // (a dynamic import(), so no integrity attribute names it; this is the deploy check).
 function checkChunk({ file, doc }, figures, repoRoot, problems) {
-  if (![...figures.values()].some((c) => c && c.type === 'scene3d')) return;
+  const types = new Set([...figures.values()].filter(Boolean).map((c) => c.type));
+  const wanted = [];
+  if (types.has('scene3d')) wanted.push({ type: 'scene3d', name: CHUNK_NAME, cmd: 'node tools/build-3d.mjs' });
+  if (types.has('splat3d')) wanted.push({ type: 'splat3d', name: GPU_CHUNK_NAME, cmd: 'node tools/build-gpu.mjs' });
+  if (!wanted.length) return;
   const runtime = byTag(doc, 'script').map((s) => attr(s, 'src')).find((src) => src && /(^|\/)dist\/explainers-runtime\.v\d+\.js(\?[^#]*)?$/.test(src));
   if (!runtime) return;
   const dir = path.dirname(runtime.replace(/[?#].*$/, ''));
-  const local = path.resolve(path.dirname(file), dir, CHUNK_NAME);
-  const fromRoot = path.join(repoRoot, 'dist', CHUNK_NAME); // fixtures outside articles/ measure the repo's dist/
-  if (!fs.existsSync(local) && !fs.existsSync(fromRoot)) problems.warn(file, 0, null, `scene3d figure(s) but the lazy chunk ${path.posix.join(dir, CHUNK_NAME)} is not found beside the runtime; run: node tools/build-3d.mjs`);
+  for (const w of wanted) {
+    const local = path.resolve(path.dirname(file), dir, w.name);
+    const fromRoot = path.join(repoRoot, 'dist', w.name); // fixtures outside articles/ measure the repo's dist/
+    if (!fs.existsSync(local) && !fs.existsSync(fromRoot)) problems.warn(file, 0, null, `${w.type} figure(s) but the lazy chunk ${path.posix.join(dir, w.name)} is not found beside the runtime; run: ${w.cmd}`);
+  }
 }
 
 export function validateArticle(article, { repoRoot, budget, problems }) {

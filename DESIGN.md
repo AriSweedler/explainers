@@ -30,7 +30,7 @@ Ids (`id`) match `[A-Za-z_][A-Za-z0-9_-]*`. Identifiers (`name`, constants, mode
 
 ### Figure types (`shows`)
 
-Figure types: `scene2d`, `scene3d`, `plot`, `timeline`. Every `shows` object has `type`.
+Figure types: `scene2d`, `scene3d`, `plot`, `timeline`, `splat3d`. Every `shows` object has `type`.
 
 #### shows: scene2d
 
@@ -85,6 +85,25 @@ Figure types: `scene2d`, `scene3d`, `plot`, `timeline`. Every `shows` object has
 | `x` | object (below) | yes | time axis |
 | `bars` | array of object (below) (min 1) | yes | one horizontal bar per clock |
 | `marker` | object (below) |  | current-time marker |
+| `constants` | map of identifier -> constant |  | name -> number, or {value, expect, tol} for a derived number |
+| `model` | object (below) |  | library model whose outputs join the scope as <name>.<output> |
+| `readouts` | array of object (below) |  | text readouts drawn over the figure |
+| `caveats` | object (below) |  | honesty flags the build echoes in the caption |
+
+#### shows: splat3d
+
+| key | type | required | meaning |
+|---|---|---|---|
+| `type` | `splat3d` | yes | figure type |
+| `assets` | map of identifier -> relative path | yes | asset name -> relative path (.bin meshes in XMSH, Gaussian sets in XSPL) |
+| `levels` | array of object (below) (min 1) | yes | one entry per budget, ascending by value |
+| `budget` | identifier | yes | the slider (values = the levels' values) that picks the level |
+| `spinControl` | identifier |  | the toggle that turns the turntable |
+| `outlineControl` | identifier |  | the toggle that shows the reference wireframe on both halves |
+| `camera` | object (below) | yes | turntable camera |
+| `light` | object (below) | yes | directional + ambient light, shared by the mesh shading and the baked splat shade |
+| `tokens` | object (below) | yes | palette tokens of the three drawn things |
+| `fallback` | object (below) | yes | what to show without WebGPU (poster: a PNG or SVG the build inserts as the first frame) |
 | `constants` | map of identifier -> constant |  | name -> number, or {value, expect, tol} for a derived number |
 | `model` | object (below) |  | library model whose outputs join the scope as <name>.<output> |
 | `readouts` | array of object (below) |  | text readouts drawn over the figure |
@@ -231,6 +250,31 @@ A constant is a number, or an object for a derived number:
 |---|---|---|---|
 | `poster` | relative path | yes | static image shown without WebGL2 |
 | `notice` | string | yes | one-line notice shown with the poster |
+
+#### splat3d: camera, levels[], tokens
+
+| key | type | required | meaning |
+|---|---|---|---|
+| `distance` | number | yes | camera distance |
+| `azimuth` | number | yes | initial azimuth (radians) |
+| `polar` | number | yes | initial polar angle (radians) |
+| `spin` | number |  | turntable rate in radians per second while the spin control is on (default 0.4) |
+
+| key | type | required | meaning |
+|---|---|---|---|
+| `value` | number | yes | the budget this level stands for; the slider that drives the figure takes these values |
+| `mesh` | string | yes | asset name of the XMSH mesh |
+| `splats` | string | yes | asset name of the XSPL Gaussian set |
+| `triangles` | number | yes | triangle count of the mesh |
+| `gaussians` | number | yes | Gaussian count of the set |
+| `psnr_mesh` | number |  | measured PSNR of the mesh render against the reference, dB |
+| `psnr_splats` | number |  | measured PSNR of the splat render against the reference, dB |
+
+| key | type | required | meaning |
+|---|---|---|---|
+| `mesh` | token | yes | palette token name (--c-<name>) of the mesh |
+| `splats` | token | yes | palette token name (--c-<name>) of the Gaussians |
+| `truth` | token | yes | palette token name (--c-<name>) of the reference outline |
 
 ### Layers (scene2d `layers[]`)
 
@@ -743,7 +787,7 @@ What `validate` checks outside the specs:
 
 - exactly one `<main>` (`HTML_MAIN_MISSING`); the runtime `<script defer src=".../dist/explainers-runtime.v1.js">` and `<link rel="stylesheet" href=".../dist/explainers.v1.css">` are present (`HTML_INCLUDE_MISSING`); no other `<script>` than those and the figure JSON blocks (`HTML_SCRIPT_FORBIDDEN`).
 - integrity: both includes carry `integrity="sha384-..."` equal to their entry in `dist/integrity.json` (`INTEGRITY_MISSING` when the attribute is absent, `INTEGRITY_STALE` when it differs). The template ships the literal placeholders `integrity="{{integrity:dist/explainers-runtime.v1.js}}"` and `integrity="{{integrity:dist/explainers.v1.css}}"`; an article that still carries them is unbuilt and gets a warning ("run: explainers build"), like a formula without `data-tex`. Same-origin SRI needs no `crossorigin` attribute. `node tools/build-runtime.mjs` rewrites `dist/integrity.json` whenever the runtime or the stylesheet changes, and every article then needs `build` again.
-- posters: every interactive figure has a current first frame as its first child, `<svg class="x-poster" id="<fig>-poster" data-poster="<sha1>">` inline or `<img class="x-poster" src="assets/poster-<fig>.svg" width height data-poster>` when the SVG exceeds 8 KiB (warnings: "no poster", "poster is stale", "poster file ... not found"; `build` fixes all three). The hash covers the emitter version and width, the spec, `data-aspect` and the palette values (the hashed tuple keeps its 3A shape with a trailing, now empty, caption slot, so no 2D poster re-hashed when 3B stopped drawing the caption into scene3d posters). A scene3d figure whose `fallback.poster` is exactly `assets/poster-<fig>.svg` also gets that file written by `build` (the same first frame; warnings "fallback poster ... not found" / "is stale"), and an article with a scene3d figure warns when `dist/explainers-3d.v1.js` is not found beside the runtime include.
+- posters: every interactive figure has a current first frame as its first child, `<svg class="x-poster" id="<fig>-poster" data-poster="<sha1>">` inline or `<img class="x-poster" src="assets/poster-<fig>.svg" width height data-poster>` when the SVG exceeds 8 KiB (warnings: "no poster", "poster is stale", "poster file ... not found"; `build` fixes all three). The hash covers the emitter version and width, the spec, `data-aspect` and the palette values (the hashed tuple keeps its 3A shape with a trailing, now empty, caption slot, so no 2D poster re-hashed when 3B stopped drawing the caption into scene3d posters). A scene3d figure whose `fallback.poster` is exactly `assets/poster-<fig>.svg` also gets that file written by `build` (the same first frame; warnings "fallback poster ... not found" / "is stale"), and an article with a scene3d figure warns when `dist/explainers-3d.v1.js` is not found beside the runtime include (a splat3d figure likewise for `dist/explainers-gpu.v1.js`). A splat3d figure's poster is its `fallback.poster` image inserted as `<img class="x-poster" src width height data-poster>`; its hash also covers the image bytes (warnings "fallback poster ... not found; render it", "poster is stale").
 - link preview: the head carries `og:title`, `og:type`, `og:url`, `og:description`, `og:site_name` ("Explainers"), `og:image` = `<og:url>assets/og.png` with `og:image:width` 1200, `og:image:height` 630 and `og:image:type` image/png, `twitter:card` summary_large_image, and `<link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">` (Messages ignores the SVG favicon and shows a 180 x 180 PNG beside the card). `assets/og.png` is the 1200 x 630 card `tools/og-image.mjs` renders from `template/og-card.html` (title, description, the palette `<style>` so `var(--c-*)` resolves, the first `.x-poster`; light scheme only) with a headless-only Chromium; `build` does not produce it, so it is re-rendered by hand when the title, description or hero figure changes. When `og:image` ends in `assets/og.png`, `validate` warns if the file is missing, is not a PNG (the 8-byte signature and the IHDR chunk, no library) or is not 1200 x 630 (`file:line: warning -: og:image assets/og.png not found; run: node tools/og-image.mjs <article>`). `index.html` carries the same tags for `https://explainers.sweedler.com/` and the front page card `assets/og.png` (`node tools/og-image.mjs --site`, which also writes the touch icon).
 - every `src`/`href` is relative or a fragment (`URL_ABSOLUTE`), except `fonts.googleapis.com`, `fonts.gstatic.com`, `data:` URIs and `<a rel="external">`. Articles live at `articles/<slug>/index.html` and reach the runtime with `../../dist/...`, so the same file works at `<user>.github.io/explainers/`, behind the `explainers.sweedler.com` redirect, and from disk. (`404.html` is the one exception: GitHub Pages serves it at any depth.)
 - palette: 1..12 `--c-<name>` tokens in an inline `<style>` (`PALETTE_MISSING`, `PALETTE_TOO_MANY`), each `light-dark(#l, #d)` with >= 3:1 contrast against `--bg` (`PALETTE_CONTRAST`; skipped with a warning when values are not hex `light-dark()`).
@@ -1127,3 +1171,4 @@ World units are the spec's; y is up; the camera pose is `{ azimuth, polar, dista
 36. **A timeline is `<ol class="x-timeline">` of `<details>`, and revealing is one generic walk.** `<details>` already gives the open/close, the keyboard and the no-JavaScript reading, so the runtime adds nothing to the entries; the stylesheet draws the rail, the dots and the one-line summary. What the glossary did for `#g-*` (open the `<details>` before the browser scrolls) is generalized into `revealTarget(el)`: walk the ancestors, open each closed `<details>`, select each unshown tab panel; it runs on every `a[href^="#"]` click before the browser's own navigation, and boot's hash routing and `glossary.js` call it too. Figures inside a `<details>` mount by the same mechanism as in a tab (the body gets layout, the observers fire); `figure.js` additionally refuses to size a box with no `offsetWidth` and leaves it to the `ResizeObserver`, so no figure is ever laid out at zero width. No expand-all control: the entries are the reader's to open.
 37. **`chips` beside `segmented`, not instead of it.** A segmented row is a radio group: one value, few options, one pill whose width is the sum of its labels, and with eleven options that pill spilled past the reading column. Chips are the other shape: many options, several pressed at once (within `min`/`max`, default 1 to all), and a row that scrolls sideways inside the panel (one line, scroll-snap, a thin scrollbar, a fade on the edge with more behind it) so the figure never grows wider than its column. The scope stays flat and numeric: `<name>.<key>` is 0 or 1 per option and `<name>.count` the number pressed (registered the way a drag registers `<name>.x`), so a layer's `visible: "p.sec"` and a readout's `{p.count:,d}` need no new grammar; a state carries `"<name>": ["key", …]` (an array, validated against the keys and the count), the nearness rule counts one unit per chip that differs (equality by set), and a `goto` snaps every flag at the midpoint like a toggle. Keyboard: ← → move between chips (wrapping) and scroll the focused one into view, Home/End jump, Space/Enter toggle, one chip tabbable at a time; the stepper leaves ← → to a focused chip as it does to a segmented control. A refused toggle (it would cross `min` or `max`) shakes the chip and changes nothing; there is no alert.
 38. **`opacity` is a layer key, not a palette trick.** A translucent shape (a splat, a glass pane, a ghosted alternative) was only expressible by a fourth palette token with alpha baked into its hex, which the contrast check cannot read and every reader sees as a different color. `opacity` on a scene2d layer is a number or an expression, clamped to 0..1 at draw time, multiplied into the alpha the state fades already own; the canvas paints it with `globalAlpha` and the poster writes the same value as an SVG `opacity` attribute on the shape (and on its halo and label), so the first frame matches the live figure. It joins the expression list like `visible`, so `states` proves it finite at every declared state. It does not hide: a layer at opacity 0 still counts as drawn for `visibleIds`, prose refs and `point_at`, since the author chose to draw it; `visible` remains the switch.
+39. **`splat3d` is a second lazy chunk, on WebGPU, drawing two pictures of one thing.** The Gaussian-splat hero needs tens of thousands of sorted, alpha-composited, anisotropic 2D Gaussians per frame, which Canvas 2D cannot do at frame rate and the three.js chunk would do through a custom material fighting its own depth sort. So `splat3d` has its own renderer, `lib/gpu/` bundled by `tools/build-gpu.mjs` into `dist/explainers-gpu.v1.js` (no dependencies, ~7 KB gzipped), imported by `lib/site/gpu.js` on the first approach of such a figure and never part of the runtime bundle; without `navigator.gpu` the poster stays and the spec's notice goes over it, as for scene3d without WebGL2. The figure is fixed in shape on purpose: one object, one turntable camera (`camera.distance/azimuth/polar`, the scene3d spherical convention, `spin` radians per second while the spin toggle is on, drag to turn), one directional light shared by the Lambert mesh shading and the shade baked into every Gaussian, the triangle mesh (XMSH, the scene3d format) in the left half and the Gaussians (XSPL: 11 floats per splat, position, the six unique covariance entries, shade, opacity) in the right, one `levels[]` entry per budget naming both assets and their measured PSNR, the level picked by a slider whose `values` must equal the levels' values (checked), and two optional toggles, spin and the reference wireframe (the finest mesh's unique edges over both halves). Projection follows EWA splatting and 3DGS: Σ′ = J W Σ Wᵀ Jᵀ plus 0.3 px² on the diagonal, a quad of radius 3√λmax per splat, the conic evaluated per fragment, α = min(0.99, opacity·e^power), α < 1/255 discarded, premultiplied over blending back to front after a counting sort on view depth each frame, no depth test; the mesh and the wireframe use the depth buffer. The three things prose may point at are the virtual objects `mesh`, `splats` and `truth` (their tokens from `tokens`), not layers. The poster is not drawn by the build: a splat3d figure's `fallback.poster` is an image rendered offline from the same assets and camera, inserted as `<img class="x-poster">` and hashed together with the spec, so a re-render refreshes the first frame like a spec edit does, and validate reports a missing image rather than drawing one. Readouts over the figure use the scene3d rule (`at` as fractions of the box, y up); the chunk draws the decibel lead from the level's PSNR pair itself, since the expression grammar has no table lookup.

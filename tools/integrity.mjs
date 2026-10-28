@@ -12,7 +12,8 @@ import crypto from 'node:crypto';
 export const INTEGRITY_FILE = 'dist/integrity.json';
 export const INTEGRITY_INCLUDES = ['dist/explainers-runtime.v1.js', 'dist/explainers.v1.css']; // carry integrity= in the template
 export const CHUNK_FILE = 'dist/explainers-3d.v1.js';                                           // dynamic import(): manifest entry only
-export const INTEGRITY_FILES = [...INTEGRITY_INCLUDES, CHUNK_FILE];
+export const GPU_CHUNK_FILE = 'dist/explainers-gpu.v1.js';                                      // dynamic import(): manifest entry only
+export const INTEGRITY_FILES = [...INTEGRITY_INCLUDES, CHUNK_FILE, GPU_CHUNK_FILE];
 
 export const sha384 = (buf) => `sha384-${crypto.createHash('sha384').update(buf).digest('base64')}`;
 

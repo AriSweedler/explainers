@@ -406,7 +406,7 @@ var ERROR_CATALOGUE = Object.freeze({
   // budget
   BUDGET_OVER: "gzip bytes of HTML + runtime + CSS + KaTeX CSS exceed --budget"
 });
-var FIGURE_TYPES = Object.freeze(["scene2d", "scene3d", "plot", "timeline"]);
+var FIGURE_TYPES = Object.freeze(["scene2d", "scene3d", "plot", "timeline", "splat3d"]);
 var CONTROL_KINDS = Object.freeze(["slider", "time", "drag", "toggle", "segmented", "chips", "play"]);
 var LAYER_KINDS = Object.freeze(["circle", "ellipse", "line", "ray", "segment", "arc", "polygon", "path", "arrow", "region", "text", "bars", "image"]);
 var OBJECT_KINDS = Object.freeze(["globe", "sphere", "ring", "disc", "body", "arrow", "part", "label"]);
@@ -599,6 +599,22 @@ SCHEMA.camera = {
   edgeArrows: f("boolean", "panorama: arrows toward off-screen objects")
 };
 SCHEMA.light = { direction: f("point3", "light direction vector", REQ), ambient: f("number", "ambient intensity 0..1", REQ) };
+SCHEMA.splatCamera = {
+  distance: f("number", "camera distance", REQ),
+  azimuth: f("number", "initial azimuth (radians)", REQ),
+  polar: f("number", "initial polar angle (radians)", REQ),
+  spin: f("number", "turntable rate in radians per second while the spin control is on (default 0.4)")
+};
+SCHEMA.splatLevel = {
+  value: f("number", "the budget this level stands for; the slider that drives the figure takes these values", REQ),
+  mesh: f("string", "asset name of the XMSH mesh", REQ),
+  splats: f("string", "asset name of the XSPL Gaussian set", REQ),
+  triangles: f("number", "triangle count of the mesh", REQ),
+  gaussians: f("number", "Gaussian count of the set", REQ),
+  psnr_mesh: f("number", "measured PSNR of the mesh render against the reference, dB"),
+  psnr_splats: f("number", "measured PSNR of the splat render against the reference, dB")
+};
+SCHEMA.splatTokens = { mesh: f("token", `${TOKEN_DOC} of the mesh`, REQ), splats: f("token", `${TOKEN_DOC} of the Gaussians`, REQ), truth: f("token", `${TOKEN_DOC} of the reference outline`, REQ) };
 SCHEMA.fallback = { poster: f("relpath", "static image shown without WebGL2", REQ), notice: f("string", "one-line notice shown with the poster", REQ) };
 SCHEMA.cut = { plane: f("plane", "'x' | 'y' | 'z' or [nx, ny, nz]", REQ), offset: f("expr", "plane offset along its normal", REQ) };
 SCHEMA.explode = { axis: f("plane", "'x' | 'y' | 'z' or [nx, ny, nz]", REQ), offset: f("expr", "displacement along the axis", REQ) };
@@ -682,6 +698,19 @@ SCHEMA.shows = {
     assets: f(map("relpath"), "asset name -> relative path (textures get @1x/@2x suffixes)"),
     fallback: f(obj(SCHEMA.fallback), "what to show without WebGL2", REQ),
     split: f(arr(obj(SCHEMA.panel)), "2D companion panels sharing this figure state"),
+    ...SHOWS_SHARED
+  },
+  splat3d: {
+    type: f(en("splat3d"), "figure type", REQ),
+    assets: f(map("relpath"), "asset name -> relative path (.bin meshes in XMSH, Gaussian sets in XSPL)", REQ),
+    levels: f(arr(obj(SCHEMA.splatLevel), 1), "one entry per budget, ascending by value", REQ),
+    budget: f("name", "the slider (values = the levels' values) that picks the level", REQ),
+    spinControl: f("name", "the toggle that turns the turntable"),
+    outlineControl: f("name", "the toggle that shows the reference wireframe on both halves"),
+    camera: f(obj(SCHEMA.splatCamera), "turntable camera", REQ),
+    light: f(obj(SCHEMA.light), "directional + ambient light, shared by the mesh shading and the baked splat shade", REQ),
+    tokens: f(obj(SCHEMA.splatTokens), "palette tokens of the three drawn things", REQ),
+    fallback: f(obj(SCHEMA.fallback), "what to show without WebGPU (poster: a PNG or SVG the build inserts as the first frame)", REQ),
     ...SHOWS_SHARED
   }
 };
@@ -1179,6 +1208,28 @@ function checkSemantics(spec, ctx) {
   const constants = shows.constants || {};
   const cat = { layers: /* @__PURE__ */ new Map(), objects: /* @__PURE__ */ new Map(), other: [] };
   collectShows(shows, cat);
+  if (shows.type === "splat3d") {
+    for (const id of ["mesh", "splats", "truth"]) {
+      cat.objects.set(id, { id, kind: "splat3d" });
+      declareId(ctx, id, `shows.tokens.${id}`, "object");
+    }
+    const byName = new Map(spec.manipulates.controls.map((c) => [c.name, c]));
+    for (const [i2, L] of shows.levels.entries()) {
+      for (const k of ["mesh", "splats"]) if (!(L[k] in shows.assets)) ctx.fail("SPEC_MISSING_KEY", `shows.levels[${i2}].${k}`, `no asset named "${L[k]}"`);
+      if (i2 > 0 && !(L.value > shows.levels[i2 - 1].value)) ctx.fail("SPEC_RANGE", `shows.levels[${i2}].value`, "levels must ascend by value");
+    }
+    const budget = byName.get(shows.budget);
+    if (!budget || budget.kind !== "slider" || !Array.isArray(budget.values)) ctx.fail("SPEC_CONFLICT", "shows.budget", `"${shows.budget}" must be a slider with values`);
+    else {
+      const want = shows.levels.map((L) => L.value);
+      if (JSON.stringify(budget.values) !== JSON.stringify(want)) ctx.fail("SPEC_CONFLICT", "shows.budget", `the budget slider's values must be the levels' values [${want.join(", ")}]`);
+    }
+    for (const k of ["spinControl", "outlineControl"]) {
+      if (shows[k] === void 0) continue;
+      const c = byName.get(shows[k]);
+      if (!c || c.kind !== "toggle") ctx.fail("SPEC_CONFLICT", `shows.${k}`, `"${shows[k]}" must be a toggle`);
+    }
+  }
   for (const { id, path: path8 } of cat.other) declareId(ctx, id, path8, "series/guide/bar/readout");
   for (const name of Object.keys(constants)) declareId(ctx, name, `shows.constants.${name}`, "constant");
   const scope = /* @__PURE__ */ new Map();
@@ -1255,7 +1306,7 @@ function checkSemantics(spec, ctx) {
     const path8 = `notice.states[${i2}]`;
     if (seen.has(st.name)) ctx.fail("SPEC_DUP_ID", `${path8}.name`, `state "${st.name}" declared twice`);
     seen.add(st.name);
-    if (st.camera && shows.type !== "scene3d") ctx.fail("SPEC_CONFLICT", `${path8}.camera`, "camera applies to scene3d figures only");
+    if (st.camera && shows.type !== "scene3d" && shows.type !== "splat3d") ctx.fail("SPEC_CONFLICT", `${path8}.camera`, "camera applies to scene3d and splat3d figures only");
     for (const [k, v] of Object.entries(st)) {
       if (k in SCHEMA.stateFixed) continue;
       const c = controlByName.get(k);
@@ -1440,6 +1491,7 @@ ${modelsTable()}`));
   out.push(section(4, "plot: x, y, series[], marker, guides[]", [table(SCHEMA.plotAxisX), table(SCHEMA.plotAxisY), table(SCHEMA.series), table(SCHEMA.marker), table(SCHEMA.guide)].join("\n\n")));
   out.push(section(4, "timeline: x, bars[]", [table(SCHEMA.timelineAxis), table(SCHEMA.bar)].join("\n\n")));
   out.push(section(4, "scene3d: camera, light, fallback", [table(SCHEMA.camera), table(SCHEMA.light), table(SCHEMA.fallback)].join("\n\n")));
+  out.push(section(4, "splat3d: camera, levels[], tokens", [table(SCHEMA.splatCamera), table(SCHEMA.splatLevel), table(SCHEMA.splatTokens)].join("\n\n")));
   out.push(section(3, "Layers (scene2d `layers[]`)", `Layer kinds: ${LAYER_KINDS.map((k) => `\`${k}\``).join(", ")}.
 
 Keys common to every layer:
@@ -25331,7 +25383,7 @@ function posterSvg(specOrCompiled, scopeOrState = null, { aspect = "3:2", tokens
   const { width: W, height: H } = posterSize(aspect);
   const out = new Emitter(id, tokens);
   if (compiled.type === "scene3d") out.scene3d(compiled, scope, W, H);
-  else out.scene(compiled, scope, W, H);
+  else if (compiled.type !== "splat3d") out.scene(compiled, scope, W, H);
   return out.svg(W, H, hash);
 }
 
@@ -25349,20 +25401,31 @@ function posterTokens(palette) {
   if (palette.fg) t.set("--fg", palette.fg.value);
   return t;
 }
-function posterHash(spec, aspect, tokens) {
-  return import_node_crypto.default.createHash("sha1").update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], ""])).digest("hex");
+function posterHash(spec, aspect, tokens, extra = "") {
+  return import_node_crypto.default.createHash("sha1").update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], extra])).digest("hex");
+}
+var isGpuPoster = (compiled) => compiled.type === "splat3d";
+function gpuPoster(compiled, file) {
+  const rel2 = compiled.spec.shows.fallback.poster, abs = import_node_path3.default.resolve(import_node_path3.default.dirname(file), rel2);
+  const bytes = import_node_fs3.default.existsSync(abs) ? import_node_fs3.default.readFileSync(abs) : null;
+  return { rel: rel2, abs, bytes, digest: bytes ? import_node_crypto.default.createHash("sha1").update(bytes).digest("hex") : "missing" };
 }
 var wantsFallbackFile = (compiled, id) => compiled.type === "scene3d" && compiled.spec.shows.fallback.poster === posterPath(id);
-function plan(fig, compiled, tokens) {
+function plan(fig, compiled, tokens, file) {
   const id = attr(fig, "id"), aspect = attr(fig, "data-aspect") || "3:2";
-  return { id, aspect, hash: posterHash(compiled.spec, aspect, tokens), existing: posterChild(fig), fallbackFile: wantsFallbackFile(compiled, id) };
+  const gpu = isGpuPoster(compiled) ? gpuPoster(compiled, file) : null;
+  return { id, aspect, hash: posterHash(compiled.spec, aspect, tokens, gpu ? gpu.digest : ""), existing: posterChild(fig), fallbackFile: wantsFallbackFile(compiled, id), gpu };
 }
 function checkPosters(doc, file, figures, palette, problems) {
   const tokens = posterTokens(palette);
   for (const fig of figureEls(doc)) {
     const id = attr(fig, "id"), compiled = figures.get(id);
     if (!compiled) continue;
-    const p = plan(fig, compiled, tokens);
+    const p = plan(fig, compiled, tokens, file);
+    if (p.gpu && !p.gpu.bytes) {
+      problems.warn(file, line(fig), id, `fallback poster ${p.gpu.rel} not found; render it (a splat3d poster is not drawn by the build)`);
+      continue;
+    }
     if (!p.existing) {
       problems.warn(file, line(fig), id, "no poster; run: explainers build");
       continue;
@@ -25388,7 +25451,26 @@ function buildPosters(doc, html, file, figures, palette) {
   for (const fig of figureEls(doc)) {
     const id = attr(fig, "id"), compiled = figures.get(id);
     if (!compiled) continue;
-    const p = plan(fig, compiled, tokens);
+    const p = plan(fig, compiled, tokens, file);
+    if (p.gpu) {
+      if (!p.gpu.bytes) continue;
+      const current2 = p.existing && p.existing.tagName === "img" && attr(p.existing, "data-poster") === p.hash && attr(p.existing, "src") === p.gpu.rel;
+      if (current2) {
+        external.push(id);
+        continue;
+      }
+      const { width, height } = posterSize(p.aspect);
+      const markup2 = `<img class="x-poster" src="${p.gpu.rel}" alt="" width="${width}" height="${height}" aria-hidden="true" data-poster="${p.hash}">`;
+      if (p.existing) edits.push({ start: p.existing.sourceCodeLocation.startOffset, end: p.existing.sourceCodeLocation.endOffset, text: markup2 });
+      else {
+        const at = fig.sourceCodeLocation.startTag.endOffset;
+        edits.push({ start: at, end: at, text: `
+${markup2}` });
+      }
+      external.push(id);
+      count++;
+      continue;
+    }
     const rel2 = posterPath(id), abs = import_node_path3.default.resolve(import_node_path3.default.dirname(file), rel2);
     const svg = posterSvg(compiled, null, { aspect: p.aspect, tokens, id, hash: p.hash });
     const writeFile = () => {
@@ -25489,6 +25571,7 @@ function checkOgImage(doc, file, problems) {
 // tools/src/article.mjs
 var import_node_path5 = __toESM(require("node:path"), 1);
 var CHUNK_NAME = "explainers-3d.v1.js";
+var GPU_CHUNK_NAME = "explainers-gpu.v1.js";
 var ALLOWED_HOSTS = /* @__PURE__ */ new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 var FIG_ID_RE = /^fig-[a-z0-9][a-z0-9-]*$/;
 var ASPECT_RE = /^[1-9]\d*:[1-9]\d*$/;
@@ -25655,13 +25738,19 @@ function checkComponents({ file, doc }, problems) {
   }
 }
 function checkChunk({ file, doc }, figures, repoRoot, problems) {
-  if (![...figures.values()].some((c) => c && c.type === "scene3d")) return;
+  const types = new Set([...figures.values()].filter(Boolean).map((c) => c.type));
+  const wanted = [];
+  if (types.has("scene3d")) wanted.push({ type: "scene3d", name: CHUNK_NAME, cmd: "node tools/build-3d.mjs" });
+  if (types.has("splat3d")) wanted.push({ type: "splat3d", name: GPU_CHUNK_NAME, cmd: "node tools/build-gpu.mjs" });
+  if (!wanted.length) return;
   const runtime = byTag(doc, "script").map((s) => attr(s, "src")).find((src) => src && /(^|\/)dist\/explainers-runtime\.v\d+\.js(\?[^#]*)?$/.test(src));
   if (!runtime) return;
   const dir = import_node_path5.default.dirname(runtime.replace(/[?#].*$/, ""));
-  const local = import_node_path5.default.resolve(import_node_path5.default.dirname(file), dir, CHUNK_NAME);
-  const fromRoot = import_node_path5.default.join(repoRoot, "dist", CHUNK_NAME);
-  if (!import_node_fs5.default.existsSync(local) && !import_node_fs5.default.existsSync(fromRoot)) problems.warn(file, 0, null, `scene3d figure(s) but the lazy chunk ${import_node_path5.default.posix.join(dir, CHUNK_NAME)} is not found beside the runtime; run: node tools/build-3d.mjs`);
+  for (const w of wanted) {
+    const local = import_node_path5.default.resolve(import_node_path5.default.dirname(file), dir, w.name);
+    const fromRoot = import_node_path5.default.join(repoRoot, "dist", w.name);
+    if (!import_node_fs5.default.existsSync(local) && !import_node_fs5.default.existsSync(fromRoot)) problems.warn(file, 0, null, `${w.type} figure(s) but the lazy chunk ${import_node_path5.default.posix.join(dir, w.name)} is not found beside the runtime; run: ${w.cmd}`);
+  }
 }
 function validateArticle(article, { repoRoot, budget, problems }) {
   const palette = extractPalette(article.doc);

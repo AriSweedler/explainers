@@ -14,6 +14,7 @@
     "docs": "node tools/gen-docs.mjs",
     "serve": "node tools/serve.mjs",
     "start": "node tools/serve.mjs",
-    "proxy": "node tools/proxy-dev.mjs"
+    "proxy": "node tools/proxy-dev.mjs",
+    "build-gpu": "node tools/build-gpu.mjs"
   }
 }

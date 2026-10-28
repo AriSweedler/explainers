@@ -36,8 +36,19 @@ export function posterTokens(palette) {
 // shape of phase 3A (a trailing caption slot, now always empty since a
 // scene3d poster is drawn from the spec, not the caption) so every 2D poster
 // hash is unchanged.
-export function posterHash(spec, aspect, tokens) {
-  return crypto.createHash('sha1').update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], ''])).digest('hex');
+export function posterHash(spec, aspect, tokens, extra = '') {
+  return crypto.createHash('sha1').update(JSON.stringify([POSTER_VERSION, POSTER_WIDTH, spec, aspect, [...tokens], extra])).digest('hex');
+}
+
+// A splat3d figure's first frame is rendered offline (the same assets, the
+// same camera) and named by its fallback.poster; the build inserts that file
+// as <img class="x-poster"> and hashes its bytes with the spec, so a re-render
+// of the image refreshes the poster like a spec edit does.
+const isGpuPoster = (compiled) => compiled.type === 'splat3d';
+function gpuPoster(compiled, file) {
+  const rel = compiled.spec.shows.fallback.poster, abs = path.resolve(path.dirname(file), rel);
+  const bytes = fs.existsSync(abs) ? fs.readFileSync(abs) : null;
+  return { rel, abs, bytes, digest: bytes ? crypto.createHash('sha1').update(bytes).digest('hex') : 'missing' };
 }
 
 // A scene3d figure whose fallback.poster names the build's own external path
@@ -45,9 +56,10 @@ export function posterHash(spec, aspect, tokens) {
 // frame (and stays current with it).
 const wantsFallbackFile = (compiled, id) => compiled.type === 'scene3d' && compiled.spec.shows.fallback.poster === posterPath(id);
 
-function plan(fig, compiled, tokens) {
+function plan(fig, compiled, tokens, file) {
   const id = attr(fig, 'id'), aspect = attr(fig, 'data-aspect') || '3:2';
-  return { id, aspect, hash: posterHash(compiled.spec, aspect, tokens), existing: posterChild(fig), fallbackFile: wantsFallbackFile(compiled, id) };
+  const gpu = isGpuPoster(compiled) ? gpuPoster(compiled, file) : null;
+  return { id, aspect, hash: posterHash(compiled.spec, aspect, tokens, gpu ? gpu.digest : ''), existing: posterChild(fig), fallbackFile: wantsFallbackFile(compiled, id), gpu };
 }
 
 // validate mode: every figure has a current poster (warnings; build fixes them).
@@ -56,7 +68,8 @@ export function checkPosters(doc, file, figures, palette, problems) {
   for (const fig of figureEls(doc)) {
     const id = attr(fig, 'id'), compiled = figures.get(id);
     if (!compiled) continue;
-    const p = plan(fig, compiled, tokens);
+    const p = plan(fig, compiled, tokens, file);
+    if (p.gpu && !p.gpu.bytes) { problems.warn(file, line(fig), id, `fallback poster ${p.gpu.rel} not found; render it (a splat3d poster is not drawn by the build)`); continue; }
     if (!p.existing) { problems.warn(file, line(fig), id, 'no poster; run: explainers build'); continue; }
     if (attr(p.existing, 'data-poster') !== p.hash) { problems.warn(file, line(p.existing), id, 'poster is stale; run: explainers build'); continue; }
     if (p.existing.tagName === 'img') {
@@ -79,7 +92,19 @@ export function buildPosters(doc, html, file, figures, palette) {
   for (const fig of figureEls(doc)) {
     const id = attr(fig, 'id'), compiled = figures.get(id);
     if (!compiled) continue;
-    const p = plan(fig, compiled, tokens);
+    const p = plan(fig, compiled, tokens, file);
+    if (p.gpu) {
+      // the image is the poster; nothing is drawn, only referenced
+      if (!p.gpu.bytes) continue; // validate reports it
+      const current = p.existing && p.existing.tagName === 'img' && attr(p.existing, 'data-poster') === p.hash && attr(p.existing, 'src') === p.gpu.rel;
+      if (current) { external.push(id); continue; }
+      const { width, height } = posterSize(p.aspect);
+      const markup = `<img class="x-poster" src="${p.gpu.rel}" alt="" width="${width}" height="${height}" aria-hidden="true" data-poster="${p.hash}">`;
+      if (p.existing) edits.push({ start: p.existing.sourceCodeLocation.startOffset, end: p.existing.sourceCodeLocation.endOffset, text: markup });
+      else { const at = fig.sourceCodeLocation.startTag.endOffset; edits.push({ start: at, end: at, text: `\n${markup}` }); }
+      external.push(id); count++;
+      continue;
+    }
     const rel = posterPath(id), abs = path.resolve(path.dirname(file), rel);
     const svg = posterSvg(compiled, null, { aspect: p.aspect, tokens, id, hash: p.hash });
     const writeFile = () => { fs.mkdirSync(path.dirname(abs), { recursive: true }); if (!fs.existsSync(abs) || fs.readFileSync(abs, 'utf8') !== svg) fs.writeFileSync(abs, svg); };

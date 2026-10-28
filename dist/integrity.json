@@ -1,5 +1,6 @@
 {
-  "dist/explainers-runtime.v1.js": "sha384-mfoRUV12JE+estX0uoGH8+NpYcbhbhd9Cgd0nTzS6CnmRAvsFQPPONb4zAv7G8vx",
+  "dist/explainers-runtime.v1.js": "sha384-PgpwYpjJ7tJZMmptU4jp2uKIUeH79xnuRIsY5vzb/fKaNbErE+UIX1RymPvhDd3/",
   "dist/explainers.v1.css": "sha384-AkyrkMy2QN4rXCMKOcXWtek7p4lb546BDIva5ivIj1BOhfG3oYF62ij0L4JNmzSm",
-  "dist/explainers-3d.v1.js": "sha384-WeN3Gls90zMIn2vwJSmblW3qaZLfoejXxenXpqla3yOBgFSTJlEjb3U5ZnhOLxFt"
+  "dist/explainers-3d.v1.js": "sha384-WeN3Gls90zMIn2vwJSmblW3qaZLfoejXxenXpqla3yOBgFSTJlEjb3U5ZnhOLxFt",
+  "dist/explainers-gpu.v1.js": "sha384-x8S+ZkjeU/9mZSiGlq9MQoh5Yl3dE7qQpWIKc0mIJU/cF05xszr8LQij8iH3hwHr"
 }

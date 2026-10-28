@@ -427,7 +427,7 @@ test('layer hover and logo: a template and a relative path on any layer; wrong t
 });
 
 test('vocabulary constants match the design', () => {
-  assert.deepEqual([...FIGURE_TYPES], ['scene2d', 'scene3d', 'plot', 'timeline']);
+  assert.deepEqual([...FIGURE_TYPES], ['scene2d', 'scene3d', 'plot', 'timeline', 'splat3d']);
   assert.deepEqual([...CONTROL_KINDS], ['slider', 'time', 'drag', 'toggle', 'segmented', 'chips', 'play']);
   assert.deepEqual([...LAYER_KINDS], ['circle', 'ellipse', 'line', 'ray', 'segment', 'arc', 'polygon', 'path', 'arrow', 'region', 'text', 'bars', 'image']);
   assert.deepEqual([...OBJECT_KINDS], ['globe', 'sphere', 'ring', 'disc', 'body', 'arrow', 'part', 'label']);

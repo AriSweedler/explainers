@@ -28,8 +28,8 @@ import { cam } from '../lib/scene2d/models/cam.js';
 import { lunar } from '../lib/scene2d/models/lunar.js';
 import { MODEL_FUNCTIONS } from '../lib/scene2d/models/index.js';
 import { MODELS } from '../lib/spec.js';
-import { bundle, gzipSize, OUTFILE, ORDER, LAZY_IMPORTER, transformModule } from '../tools/build-runtime.mjs';
-import { computeIntegrity, INTEGRITY_FILE, INTEGRITY_FILES, INTEGRITY_INCLUDES, CHUNK_FILE } from '../tools/integrity.mjs';
+import { bundle, gzipSize, OUTFILE, ORDER, LAZY_IMPORTER, LAZY_IMPORTERS, transformModule } from '../tools/build-runtime.mjs';
+import { computeIntegrity, INTEGRITY_FILE, INTEGRITY_FILES, INTEGRITY_INCLUDES, CHUNK_FILE, GPU_CHUNK_FILE } from '../tools/integrity.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -404,7 +404,7 @@ test('models compute every output lib/spec.js declares, finite', () => {
 
 // ------------------------------------------------------------------ build
 
-test('the concatenation build is valid JS, current in dist/, and under 45 KB gzip', () => {
+test('the concatenation build is valid JS, current in dist/, and under 46 KB gzip', () => {
   const out = bundle(root);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainers-runtime-'));
   const file = path.join(tmp, 'runtime.js');
@@ -421,12 +421,12 @@ test('the concatenation build is valid JS, current in dist/, and under 45 KB gzi
   // the group and pressed state, the roving tabindex, the arrow/Home/End keys, scrollIntoView, the edge fades and the shake
   for (const needle of ['x-ctl x-ctl-chips', '_ch${i}', "class: 'x-chips', role: 'group'", "class: 'x-chip'", 'aria-pressed', 'ArrowRight: at + 1, ArrowLeft: at - 1 + n, Home: 0, End: n - 1', "scrollIntoView({ block: 'nearest', inline: 'nearest' })", 'x-more-left', 'x-more-right', 'x-shake', '.x-discrete, .x-ctl-segmented, .x-ctl-chips', "case 'chips': m = mountChips(fig, c, counts.ch++)"]) assert.ok(out.includes(needle), needle);
   assert.doesNotMatch(out, /^\s*(import|export)\b/m);
-  // the one dynamic import() loads the 3D chunk from lib/site/scene3d.js; every other module stays free of it
+  // the dynamic import()s load the 3D chunk (lib/site/scene3d.js) and the GPU chunk (lib/site/gpu.js); every other module stays free of them
   const sections = out.split(/^\/\/ ---- (?=lib\/)/m).slice(1);
   const withImport = sections.filter((sec) => /\bimport\s*\(/.test(sec)).map((sec) => sec.slice(0, sec.indexOf('\n')));
-  assert.deepEqual(withImport, [LAZY_IMPORTER]);
+  assert.deepEqual(withImport, LAZY_IMPORTERS);
   assert.equal(fs.readFileSync(path.join(root, OUTFILE), 'utf8'), out, `${OUTFILE} is stale; run: node tools/build-runtime.mjs`);
-  assert.ok(gzipSize(out) <= 45 * 1000, `runtime is ${gzipSize(out)} bytes gzipped`);
+  assert.ok(gzipSize(out) <= 46 * 1000, `runtime is ${gzipSize(out)} bytes gzipped`);
   for (const rel of ORDER) assert.ok(fs.existsSync(path.join(root, rel)), rel);
 });
 
@@ -435,7 +435,9 @@ test('transformModule refuses a dynamic import() anywhere but the scene3d loader
   assert.throws(() => transformModule(src, 'lib/site/figure.js'), /dynamic import\(\) is not allowed/);
   assert.doesNotThrow(() => transformModule(src, LAZY_IMPORTER));
   assert.equal(LAZY_IMPORTER, 'lib/site/scene3d.js');
-  assert.ok(ORDER.includes(LAZY_IMPORTER) && ORDER.includes('lib/scene3d/surface.js'));
+  assert.deepEqual(LAZY_IMPORTERS, ['lib/site/scene3d.js', 'lib/site/gpu.js'], 'the WebGPU chunk has its own loader beside the 3D one');
+  for (const l of LAZY_IMPORTERS) { assert.doesNotThrow(() => transformModule(src, l)); assert.ok(ORDER.includes(l), l); }
+  assert.ok(ORDER.includes('lib/scene3d/surface.js'));
 });
 
 test('the stylesheet exists, is small, and styles the contract DOM', () => {
@@ -460,7 +462,7 @@ test('the stylesheet exists, is small, and styles the contract DOM', () => {
 test('dist/integrity.json holds a current sha384 for the runtime, the stylesheet and the 3D chunk; the template carries the two include placeholders', () => {
   const table = JSON.parse(fs.readFileSync(path.join(root, INTEGRITY_FILE), 'utf8'));
   assert.deepEqual(Object.keys(table), INTEGRITY_FILES);
-  assert.deepEqual(INTEGRITY_FILES, [...INTEGRITY_INCLUDES, CHUNK_FILE]);
+  assert.deepEqual(INTEGRITY_FILES, [...INTEGRITY_INCLUDES, CHUNK_FILE, GPU_CHUNK_FILE]);
   for (const v of Object.values(table)) assert.match(v, /^sha384-[A-Za-z0-9+/]{64}$/);
   assert.deepEqual(table, computeIntegrity(root), `${INTEGRITY_FILE} is stale; run: node tools/build-runtime.mjs && node tools/build-3d.mjs`);
   const template = fs.readFileSync(path.join(root, 'template/article.html'), 'utf8');

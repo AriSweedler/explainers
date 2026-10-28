@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Splat3d</title>
+<link rel="stylesheet" href="../../dist/explainers.v1.css" integrity="{{integrity:dist/explainers.v1.css}}">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
+<script defer src="../../dist/explainers-runtime.v1.js" integrity="{{integrity:dist/explainers-runtime.v1.js}}"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#ffffff, #111111);
+    --fg: light-dark(#111111, #eeeeee);
+    --c-ink: light-dark(#1f4e9c, #8ab4f8);
+    --c-mark: light-dark(#b3324a, #ee6c86);
+  }
+</style>
+</head>
+<body>
+<main>
+<h1>Splat3d</h1>
+<section id="one">
+<h2><a class="x-anchor" href="#one">One</a></h2>
+<p>A <span data-fig="fig-pot" data-ref="mesh">blue mesh</span> beside the same shape as <span data-fig="fig-pot" data-ref="splats">red blobs</span>, both over the <span data-fig="fig-pot" data-ref="truth">exact wire</span> when asked; a <dfn id="t-budget"><a href="#g-budget">budget</a></dfn> picks how many of each.</p>
+<figure class="x-fig" id="fig-pot" data-aspect="7:2">
+<script type="application/json">
+{
+  "shows": {
+    "type": "splat3d",
+    "assets": { "m0": "assets/pot/mesh-0.bin", "s0": "assets/pot/splats-0.bin", "m1": "assets/pot/mesh-1.bin", "s1": "assets/pot/splats-1.bin" },
+    "levels": [
+      { "value": 56, "mesh": "m0", "splats": "s0", "triangles": 56, "gaussians": 56, "psnr_mesh": 19.8, "psnr_splats": 23.2 },
+      { "value": 240, "mesh": "m1", "splats": "s1", "triangles": 240, "gaussians": 240, "psnr_mesh": 23.5, "psnr_splats": 24.3 }
+    ],
+    "budget": "n",
+    "spinControl": "spin",
+    "outlineControl": "outline",
+    "camera": { "distance": 3.2, "azimuth": 0.6, "polar": 1.15, "spin": 0.4 },
+    "light": { "direction": [0.4, 0.7, 0.6], "ambient": 0.25 },
+    "tokens": { "mesh": "ink", "splats": "mark", "truth": "ink" },
+    "readouts": [{ "id": "count", "at": [0.02, 0.95], "text": "{n:.0f} each", "token": "ink" }],
+    "fallback": { "poster": "assets/splat3d-poster.png", "notice": "Your browser has no WebGPU; this is a still frame." }
+  },
+  "manipulates": {
+    "controls": [
+      { "kind": "slider", "name": "n", "label": "budget", "values": [56, 240], "default": 56, "token": "ink", "format": "{n:.0f} each" },
+      { "kind": "toggle", "name": "spin", "label": ["Spin", "Spinning"], "default": true, "token": "ink" },
+      { "kind": "toggle", "name": "outline", "label": ["Wire", "Wired"], "default": false, "token": "ink", "position": "below" }
+    ]
+  },
+  "notice": {
+    "steps": "buttons",
+    "point_at": ["mesh", "splats", "truth"],
+    "states": [
+      { "name": "few", "n": 56, "outline": false, "caption": "Fifty-six of each." },
+      { "name": "wired", "n": 240, "outline": true, "camera": { "azimuth": 1.2 }, "caption": "Two hundred forty, over the wire, a third of a turn on." }
+    ]
+  }
+}
+</script>
+<figcaption>Drag the budget; drag either half to turn it.</figcaption>
+</figure>
+</section>
+<details id="glossary" class="x-glossary">
+  <summary>Glossary</summary>
+  <dl>
+    <div class="row" id="g-budget">
+      <dt>budget <a class="x-back" href="#t-budget" aria-label="back to first use">↩</a></dt>
+      <dd>How many triangles, or how many Gaussians, a drawing may use.</dd>
+    </div>
+  </dl>
+</details>
+</main>
+</body>
+</html>

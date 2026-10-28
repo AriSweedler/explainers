@@ -5,7 +5,7 @@ one HTML file per article, one shared vendored runtime, one stylesheet, zero thi
 
 A figure is *data*, never code: a `<figure class="x-fig">` holding one JSON spec with three keys, **shows** (what it draws), **manipulates** (what the reader changes) and **notice** (named states and what the prose points at). The runtime draws it; a Node CLI refuses anything outside the closed vocabulary.
 
-**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~43 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3A (done) adds SVG posters (the first frame, drawn at build time, shown before the runtime mounts and without JavaScript), `dist/integrity.json` with `integrity=` on the runtime and stylesheet includes, and three validator warnings. Phase 3B (done) adds the WebGL figures: `dist/explainers-3d.v1.js`, a lazy chunk (three.js 0.185.0 + `lib/scene3d/`, ~143 KB gzipped, off the critical path) that the runtime imports on the first approach of a `scene3d` figure, with arcball/orbit/fixed/panorama cameras, every object kind, DOM labels, surface drags with geolocation, projected posters, and the Moon article's second figure, the same orbit in three dimensions. See "Phase 3 status" in `DESIGN.md`.
+**Status:** phase 1 is the contract and the tooling (`lib/spec.js`, `lib/expr.js`, `tools/explainers.cjs`, the template, `DESIGN.md`). Phase 2 is the browser runtime: `dist/explainers-runtime.v1.js` (one plain-JS file, no dependencies, ~43 KB gzipped), `dist/explainers.v1.css`, and the first article, `articles/moon/` (the sidereal and synodic month). Phase 3A (done) adds SVG posters (the first frame, drawn at build time, shown before the runtime mounts and without JavaScript), `dist/integrity.json` with `integrity=` on the runtime and stylesheet includes, and three validator warnings. Phase 3B (done) adds the WebGL figures: `dist/explainers-3d.v1.js`, a lazy chunk (three.js 0.185.0 + `lib/scene3d/`, ~143 KB gzipped, off the critical path) that the runtime imports on the first approach of a `scene3d` figure, with arcball/orbit/fixed/panorama cameras, every object kind, DOM labels, surface drags with geolocation, projected posters, and the Moon article's second figure, the same orbit in three dimensions. Phase 3C (done) adds the WebGPU figure type `splat3d`: `dist/explainers-gpu.v1.js`, a second lazy chunk (`lib/gpu/`, no dependencies, ~7 KB gzipped) that draws one object as a triangle mesh and as sorted, alpha-composited 3D Gaussians side by side, used by the hero of `articles/gaussian-splats-vs-triangles/`. See "Phase 3 status" and Decision 39 in `DESIGN.md`.
 
 ## explainers.sweedler.com
 
@@ -42,9 +42,10 @@ index.html, 404.html, .nojekyll      site root (GitHub Pages via Actions; see .g
 articles/<slug>/index.html           one article = one file (+ articles/<slug>/assets/ for posters, diagrams and og.png, the link-preview card)
 template/article.html                the head, palette, reading column and glossary every article starts from
 template/og-card.html                the 1200 x 630 link-preview card tools/og-image.mjs renders from an article's head and hero poster
-dist/                                explainers-runtime.v1.js, explainers.v1.css, explainers-3d.v1.js, integrity.json (committed build outputs)
+dist/                                explainers-runtime.v1.js, explainers.v1.css, explainers-3d.v1.js, explainers-gpu.v1.js, integrity.json (committed build outputs)
 lib/core/, lib/scene2d/, lib/controls/, lib/site/   runtime source (ES modules); tools/build-runtime.mjs concatenates them into dist/
 lib/scene3d/                         the three.js adapter and its pure math; tools/build-3d.mjs bundles it with three into the lazy chunk
+lib/gpu/                             the WebGPU splat3d renderer (WGSL, XSPL Gaussian format, camera math); tools/build-gpu.mjs bundles it into the GPU chunk
 assets/katex/                        vendored KaTeX CSS + woff2 fonts (relative url() in the CSS)
 assets/og.png, assets/apple-touch-icon.png   the front page's link-preview card and the PNG icon Messages shows beside a link (node tools/og-image.mjs --site)
 lib/spec.js, lib/expr.js             the closed vocabulary and expression grammar, shared by runtime and CLI
@@ -89,7 +90,7 @@ DESIGN.md                            the contract: vocabulary (generated), gramm
 ## Run the tools
 
 ```sh
-npm test                                  # node --test: expr, spec, cli, runtime, poster, scene3d, docs (also checks dist/ is current)
+npm test                                  # node --test: expr, spec, cli, runtime, poster, scene3d, gpu, docs (also checks dist/ is current)
 node tools/explainers.cjs --help          # no install needed; single committed file
 node tools/explainers.cjs vocab           # the vocabulary as markdown (what DESIGN.md embeds)
 ```
@@ -99,11 +100,12 @@ Maintainers (changing `lib/` or `tools/src/`):
 ```sh
 node tools/build-runtime.mjs                    # lib/ -> dist/explainers-runtime.v1.js + dist/integrity.json (no dependencies; npm test checks both are current)
 node tools/build-3d.mjs                         # lib/scene3d/ + three -> dist/explainers-3d.v1.js (esbuild from tools/node_modules; --check like build-runtime; npm test checks it)
+node tools/build-gpu.mjs                        # lib/gpu/ -> dist/explainers-gpu.v1.js (esbuild; --check; npm test checks it)
 node tools/explainers.cjs build articles/*/index.html   # then refresh every article's integrity= attributes (and posters)
 cd tools && npm install && node build-cli.mjs   # rebundles tools/explainers.cjs, vendors assets/katex, regenerates DESIGN.md
 ```
 
-`npm run build-runtime` and `npm run build-3d` are the same two commands. Never hand-edit `tools/explainers.cjs`, `dist/explainers-runtime.v1.js` or `dist/explainers-3d.v1.js`.
+`npm run build-runtime`, `npm run build-3d` and `npm run build-gpu` are the same three commands. Never hand-edit `tools/explainers.cjs`, `dist/explainers-runtime.v1.js`, `dist/explainers-3d.v1.js` or `dist/explainers-gpu.v1.js`.
 
 ## Preview locally
 

@@ -48,6 +48,7 @@ export const ORDER = [
   'lib/controls/play.js',
   'lib/controls/stepper.js',
   'lib/site/scene3d.js',
+  'lib/site/gpu.js',
   'lib/site/figure.js',
   'lib/site/term.js',
   'lib/site/tabs.js',
@@ -58,6 +59,7 @@ export const ORDER = [
 ];
 
 export const LAZY_IMPORTER = 'lib/site/scene3d.js';
+export const LAZY_IMPORTERS = ['lib/site/scene3d.js', 'lib/site/gpu.js']; // the two lazy chunks: three.js (scene3d) and WebGPU (splat3d)
 
 const IMPORT_RE = /^import\s+(?:[\s\S]*?\s+from\s+)?['"][^'"]+['"];?[ \t]*\r?\n/gm;
 const EXPORT_DECL_RE = /^export\s+(?=(?:async\s+)?function\b|class\b|const\b|let\b|var\b)/gm;
@@ -110,7 +112,7 @@ export function transformModule(src, rel) {
   if (leftover) throw new Error(`${rel}: unhandled ${leftover[1]} statement`);
   // The one dynamic import() of the runtime loads the lazy 3D chunk; the
   // bundle stays dependency-free everywhere else.
-  if (rel !== LAZY_IMPORTER && /\bimport\s*\(/.test(out)) throw new Error(`${rel}: dynamic import() is not allowed in the runtime bundle (only ${LAZY_IMPORTER} loads the 3D chunk)`);
+  if (!LAZY_IMPORTERS.includes(rel) && /\bimport\s*\(/.test(out)) throw new Error(`${rel}: dynamic import() is not allowed in the runtime bundle (only ${LAZY_IMPORTERS.join(' and ')} load the lazy chunks)`);
   return out;
 }
 
