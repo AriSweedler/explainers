@@ -388,6 +388,16 @@ test('every layer kind validates with its required geometry', () => {
   expectCode(mutate((x) => { x.shows.layers.push({ id: 'p', kind: 'polygon', points: [[0, 0], [1, 1]] }); }), 'SPEC_RANGE', /points/);
 });
 
+test('layer opacity: a number or an expression on any layer, in the expression list; a boolean is refused', () => {
+  const c = ok(mutate((s) => { s.shows.layers[6].opacity = 'clamp(t/60,0,1)'; s.shows.layers[0].opacity = 0.4; }));
+  assert.ok(c.expressions.some((e) => e.path === 'shows.layers[6].opacity' && e.src === 'clamp(t/60,0,1)'), 'an opacity expression joins the expression list');
+  assert.equal(SCHEMA.layerCommon.opacity.type, 'expr');
+  assert.equal(SCHEMA.layerCommon.opacity.req, false, 'opacity is optional');
+  expectCode(mutate((s) => { s.shows.layers[0].opacity = true; }), 'SPEC_BAD_TYPE', /opacity/);
+  expectCode(mutate((s) => { s.shows.layers[0].opacity = 't <'; }), 'SPEC_BAD_EXPR', /opacity/);
+  expectCode(mutate((s) => { s.shows.layers[0].opacity = 'tt'; }), 'SPEC_UNKNOWN_IDENT', /opacity/);
+});
+
 test('layer hover and logo: a template and a relative path on any layer; wrong types, bad formats and unknown keys are refused', () => {
   const withHover = mutate((s) => { s.shows.layers[6].hover = 'Moon, day {t:.1f}'; s.shows.layers[6].logo = 'assets/moon.svg'; });
   const c = ok(withHover);

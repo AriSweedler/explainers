@@ -338,6 +338,7 @@ width: f('number', 'stroke width in CSS px (default 1.5)'),
 dash: f('pair', '[on, off] dash lengths in CSS px'),
 arrow: f(en('start', 'end', 'both'), 'arrowhead placement on line-like layers'),
 visible: f('flag', 'boolean or expression; nonzero draws the layer (default true)'),
+opacity: f('expr', 'alpha of the whole layer, 0..1, number or expression (default 1); clamped when drawn, so overlapping translucent layers composite'),
 highlight: f('boolean', 'draw thicker with a halo (default false)'),
 label: f('string', 'short in-canvas label drawn beside the shape'),
 hover: f('template', 'tooltip text with {expr:fmt} placeholders, shown while the pointer rests on the layer (a tap on touch); circles hit within max(r, 12 px) of the center, other kinds within 12 px of their anchor'),
@@ -1835,6 +1836,7 @@ if (spec.hover) g.hover = compileTemplate(spec.hover); // the tooltip text, rend
 return {
 id: spec.id, kind: spec.kind, spec, g,
 visible: 'visible' in spec ? getter(spec.visible) : null,
+opacity: 'opacity' in spec ? getter(spec.opacity) : null, // multiplies alpha; clamped to 0..1 at draw
 highlight: !!spec.highlight, // prose refs toggle this at runtime
 alpha: 1,                    // state show/hide fades ease this
 override: null,              // state visible.show (1) / visible.hide (0)
@@ -1843,6 +1845,11 @@ previewOf: null,
 wasHidden: false,
 image: null,
 };
+}
+function layerOpacity(L, scope) {
+if (!L.opacity) return 1;
+const a = L.opacity(scope);
+return a < 0 ? 0 : a > 1 ? 1 : a;
 }
 function isShown(L, scope) {
 if (L.forceHide || L.alpha <= 0 || L.override === 0) return false;
@@ -2016,7 +2023,7 @@ const stroke = s.stroke ? env.tokens.get(s.stroke) : null;
 const fill = s.fill ? env.tokens.get(s.fill) : null;
 const color = stroke || fill || env.fg;
 ctx.save();
-ctx.globalAlpha = L.alpha;
+ctx.globalAlpha = L.alpha * layerOpacity(L, scope);
 let geo;
 if (L.kind === 'region') {
 geo = { anchor: [m.rect.x, m.rect.y], heads: [], dir: null };

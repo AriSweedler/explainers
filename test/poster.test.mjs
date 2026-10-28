@@ -76,6 +76,22 @@ test('fig-months at a state and with a toggle off: the frame follows the scope',
   assert.equal(posterSvg(c.spec, null, { tokens: TOKENS, id: 'fig-months' }), defaults, 'a raw spec is validated and drawn the same');
 });
 
+test('layer opacity reaches the poster as an SVG opacity attribute, clamped, and omitted at 1', () => {
+  const spec = figMonths().spec;
+  spec.shows.layers[1].opacity = 0.4;                 // earth, a filled circle with a label
+  spec.shows.layers[3].opacity = 'clamp(t/60,0,1)';  // sun line: 0 at t=0, 0.5 at t=30
+  spec.shows.layers[6].opacity = 7;                   // moon: clamped to 1, so no attribute
+  const c = validateSpec(spec, { figureId: 'fig-months' });
+  const at0 = posterSvg(c, null, { tokens: TOKENS, id: 'fig-months' });
+  assert.match(at0, /class="f-earth" opacity="0\.4"\/>/, 'the filled circle carries the opacity');
+  assert.match(at0, /class="f-earth h" font-size="12" font-style="italic" opacity="0.4">Earth</, 'its label fades with it');
+  assert.match(at0, /class="s-sun" stroke-width="1.5" stroke-dasharray="2 6" opacity="0"\/>|class="s-sun" stroke-width="1.5" opacity="0"\/>/, 'an expression evaluates at the scope');
+  assert.doesNotMatch(at0, /class="f-moon" opacity=/, 'a value above 1 clamps to 1 and writes no attribute');
+  assert.match(at0, /class="f-sun" opacity="0"\/>/, 'the arrowhead fades with its line');
+  const at30 = posterSvg(c, new Map([...scopeForState(c, null), ['t', 30]]), { tokens: TOKENS, id: 'fig-months' });
+  assert.match(at30, /class="s-sun" stroke-width="1.5" opacity="0\.5"\/>/, 'half way along the slider the line is half opaque');
+});
+
 test('SvgPath records Path2D calls as path data with canvas arc semantics', () => {
   const full = new SvgPath();
   full.arc(10, 10, 5, 0, Math.PI * 2);
